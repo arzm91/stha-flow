@@ -638,6 +638,35 @@ export type Database = {
         }
         Relationships: []
       }
+      tag_endpoint_requests: {
+        Row: {
+          endpoint_id: string
+          fired_at: string
+          processed: boolean
+          request_id: number
+        }
+        Insert: {
+          endpoint_id: string
+          fired_at?: string
+          processed?: boolean
+          request_id: number
+        }
+        Update: {
+          endpoint_id?: string
+          fired_at?: string
+          processed?: boolean
+          request_id?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tag_endpoint_requests_endpoint_id_fkey"
+            columns: ["endpoint_id"]
+            isOneToOne: false
+            referencedRelation: "tag_endpoints"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tag_endpoints: {
         Row: {
           ativo: boolean
@@ -808,7 +837,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      ingest_endpoint_payload: {
+        Args: {
+          p_endpoint_id: string
+          p_endpoint_name: string
+          p_payload: Json
+        }
+        Returns: number
+      }
       ingest_tags: { Args: { payload: Json }; Returns: number }
+      poll_tag_endpoints_fire: { Args: never; Returns: number }
+      poll_tag_endpoints_process: { Args: never; Returns: number }
+      sync_tag_endpoint_now: { Args: { p_endpoint_id: string }; Returns: Json }
     }
     Enums: {
       app_role: "admin" | "operador"
