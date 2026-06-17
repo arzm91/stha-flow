@@ -116,7 +116,7 @@ function EndpointsPage() {
       return syncTagEndpointById(id);
     },
     onSuccess: (data) => {
-      const r = data?.results?.[0];
+      const r = data?.results?.[0] as { ok: boolean; count?: number; error?: string } | undefined;
       if (r?.ok) toast.success(`Sincronizado: ${r.count ?? 0} tags`);
       else toast.error(r?.error || "Falha ao sincronizar");
       qc.invalidateQueries({ queryKey: ["tag_endpoints"] });
