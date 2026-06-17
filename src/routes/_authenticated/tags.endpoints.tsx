@@ -50,7 +50,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { formatRelative } from "@/lib/format";
-import { syncAllTagEndpoints, syncTagEndpointById, testTagEndpointUrl } from "@/lib/tagEndpointSync";
+import { syncAllTagEndpoints, syncTagEndpointById } from "@/lib/tagEndpointSync";
 
 export const Route = createFileRoute("/_authenticated/tags/endpoints")({
   component: EndpointsPage,
@@ -116,7 +116,7 @@ function EndpointsPage() {
       return syncTagEndpointById(id);
     },
     onSuccess: (data) => {
-      const r = data?.results?.[0];
+      const r = data?.results?.[0] as { ok: boolean; count?: number; error?: string } | undefined;
       if (r?.ok) toast.success(`Sincronizado: ${r.count ?? 0} tags`);
       else toast.error(r?.error || "Falha ao sincronizar");
       qc.invalidateQueries({ queryKey: ["tag_endpoints"] });
@@ -472,16 +472,23 @@ function EndpointForm({
 
   async function testar() {
     setTestResult(null);
-    let headers: Record<string, string> = {};
     try {
-      ({ headers } = validate());
+      validate();
     } catch (e: any) {
       setTestResult({ ok: false, message: e.message });
       return;
     }
+    if (!editing) {
+      setTestResult({
+        ok: false,
+        message: "Salve o endpoint primeiro e use o botão Sincronizar para testar.",
+      });
+      return;
+    }
     try {
-      const data = await testTagEndpointUrl(url.trim(), headers);
-      setTestResult({ ok: true, count: data.count ?? 0, sample: data.sample });
+      const data = await syncTagEndpointById(editing.id);
+      const count = data.results[0]?.count ?? 0;
+      setTestResult({ ok: true, count, sample: undefined });
     } catch (e: any) {
       setTestResult({ ok: false, message: e.message });
     }
