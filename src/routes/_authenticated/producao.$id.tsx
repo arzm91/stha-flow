@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, CheckCircle2, Gauge, FlaskConical, MessageSquare } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Gauge, FlaskConical, MessageSquare, Activity, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate, formatNumber, durationFromNow, durationBetween } from "@/lib/format";
 
@@ -29,7 +29,7 @@ function OPPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ordens_producao")
-        .select("*, produto:produto_id(id,nome,codigo,unidade), equipamento:equipamento_id(id,codigo,nome), tanque:tanque_destino_id(nome,codigo)")
+        .select("*, produto:produto_id(id,nome,codigo,unidade), equipamento:equipamento_id(id,codigo,nome,tag_nomes), tanque:tanque_destino_id(nome,codigo)")
         .eq("id", id).maybeSingle();
       if (error) throw error;
       return data;
@@ -106,6 +106,8 @@ function OPPage() {
         <Info label="Qtd. planejada / produzida" value={`${formatNumber(Number(op.data.qtd_planejada))} / ${op.data.qtd_produzida != null ? formatNumber(Number(op.data.qtd_produzida)) : "—"}`} />
       </div>
 
+      <TagsDoEquipamento tagNomes={((op.data.equipamento as any)?.tag_nomes ?? []) as string[]} />
+
       <Tabs defaultValue="parametros">
         <TabsList>
           <TabsTrigger value="parametros"><Gauge className="mr-1 h-4 w-4" />Parâmetros</TabsTrigger>
@@ -181,6 +183,70 @@ function Info({ label, value }: { label: string; value: string }) {
       <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className="mt-1 font-mono text-sm font-semibold">{value}</div>
     </CardContent></Card>
+  );
+}
+
+function TagsDoEquipamento({ tagNomes }: { tagNomes: string[] }) {
+  const tags = useQuery({
+    queryKey: ["equip-tags-live", tagNomes.slice().sort().join(",")],
+    enabled: tagNomes.length > 0,
+    refetchInterval: 5_000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tags_live")
+        .select("nome,valor,valor_num,unidade,grupo,qualidade,valor_min,valor_max,atualizado_em")
+        .in("nome", tagNomes);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  if (tagNomes.length === 0) return null;
+
+  const byName = new Map((tags.data ?? []).map((t) => [t.nome, t]));
+
+  return (
+    <Card className="mb-4">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <Activity className="h-4 w-4 text-primary" />
+          Tags do equipamento
+        </CardTitle>
+        <span className="text-xs text-muted-foreground">Atualização a cada 5s</span>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
+          {tagNomes.map((nome) => {
+            const t = byName.get(nome) as any;
+            const num = t?.valor_num != null ? Number(t.valor_num) : null;
+            const min = t?.valor_min != null ? Number(t.valor_min) : null;
+            const max = t?.valor_max != null ? Number(t.valor_max) : null;
+            const fora = num != null && ((min != null && num < min) || (max != null && num > max));
+            return (
+              <div key={nome} className={`rounded-md border p-3 ${fora ? "border-destructive/40 bg-destructive/5" : "border-border bg-muted/20"}`}>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="truncate font-mono text-xs text-muted-foreground" title={nome}>{nome}</span>
+                  {fora ? <AlertTriangle className="h-3.5 w-3.5 text-destructive" /> : null}
+                </div>
+                <div className="mt-1 font-mono text-lg font-semibold">
+                  {t ? (t.valor ?? "—") : <span className="text-muted-foreground text-sm">sem dados</span>}
+                  {t?.unidade ? <span className="ml-1 text-xs text-muted-foreground">{t.unidade}</span> : null}
+                </div>
+                <div className="mt-1 flex items-center justify-between text-[10px] text-muted-foreground">
+                  <span>{t?.grupo ?? ""}</span>
+                  <span>{t?.atualizado_em ? formatDate(t.atualizado_em) : ""}</span>
+                </div>
+                {min != null || max != null ? (
+                  <div className="mt-0.5 text-[10px] text-muted-foreground">
+                    Limites: {min ?? "—"} / {max ?? "—"}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
