@@ -485,38 +485,19 @@ function EndpointForm({
       return;
     }
     try {
-      const res = await fetch(url.trim(), {
-        method: "GET",
-        headers: { Accept: "application/json", ...headers },
-        signal: AbortSignal.timeout(10_000),
+      const res = await fetch(`/api/public/tags/poll?test=1`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: url.trim(), headers }),
       });
-      if (!res.ok) {
-        setTestResult({ ok: false, message: `HTTP ${res.status}` });
-        return;
-      }
       const data = await res.json();
-      let count = 0;
-      if (Array.isArray(data)) count = data.length;
-      else if (data && typeof data === "object") {
-        if (Array.isArray((data as any).tags)) count = (data as any).tags.length;
-        else if (Array.isArray((data as any).data)) count = (data as any).data.length;
-        else count = Object.keys(data).length;
+      if (data.ok) {
+        setTestResult({ ok: true, count: data.count ?? 0, sample: data.sample });
+      } else {
+        setTestResult({ ok: false, message: data.message || `HTTP ${res.status}` });
       }
-      setTestResult({
-        ok: true,
-        count,
-        sample: JSON.stringify(data, null, 2).slice(0, 400),
-      });
     } catch (e: any) {
-      setTestResult({
-        ok: false,
-        message:
-          e.name === "TimeoutError"
-            ? "Timeout (10s)"
-            : e.message?.includes("Failed to fetch")
-              ? "Falha de rede ou CORS — o servidor consegue mas o navegador não"
-              : e.message,
-      });
+      setTestResult({ ok: false, message: e.message });
     }
   }
 
