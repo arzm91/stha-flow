@@ -12,42 +12,41 @@ export type TagEndpoint = {
   ultima_execucao: string | null;
 };
 
+function getPublicApiKey() {
+  return import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
+}
+
+async function callPollRoute(search: string) {
+  const res = await fetch(`/api/public/tags/poll${search}`, {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(getPublicApiKey() ? { apikey: getPublicApiKey()! } : {}),
+    },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
+  return data as { ok?: boolean; processed?: number; results?: Array<{ id: string; ok: boolean; count?: number; error?: string; status?: number }> };
+}
+
 /**
- * Manual sync runs server-side via pg_net (the database makes the HTTP request).
- * Browser direct fetch is blocked by mixed-content (HTTPS → HTTP) and the
- * Cloudflare Worker runtime is blocked by error 1003 on direct-IP targets,
- * so pg_net is the only reliable path.
+ * Manual sync runs through the app server route, which uses native HTTP for
+ * direct-IP http:// endpoints. This avoids browser mixed-content blocks and
+ * the database network timeout seen with pg_net.
  */
 export async function syncTagEndpointById(id: string) {
-  const { data, error } = await supabase.rpc("sync_tag_endpoint_now" as never, {
-    p_endpoint_id: id,
-  } as never);
-  if (error) throw error;
-  const result = (data ?? {}) as { ok?: boolean; count?: number; error?: string; status?: number };
-  if (!result.ok) {
-    throw new Error(result.error || `Falha ao sincronizar (status ${result.status ?? "?"})`);
+  const data = await callPollRoute(`?id=${encodeURIComponent(id)}&force=1`);
+  const result = data.results?.[0];
+  if (!data.ok || !result?.ok) {
+    throw new Error(result?.error || `Falha ao sincronizar (status ${result?.status ?? "?"})`);
   }
   return { ok: true, processed: 1, results: [{ id, ok: true, count: result.count ?? 0 }] };
 }
 
 export async function syncAllTagEndpoints() {
-  const { data, error } = await supabase
-    .from("tag_endpoints" as never)
-    .select("id")
-    .eq("ativo", true);
-  if (error) throw error;
-  const ids = ((data ?? []) as Array<{ id: string }>).map((r) => r.id);
-
-  const results: Array<{ id: string; ok: boolean; count?: number; error?: string }> = [];
-  for (const id of ids) {
-    try {
-      const r = await syncTagEndpointById(id);
-      results.push(r.results[0]);
-    } catch (e: any) {
-      results.push({ id, ok: false, error: String(e?.message ?? e) });
-    }
-  }
-  return { ok: true, processed: results.length, results };
+  const data = await callPollRoute("?force=1");
+  return { ok: Boolean(data.ok), processed: data.processed ?? 0, results: data.results ?? [] };
 }
 
 /**
