@@ -92,7 +92,7 @@ function EndpointsPage() {
     mutationFn: async (ep: Endpoint) => {
       const { error } = await supabase
         .from("tag_endpoints" as never)
-        .update({ ativo: !ep.ativo })
+        .update({ ativo: !ep.ativo } as never)
         .eq("id", ep.id);
       if (error) throw error;
     },
@@ -362,11 +362,11 @@ function EndpointForm({ editing, onClose }: { editing: Endpoint | null; onClose:
       if (editing) {
         const { error } = await supabase
           .from("tag_endpoints" as never)
-          .update(payload)
+          .update(payload as never)
           .eq("id", editing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("tag_endpoints" as never).insert(payload);
+        const { error } = await supabase.from("tag_endpoints" as never).insert(payload as never);
         if (error) throw error;
       }
     },
