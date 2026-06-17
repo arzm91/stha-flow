@@ -9,38 +9,187 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as AuthRouteImport } from './routes/auth'
+import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedCadastrosTanquesRouteImport } from './routes/_authenticated/cadastros.tanques'
+import { Route as AuthenticatedCadastrosProdutosRouteImport } from './routes/_authenticated/cadastros.produtos'
+import { Route as AuthenticatedCadastrosParametrosRouteImport } from './routes/_authenticated/cadastros.parametros'
+import { Route as AuthenticatedCadastrosEquipamentosRouteImport } from './routes/_authenticated/cadastros.equipamentos'
+import { Route as AuthenticatedCadastrosAnalisesRouteImport } from './routes/_authenticated/cadastros.analises'
+import { Route as AuthenticatedCadastrosEquipamentosIdRouteImport } from './routes/_authenticated/cadastros.equipamentos.$id'
 
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthRoute = AuthRouteImport.update({
+  id: '/auth',
+  path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
+  id: '/_authenticated',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedCadastrosTanquesRoute =
+  AuthenticatedCadastrosTanquesRouteImport.update({
+    id: '/cadastros/tanques',
+    path: '/cadastros/tanques',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCadastrosProdutosRoute =
+  AuthenticatedCadastrosProdutosRouteImport.update({
+    id: '/cadastros/produtos',
+    path: '/cadastros/produtos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCadastrosParametrosRoute =
+  AuthenticatedCadastrosParametrosRouteImport.update({
+    id: '/cadastros/parametros',
+    path: '/cadastros/parametros',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCadastrosEquipamentosRoute =
+  AuthenticatedCadastrosEquipamentosRouteImport.update({
+    id: '/cadastros/equipamentos',
+    path: '/cadastros/equipamentos',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCadastrosAnalisesRoute =
+  AuthenticatedCadastrosAnalisesRouteImport.update({
+    id: '/cadastros/analises',
+    path: '/cadastros/analises',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedCadastrosEquipamentosIdRoute =
+  AuthenticatedCadastrosEquipamentosIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedCadastrosEquipamentosRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/cadastros/analises': typeof AuthenticatedCadastrosAnalisesRoute
+  '/cadastros/equipamentos': typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
+  '/cadastros/parametros': typeof AuthenticatedCadastrosParametrosRoute
+  '/cadastros/produtos': typeof AuthenticatedCadastrosProdutosRoute
+  '/cadastros/tanques': typeof AuthenticatedCadastrosTanquesRoute
+  '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/dashboard': typeof AuthenticatedDashboardRoute
+  '/cadastros/analises': typeof AuthenticatedCadastrosAnalisesRoute
+  '/cadastros/equipamentos': typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
+  '/cadastros/parametros': typeof AuthenticatedCadastrosParametrosRoute
+  '/cadastros/produtos': typeof AuthenticatedCadastrosProdutosRoute
+  '/cadastros/tanques': typeof AuthenticatedCadastrosTanquesRoute
+  '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
+  '/auth': typeof AuthRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/cadastros/analises': typeof AuthenticatedCadastrosAnalisesRoute
+  '/_authenticated/cadastros/equipamentos': typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
+  '/_authenticated/cadastros/parametros': typeof AuthenticatedCadastrosParametrosRoute
+  '/_authenticated/cadastros/produtos': typeof AuthenticatedCadastrosProdutosRoute
+  '/_authenticated/cadastros/tanques': typeof AuthenticatedCadastrosTanquesRoute
+  '/_authenticated/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/dashboard'
+    | '/cadastros/analises'
+    | '/cadastros/equipamentos'
+    | '/cadastros/parametros'
+    | '/cadastros/produtos'
+    | '/cadastros/tanques'
+    | '/cadastros/equipamentos/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/auth'
+    | '/reset-password'
+    | '/dashboard'
+    | '/cadastros/analises'
+    | '/cadastros/equipamentos'
+    | '/cadastros/parametros'
+    | '/cadastros/produtos'
+    | '/cadastros/tanques'
+    | '/cadastros/equipamentos/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/_authenticated'
+    | '/auth'
+    | '/reset-password'
+    | '/_authenticated/dashboard'
+    | '/_authenticated/cadastros/analises'
+    | '/_authenticated/cadastros/equipamentos'
+    | '/_authenticated/cadastros/parametros'
+    | '/_authenticated/cadastros/produtos'
+    | '/_authenticated/cadastros/tanques'
+    | '/_authenticated/cadastros/equipamentos/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth': {
+      id: '/auth'
+      path: '/auth'
+      fullPath: '/auth'
+      preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,11 +197,100 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/dashboard': {
+      id: '/_authenticated/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cadastros/tanques': {
+      id: '/_authenticated/cadastros/tanques'
+      path: '/cadastros/tanques'
+      fullPath: '/cadastros/tanques'
+      preLoaderRoute: typeof AuthenticatedCadastrosTanquesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cadastros/produtos': {
+      id: '/_authenticated/cadastros/produtos'
+      path: '/cadastros/produtos'
+      fullPath: '/cadastros/produtos'
+      preLoaderRoute: typeof AuthenticatedCadastrosProdutosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cadastros/parametros': {
+      id: '/_authenticated/cadastros/parametros'
+      path: '/cadastros/parametros'
+      fullPath: '/cadastros/parametros'
+      preLoaderRoute: typeof AuthenticatedCadastrosParametrosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cadastros/equipamentos': {
+      id: '/_authenticated/cadastros/equipamentos'
+      path: '/cadastros/equipamentos'
+      fullPath: '/cadastros/equipamentos'
+      preLoaderRoute: typeof AuthenticatedCadastrosEquipamentosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cadastros/analises': {
+      id: '/_authenticated/cadastros/analises'
+      path: '/cadastros/analises'
+      fullPath: '/cadastros/analises'
+      preLoaderRoute: typeof AuthenticatedCadastrosAnalisesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/cadastros/equipamentos/$id': {
+      id: '/_authenticated/cadastros/equipamentos/$id'
+      path: '/$id'
+      fullPath: '/cadastros/equipamentos/$id'
+      preLoaderRoute: typeof AuthenticatedCadastrosEquipamentosIdRouteImport
+      parentRoute: typeof AuthenticatedCadastrosEquipamentosRoute
+    }
   }
 }
 
+interface AuthenticatedCadastrosEquipamentosRouteChildren {
+  AuthenticatedCadastrosEquipamentosIdRoute: typeof AuthenticatedCadastrosEquipamentosIdRoute
+}
+
+const AuthenticatedCadastrosEquipamentosRouteChildren: AuthenticatedCadastrosEquipamentosRouteChildren =
+  {
+    AuthenticatedCadastrosEquipamentosIdRoute:
+      AuthenticatedCadastrosEquipamentosIdRoute,
+  }
+
+const AuthenticatedCadastrosEquipamentosRouteWithChildren =
+  AuthenticatedCadastrosEquipamentosRoute._addFileChildren(
+    AuthenticatedCadastrosEquipamentosRouteChildren,
+  )
+
+interface AuthenticatedRouteRouteChildren {
+  AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedCadastrosAnalisesRoute: typeof AuthenticatedCadastrosAnalisesRoute
+  AuthenticatedCadastrosEquipamentosRoute: typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
+  AuthenticatedCadastrosParametrosRoute: typeof AuthenticatedCadastrosParametrosRoute
+  AuthenticatedCadastrosProdutosRoute: typeof AuthenticatedCadastrosProdutosRoute
+  AuthenticatedCadastrosTanquesRoute: typeof AuthenticatedCadastrosTanquesRoute
+}
+
+const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedCadastrosAnalisesRoute: AuthenticatedCadastrosAnalisesRoute,
+  AuthenticatedCadastrosEquipamentosRoute:
+    AuthenticatedCadastrosEquipamentosRouteWithChildren,
+  AuthenticatedCadastrosParametrosRoute: AuthenticatedCadastrosParametrosRoute,
+  AuthenticatedCadastrosProdutosRoute: AuthenticatedCadastrosProdutosRoute,
+  AuthenticatedCadastrosTanquesRoute: AuthenticatedCadastrosTanquesRoute,
+}
+
+const AuthenticatedRouteRouteWithChildren =
+  AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
