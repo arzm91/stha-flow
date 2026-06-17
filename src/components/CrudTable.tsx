@@ -126,7 +126,7 @@ export function CrudTable({
             <DialogTrigger asChild>
               <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" /> Novo</Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-lg overflow-y-auto sm:max-w-xl">
               <DialogHeader>
                 <DialogTitle>{editing ? "Editar" : "Novo registro"}</DialogTitle>
                 <DialogDescription>Preencha os campos abaixo.</DialogDescription>
