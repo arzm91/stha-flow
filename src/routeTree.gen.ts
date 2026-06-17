@@ -21,6 +21,7 @@ import { Route as AuthenticatedEstoqueRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedCadastrosRouteImport } from './routes/_authenticated/cadastros'
+import { Route as AuthenticatedTagsIndexRouteImport } from './routes/_authenticated/tags.index'
 import { Route as AuthenticatedProducaoIndexRouteImport } from './routes/_authenticated/producao.index'
 import { Route as AuthenticatedEstoqueIndexRouteImport } from './routes/_authenticated/estoque.index'
 import { Route as ApiPublicTagsRouteImport } from './routes/api/public/tags'
@@ -100,6 +101,11 @@ const AuthenticatedCadastrosRoute = AuthenticatedCadastrosRouteImport.update({
   id: '/cadastros',
   path: '/cadastros',
   getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedTagsIndexRoute = AuthenticatedTagsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedTagsRoute,
 } as any)
 const AuthenticatedProducaoIndexRoute =
   AuthenticatedProducaoIndexRouteImport.update({
@@ -234,6 +240,7 @@ export interface FileRoutesByFullPath {
   '/api/public/tags': typeof ApiPublicTagsRouteWithChildren
   '/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/producao/': typeof AuthenticatedProducaoIndexRoute
+  '/tags/': typeof AuthenticatedTagsIndexRoute
   '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
   '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
@@ -247,7 +254,6 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/indicadores': typeof AuthenticatedIndicadoresRoute
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
-  '/tags': typeof AuthenticatedTagsRouteWithChildren
   '/cadastros/analises': typeof AuthenticatedCadastrosAnalisesRoute
   '/cadastros/equipamentos': typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
   '/cadastros/parametros': typeof AuthenticatedCadastrosParametrosRoute
@@ -263,6 +269,7 @@ export interface FileRoutesByTo {
   '/api/public/tags': typeof ApiPublicTagsRouteWithChildren
   '/estoque': typeof AuthenticatedEstoqueIndexRoute
   '/producao': typeof AuthenticatedProducaoIndexRoute
+  '/tags': typeof AuthenticatedTagsIndexRoute
   '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
   '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
@@ -296,6 +303,7 @@ export interface FileRoutesById {
   '/api/public/tags': typeof ApiPublicTagsRouteWithChildren
   '/_authenticated/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/_authenticated/producao/': typeof AuthenticatedProducaoIndexRoute
+  '/_authenticated/tags/': typeof AuthenticatedTagsIndexRoute
   '/_authenticated/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
   '/_authenticated/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
@@ -329,6 +337,7 @@ export interface FileRouteTypes {
     | '/api/public/tags'
     | '/estoque/'
     | '/producao/'
+    | '/tags/'
     | '/cadastros/equipamentos/$id'
     | '/estoque/tanques/$id'
     | '/api/public/tags/poll'
@@ -342,7 +351,6 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/indicadores'
     | '/relatorios'
-    | '/tags'
     | '/cadastros/analises'
     | '/cadastros/equipamentos'
     | '/cadastros/parametros'
@@ -358,6 +366,7 @@ export interface FileRouteTypes {
     | '/api/public/tags'
     | '/estoque'
     | '/producao'
+    | '/tags'
     | '/cadastros/equipamentos/$id'
     | '/estoque/tanques/$id'
     | '/api/public/tags/poll'
@@ -390,6 +399,7 @@ export interface FileRouteTypes {
     | '/api/public/tags'
     | '/_authenticated/estoque/'
     | '/_authenticated/producao/'
+    | '/_authenticated/tags/'
     | '/_authenticated/cadastros/equipamentos/$id'
     | '/_authenticated/estoque/tanques/$id'
     | '/api/public/tags/poll'
@@ -488,6 +498,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/cadastros'
       preLoaderRoute: typeof AuthenticatedCadastrosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/tags/': {
+      id: '/_authenticated/tags/'
+      path: '/'
+      fullPath: '/tags/'
+      preLoaderRoute: typeof AuthenticatedTagsIndexRouteImport
+      parentRoute: typeof AuthenticatedTagsRoute
     }
     '/_authenticated/producao/': {
       id: '/_authenticated/producao/'
@@ -710,10 +727,12 @@ const AuthenticatedRelatoriosRouteWithChildren =
 
 interface AuthenticatedTagsRouteChildren {
   AuthenticatedTagsEndpointsRoute: typeof AuthenticatedTagsEndpointsRoute
+  AuthenticatedTagsIndexRoute: typeof AuthenticatedTagsIndexRoute
 }
 
 const AuthenticatedTagsRouteChildren: AuthenticatedTagsRouteChildren = {
   AuthenticatedTagsEndpointsRoute: AuthenticatedTagsEndpointsRoute,
+  AuthenticatedTagsIndexRoute: AuthenticatedTagsIndexRoute,
 }
 
 const AuthenticatedTagsRouteWithChildren =
