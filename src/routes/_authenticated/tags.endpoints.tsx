@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
@@ -10,7 +10,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +25,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -27,10 +33,31 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { EmptyState } from "@/components/EmptyState";
 import { toast } from "sonner";
-import { ArrowLeft, Copy, Pencil, Play, Plus, Radio, Trash2 } from "lucide-react";
-import { formatDate } from "@/lib/format";
+import {
+  ArrowLeft,
+  Copy,
+  Pencil,
+  Play,
+  Plus,
+  Radio,
+  RefreshCw,
+  Trash2,
+  Check,
+  AlertCircle,
+} from "lucide-react";
+import { formatRelative } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/tags/endpoints")({
   component: EndpointsPage,
@@ -53,15 +80,12 @@ type Endpoint = {
 
 const ingestUrl =
   typeof window !== "undefined" ? `${window.location.origin}/api/public/tags` : "/api/public/tags";
-const pollUrl =
-  typeof window !== "undefined"
-    ? `${window.location.origin}/api/public/tags/poll`
-    : "/api/public/tags/poll";
 
 function EndpointsPage() {
   const qc = useQueryClient();
   const [openForm, setOpenForm] = useState(false);
   const [editing, setEditing] = useState<Endpoint | null>(null);
+  const [removing, setRemoving] = useState<Endpoint | null>(null);
 
   const list = useQuery({
     queryKey: ["tag_endpoints"],
@@ -99,7 +123,7 @@ function EndpointsPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tag_endpoints"] }),
   });
 
-  const runNow = useMutation({
+  const runOne = useMutation({
     mutationFn: async (id: string) => {
       const res = await fetch(`/api/public/tags/poll?id=${id}&force=1`);
       const json = await res.json();
@@ -116,110 +140,143 @@ function EndpointsPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const runAll = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/public/tags/poll?force=1`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "Falha");
+      return json;
+    },
+    onSuccess: (data) => {
+      const ok = (data?.results ?? []).filter((r: any) => r.ok).length;
+      const tot = data?.processed ?? 0;
+      toast.success(`${ok}/${tot} endpoints sincronizados`);
+      qc.invalidateQueries({ queryKey: ["tag_endpoints"] });
+      qc.invalidateQueries({ queryKey: ["tags-live"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <div>
       <PageHeader
         title="Endpoints de Tags"
-        description="Configure fontes de tags via HTTP — push (envio) e pull (busca)."
+        description="Configure fontes de tags via HTTP — envio (push) e busca periódica (pull)."
         actions={
-          <div className="flex gap-2">
+          <>
             <Button variant="outline" size="sm" asChild>
               <Link to="/tags">
                 <ArrowLeft className="mr-1 h-4 w-4" /> Voltar
               </Link>
             </Button>
-            <Dialog
-              open={openForm}
-              onOpenChange={(o) => {
-                setOpenForm(o);
-                if (!o) setEditing(null);
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => runAll.mutate()}
+              disabled={runAll.isPending}
+            >
+              <RefreshCw className={`mr-1 h-4 w-4 ${runAll.isPending ? "animate-spin" : ""}`} />
+              Sincronizar tudo
+            </Button>
+            <Button
+              size="sm"
+              onClick={() => {
+                setEditing(null);
+                setOpenForm(true);
               }}
             >
-              <DialogTrigger asChild>
-                <Button size="sm">
-                  <Plus className="mr-1 h-4 w-4" /> Novo endpoint
-                </Button>
-              </DialogTrigger>
-              <EndpointForm
-                editing={editing}
-                onClose={() => {
-                  setOpenForm(false);
-                  setEditing(null);
-                }}
-              />
-            </Dialog>
-          </div>
+              <Plus className="mr-1 h-4 w-4" /> Novo endpoint
+            </Button>
+          </>
         }
       />
 
-      <div className="mb-4 grid gap-3 md:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Radio className="h-4 w-4" /> Receber tags (push)
-            </CardTitle>
-            <CardDescription>
-              Configure seu CLP/SCADA para enviar POST com JSON para a URL abaixo.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <CopyField label="URL de ingestão" value={ingestUrl} />
-            <details className="text-xs text-muted-foreground">
-              <summary className="cursor-pointer">Ver exemplo de payload</summary>
-              <pre className="mt-2 overflow-auto rounded bg-muted p-2 text-[11px]">
-{`POST ${ingestUrl}
-Content-Type: application/json
-
-{
-  "tags": [
-    { "nome": "R8.Temp", "valor": 78.4, "unidade": "°C", "grupo": "Reator 8" },
-    { "nome": "R8.Pressao", "valor": 2.1, "unidade": "bar" }
-  ]
-}`}
-            </pre>
-            </details>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Buscar tags (pull)</CardTitle>
-            <CardDescription>
-              Cadastre URLs externas — o sistema faz GET periódico e grava as tags automaticamente.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            <CopyField label="URL do worker (cron)" value={pollUrl} />
-            <p className="text-xs text-muted-foreground">
-              Já agendado a cada 1 minuto. Endpoints com intervalo menor são limitados a 1 min pelo
-              agendador.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="mb-4">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Radio className="h-4 w-4" /> Como alimentar tags neste sistema
+          </CardTitle>
+          <CardDescription>
+            Você pode usar um, dois ou os três fluxos ao mesmo tempo.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-3">
+          <FluxoCard
+            n={1}
+            titulo="Push"
+            descricao="Seu CLP/SCADA envia POST quando os valores mudam. Mais rápido e econômico."
+            extra={
+              <div className="space-y-2">
+                <CopyField label="URL" value={ingestUrl} />
+                <details className="text-xs text-muted-foreground">
+                  <summary className="cursor-pointer select-none">Ver exemplo</summary>
+                  <pre className="mt-2 overflow-auto rounded bg-muted p-2 text-[11px]">
+{`curl -X POST ${ingestUrl} \\
+  -H "Content-Type: application/json" \\
+  -d '{"tags":[
+    {"nome":"R8.Temp","valor":78.4,"unidade":"°C","grupo":"Reator 8"}
+  ]}'`}
+                  </pre>
+                </details>
+              </div>
+            }
+          />
+          <FluxoCard
+            n={2}
+            titulo="Pull"
+            descricao="Cadastre uma URL externa abaixo — o servidor faz GET a cada N segundos e grava as tags."
+            extra={
+              <p className="text-xs text-muted-foreground">
+                O agendador roda a cada 1 minuto; intervalos menores são limitados a 60s.
+              </p>
+            }
+          />
+          <FluxoCard
+            n={3}
+            titulo="Manual"
+            descricao="Crie tags na mão pela tela Tags ao Vivo — útil para testes e demonstrações."
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Fontes cadastradas (pull)</CardTitle>
+          <CardDescription>
+            URLs que o sistema consulta periodicamente para buscar tags.
+          </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {list.isLoading ? (
             <div className="p-6 text-sm text-muted-foreground">Carregando…</div>
           ) : (list.data?.length ?? 0) === 0 ? (
-            <EmptyState
-              icon={<Radio className="h-6 w-6" />}
-              title="Nenhuma fonte cadastrada"
-              description="Cadastre uma URL para o sistema buscar tags automaticamente."
-            />
+            <div className="p-6">
+              <EmptyState
+                icon={<Radio className="h-6 w-6" />}
+                title="Nenhuma fonte cadastrada"
+                description="Cadastre uma URL para o sistema buscar tags automaticamente."
+                action={
+                  <Button
+                    size="sm"
+                    onClick={() => {
+                      setEditing(null);
+                      setOpenForm(true);
+                    }}
+                  >
+                    <Plus className="mr-1 h-4 w-4" /> Novo endpoint
+                  </Button>
+                }
+              />
+            </div>
           ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>URL</TableHead>
-                  <TableHead>Intervalo</TableHead>
+                  <TableHead className="text-right">Intervalo</TableHead>
+                  <TableHead>Última execução</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Última</TableHead>
                   <TableHead>Ativo</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
@@ -228,36 +285,27 @@ Content-Type: application/json
                 {list.data!.map((ep) => (
                   <TableRow key={ep.id}>
                     <TableCell className="font-medium">{ep.nome}</TableCell>
-                    <TableCell className="max-w-[260px] truncate font-mono text-xs">
-                      {ep.metodo} {ep.url}
+                    <TableCell className="max-w-[280px] truncate font-mono text-xs">
+                      <span className="mr-1 rounded bg-muted px-1 py-0.5 text-[10px] font-semibold">
+                        {ep.metodo}
+                      </span>
+                      {ep.url}
                     </TableCell>
-                    <TableCell className="text-xs">{ep.intervalo_segundos}s</TableCell>
-                    <TableCell>
-                      {ep.ultimo_status ? (
-                        <Badge
-                          variant="outline"
-                          className={
-                            ep.ultimo_status.startsWith("OK")
-                              ? "border-success/30 bg-success/10 text-success"
-                              : "border-destructive/30 bg-destructive/10 text-destructive"
-                          }
-                        >
-                          {ep.ultimo_status}
-                        </Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                      {ep.ultimo_erro && (
-                        <div
-                          className="mt-1 max-w-[220px] truncate text-[10px] text-destructive"
-                          title={ep.ultimo_erro}
-                        >
-                          {ep.ultimo_erro}
-                        </div>
-                      )}
-                    </TableCell>
+                    <TableCell className="text-right text-xs">{ep.intervalo_segundos}s</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
-                      {ep.ultima_execucao ? formatDate(ep.ultima_execucao) : "—"}
+                      {ep.ultima_execucao ? (
+                        <>
+                          {formatRelative(ep.ultima_execucao)}
+                          {ep.tags_recebidas > 0 && (
+                            <div className="text-[10px]">{ep.tags_recebidas} tags</div>
+                          )}
+                        </>
+                      ) : (
+                        "nunca"
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={ep.ultimo_status} erro={ep.ultimo_erro} />
                     </TableCell>
                     <TableCell>
                       <Switch checked={ep.ativo} onCheckedChange={() => toggle.mutate(ep)} />
@@ -267,8 +315,8 @@ Content-Type: application/json
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => runNow.mutate(ep.id)}
-                          disabled={runNow.isPending}
+                          onClick={() => runOne.mutate(ep.id)}
+                          disabled={runOne.isPending}
                           title="Sincronizar agora"
                         >
                           <Play className="h-4 w-4" />
@@ -280,15 +328,15 @@ Content-Type: application/json
                             setEditing(ep);
                             setOpenForm(true);
                           }}
+                          title="Editar"
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => {
-                            if (confirm(`Remover endpoint "${ep.nome}"?`)) remove.mutate(ep.id);
-                          }}
+                          onClick={() => setRemoving(ep)}
+                          title="Remover"
                         >
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
@@ -301,6 +349,88 @@ Content-Type: application/json
           )}
         </CardContent>
       </Card>
+
+      <EndpointForm
+        open={openForm}
+        editing={editing}
+        onClose={() => {
+          setOpenForm(false);
+          setEditing(null);
+        }}
+      />
+
+      <AlertDialog open={!!removing} onOpenChange={(o) => !o && setRemoving(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover endpoint?</AlertDialogTitle>
+            <AlertDialogDescription>
+              O endpoint <strong>{removing?.nome}</strong> deixará de ser consultado. As tags já
+              recebidas continuam disponíveis.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                if (removing) remove.mutate(removing.id);
+                setRemoving(null);
+              }}
+            >
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
+
+function FluxoCard({
+  n,
+  titulo,
+  descricao,
+  extra,
+}: {
+  n: number;
+  titulo: string;
+  descricao: string;
+  extra?: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-lg border bg-card/40 p-3">
+      <div className="mb-1 flex items-center gap-2">
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/15 text-[11px] font-semibold text-primary">
+          {n}
+        </span>
+        <span className="text-sm font-semibold">{titulo}</span>
+      </div>
+      <p className="mb-2 text-xs text-muted-foreground">{descricao}</p>
+      {extra}
+    </div>
+  );
+}
+
+function StatusBadge({ status, erro }: { status: string | null; erro: string | null }) {
+  if (!status) return <span className="text-xs text-muted-foreground">—</span>;
+  const ok = status.startsWith("OK");
+  return (
+    <div className="space-y-1">
+      <Badge
+        variant="outline"
+        className={
+          ok
+            ? "border-success/30 bg-success/10 text-success"
+            : "border-destructive/30 bg-destructive/10 text-destructive"
+        }
+      >
+        {status}
+      </Badge>
+      {erro && (
+        <div className="max-w-[220px] truncate text-[10px] text-destructive" title={erro}>
+          {erro}
+        </div>
+      )}
     </div>
   );
 }
@@ -308,57 +438,143 @@ Content-Type: application/json
 function CopyField({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <Label className="text-xs">{label}</Label>
+      <Label className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</Label>
       <div className="mt-1 flex gap-1">
-        <Input readOnly value={value} className="font-mono text-xs" />
+        <Input readOnly value={value} className="h-8 font-mono text-xs" />
         <Button
+          type="button"
           variant="outline"
           size="icon"
+          className="h-8 w-8 shrink-0"
           onClick={() => {
             navigator.clipboard.writeText(value);
             toast.success("Copiado");
           }}
         >
-          <Copy className="h-4 w-4" />
+          <Copy className="h-3.5 w-3.5" />
         </Button>
       </div>
     </div>
   );
 }
 
-function EndpointForm({ editing, onClose }: { editing: Endpoint | null; onClose: () => void }) {
+function EndpointForm({
+  open,
+  editing,
+  onClose,
+}: {
+  open: boolean;
+  editing: Endpoint | null;
+  onClose: () => void;
+}) {
   const qc = useQueryClient();
-  const [nome, setNome] = useState(editing?.nome ?? "");
-  const [url, setUrl] = useState(editing?.url ?? "");
-  const [metodo, setMetodo] = useState(editing?.metodo ?? "GET");
-  const [intervalo, setIntervalo] = useState(String(editing?.intervalo_segundos ?? 60));
-  const [headersText, setHeadersText] = useState(
-    editing?.headers ? JSON.stringify(editing.headers, null, 2) : "",
-  );
-  const [body, setBody] = useState(editing?.body ?? "");
-  const [ativo, setAtivo] = useState(editing?.ativo ?? true);
+  const [nome, setNome] = useState("");
+  const [url, setUrl] = useState("");
+  const [metodo, setMetodo] = useState("GET");
+  const [intervalo, setIntervalo] = useState("60");
+  const [headersText, setHeadersText] = useState("");
+  const [body, setBody] = useState("");
+  const [ativo, setAtivo] = useState(true);
+  const [testResult, setTestResult] = useState<
+    | { ok: true; count: number; sample?: string }
+    | { ok: false; message: string }
+    | null
+  >(null);
+
+  useEffect(() => {
+    if (open) {
+      setNome(editing?.nome ?? "");
+      setUrl(editing?.url ?? "");
+      setMetodo(editing?.metodo ?? "GET");
+      setIntervalo(String(editing?.intervalo_segundos ?? 60));
+      setHeadersText(editing?.headers ? JSON.stringify(editing.headers, null, 2) : "");
+      setBody(editing?.body ?? "");
+      setAtivo(editing?.ativo ?? true);
+      setTestResult(null);
+    }
+  }, [open, editing]);
+
+  function validate(): { headers: Record<string, string>; payload: any } {
+    const u = url.trim();
+    if (!nome.trim() || !u) throw new Error("Nome e URL são obrigatórios");
+    if (typeof window !== "undefined") {
+      try {
+        const parsed = new URL(u);
+        if (parsed.host === window.location.host && parsed.pathname.startsWith("/api/public/tags")) {
+          throw new Error(
+            "URL aponta para o próprio sistema — isso causaria um loop. Use a URL do seu CLP/SCADA.",
+          );
+        }
+      } catch (e: any) {
+        if (e?.message?.startsWith("URL aponta")) throw e;
+        throw new Error("URL inválida");
+      }
+    }
+    let headers: Record<string, string> = {};
+    if (headersText.trim()) {
+      try {
+        headers = JSON.parse(headersText);
+      } catch {
+        throw new Error("Headers deve ser JSON válido");
+      }
+    }
+    const payload = {
+      nome: nome.trim(),
+      url: u,
+      metodo,
+      headers,
+      body: body.trim() || null,
+      intervalo_segundos: Math.max(5, Number(intervalo) || 60),
+      ativo,
+    };
+    return { headers, payload };
+  }
+
+  const test = useMutation({
+    mutationFn: async () => {
+      const { headers } = validate();
+      const res = await fetch(url.trim(), {
+        method: metodo,
+        headers: { Accept: "application/json", ...headers },
+        body: metodo !== "GET" && body.trim() ? body : undefined,
+      });
+      const text = await res.text();
+      if (!res.ok) {
+        setTestResult({ ok: false, message: `HTTP ${res.status}: ${text.slice(0, 200)}` });
+        return;
+      }
+      let data: any;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        setTestResult({ ok: false, message: "Resposta não é JSON" });
+        return;
+      }
+      const list = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.tags)
+          ? data.tags
+          : Array.isArray(data?.data)
+            ? data.data
+            : Array.isArray(data?.items)
+              ? data.items
+              : typeof data === "object"
+                ? Object.entries(data).map(([k, v]) => ({ nome: k, valor: v }))
+                : [];
+      setTestResult({
+        ok: true,
+        count: list.length,
+        sample: JSON.stringify(list.slice(0, 3), null, 2),
+      });
+    },
+    onError: (e: any) => {
+      setTestResult({ ok: false, message: e.message });
+    },
+  });
 
   const save = useMutation({
     mutationFn: async () => {
-      let headers: Record<string, string> = {};
-      if (headersText.trim()) {
-        try {
-          headers = JSON.parse(headersText);
-        } catch {
-          throw new Error("Headers deve ser JSON válido");
-        }
-      }
-      const payload = {
-        nome: nome.trim(),
-        url: url.trim(),
-        metodo,
-        headers,
-        body: body.trim() || null,
-        intervalo_segundos: Math.max(5, Number(intervalo) || 60),
-        ativo,
-      };
-      if (!payload.nome || !payload.url) throw new Error("Nome e URL são obrigatórios");
-
+      const { payload } = validate();
       if (editing) {
         const { error } = await supabase
           .from("tag_endpoints" as never)
@@ -379,83 +595,124 @@ function EndpointForm({ editing, onClose }: { editing: Endpoint | null; onClose:
   });
 
   return (
-    <DialogContent className="max-w-lg">
-      <DialogHeader>
-        <DialogTitle>{editing ? "Editar endpoint" : "Novo endpoint"}</DialogTitle>
-        <DialogDescription>
-          Configure uma URL externa de onde as tags serão buscadas.
-        </DialogDescription>
-      </DialogHeader>
-      <div className="space-y-3">
-        <div>
-          <Label>Nome</Label>
-          <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Reator 8" />
-        </div>
-        <div className="grid grid-cols-[100px_1fr] gap-2">
+    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-lg overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>{editing ? "Editar endpoint" : "Novo endpoint"}</DialogTitle>
+          <DialogDescription>
+            URL externa que o sistema consultará periodicamente para buscar tags.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
           <div>
-            <Label>Método</Label>
-            <Select value={metodo} onValueChange={setMetodo}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="GET">GET</SelectItem>
-                <SelectItem value="POST">POST</SelectItem>
-              </SelectContent>
-            </Select>
+            <Label>Nome *</Label>
+            <Input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Reator 8" />
+          </div>
+          <div className="grid grid-cols-[100px_1fr] gap-2">
+            <div>
+              <Label>Método</Label>
+              <Select value={metodo} onValueChange={setMetodo}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="GET">GET</SelectItem>
+                  <SelectItem value="POST">POST</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label>URL *</Label>
+              <Input
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="https://seu-clp.local/api/tags"
+              />
+            </div>
           </div>
           <div>
-            <Label>URL</Label>
+            <Label>Intervalo (segundos)</Label>
             <Input
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://seu-clp.local/api/tags"
+              type="number"
+              min={5}
+              value={intervalo}
+              onChange={(e) => setIntervalo(e.target.value)}
             />
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              O agendador roda a cada 60s. Valores menores são limitados a 60s na prática.
+            </p>
           </div>
-        </div>
-        <div>
-          <Label>Intervalo (segundos)</Label>
-          <Input
-            type="number"
-            min={5}
-            value={intervalo}
-            onChange={(e) => setIntervalo(e.target.value)}
-          />
-        </div>
-        <div>
-          <Label>Headers (JSON, opcional)</Label>
-          <Textarea
-            value={headersText}
-            onChange={(e) => setHeadersText(e.target.value)}
-            placeholder={`{ "Authorization": "Bearer ..." }`}
-            rows={3}
-            className="font-mono text-xs"
-          />
-        </div>
-        {metodo === "POST" && (
           <div>
-            <Label>Body (opcional)</Label>
+            <Label>Headers (JSON, opcional)</Label>
             <Textarea
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
+              value={headersText}
+              onChange={(e) => setHeadersText(e.target.value)}
+              placeholder={`{ "Authorization": "Bearer ..." }`}
               rows={3}
               className="font-mono text-xs"
             />
           </div>
-        )}
-        <div className="flex items-center gap-2">
-          <Switch checked={ativo} onCheckedChange={setAtivo} />
-          <Label>Ativo</Label>
+          {metodo === "POST" && (
+            <div>
+              <Label>Body (opcional)</Label>
+              <Textarea
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                rows={3}
+                className="font-mono text-xs"
+              />
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <Switch checked={ativo} onCheckedChange={setAtivo} />
+            <Label>Ativo</Label>
+          </div>
+
+          {testResult && (
+            <div
+              className={`rounded border p-2 text-xs ${
+                testResult.ok
+                  ? "border-success/30 bg-success/10 text-success"
+                  : "border-destructive/30 bg-destructive/10 text-destructive"
+              }`}
+            >
+              <div className="flex items-center gap-1 font-medium">
+                {testResult.ok ? (
+                  <>
+                    <Check className="h-3.5 w-3.5" /> Resposta OK — {testResult.count} tags detectadas
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="h-3.5 w-3.5" /> Falha no teste
+                  </>
+                )}
+              </div>
+              {testResult.ok && testResult.sample && (
+                <pre className="mt-2 max-h-32 overflow-auto rounded bg-background/50 p-1 font-mono text-[10px]">
+                  {testResult.sample}
+                </pre>
+              )}
+              {!testResult.ok && <div className="mt-1">{testResult.message}</div>}
+            </div>
+          )}
         </div>
-      </div>
-      <DialogFooter>
-        <Button variant="outline" onClick={onClose}>
-          Cancelar
-        </Button>
-        <Button onClick={() => save.mutate()} disabled={save.isPending}>
-          {save.isPending ? "Salvando…" : "Salvar"}
-        </Button>
-      </DialogFooter>
-    </DialogContent>
+        <DialogFooter className="gap-2 sm:gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => test.mutate()}
+            disabled={test.isPending}
+          >
+            {test.isPending ? "Testando…" : "Testar agora"}
+          </Button>
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            {save.isPending ? "Salvando…" : "Salvar"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
