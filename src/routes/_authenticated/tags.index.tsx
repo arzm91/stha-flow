@@ -512,7 +512,7 @@ function DeleteTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => 
   const remover = useMutation({
     mutationFn: async () => {
       if (!tag) return;
-      const { error } = await supabase.rpc("delete_tag" as never, { _nome: tag.nome } as never);
+      const { error } = await supabase.from("tags_live").delete().eq("nome", tag.nome);
       if (error) throw error;
     },
     onSuccess: () => {
