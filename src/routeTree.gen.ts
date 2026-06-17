@@ -13,12 +13,24 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
+import { Route as AuthenticatedProducaoRouteImport } from './routes/_authenticated/producao'
+import { Route as AuthenticatedIndicadoresRouteImport } from './routes/_authenticated/indicadores'
+import { Route as AuthenticatedEstoqueRouteImport } from './routes/_authenticated/estoque'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
+import { Route as AuthenticatedRelatoriosQualidadeRouteImport } from './routes/_authenticated/relatorios.qualidade'
+import { Route as AuthenticatedRelatoriosProducaoRouteImport } from './routes/_authenticated/relatorios.producao'
+import { Route as AuthenticatedRelatoriosEstoqueRouteImport } from './routes/_authenticated/relatorios.estoque'
+import { Route as AuthenticatedProducaoNovaRouteImport } from './routes/_authenticated/producao.nova'
+import { Route as AuthenticatedProducaoIdRouteImport } from './routes/_authenticated/producao.$id'
+import { Route as AuthenticatedEstoqueMovimentacaoRouteImport } from './routes/_authenticated/estoque.movimentacao'
 import { Route as AuthenticatedCadastrosTanquesRouteImport } from './routes/_authenticated/cadastros.tanques'
 import { Route as AuthenticatedCadastrosProdutosRouteImport } from './routes/_authenticated/cadastros.produtos'
 import { Route as AuthenticatedCadastrosParametrosRouteImport } from './routes/_authenticated/cadastros.parametros'
 import { Route as AuthenticatedCadastrosEquipamentosRouteImport } from './routes/_authenticated/cadastros.equipamentos'
 import { Route as AuthenticatedCadastrosAnalisesRouteImport } from './routes/_authenticated/cadastros.analises'
+import { Route as AuthenticatedEstoqueTanquesIdRouteImport } from './routes/_authenticated/estoque.tanques.$id'
 import { Route as AuthenticatedCadastrosEquipamentosIdRouteImport } from './routes/_authenticated/cadastros.equipamentos.$id'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
@@ -40,11 +52,73 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
+  id: '/relatorios',
+  path: '/relatorios',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedProducaoRoute = AuthenticatedProducaoRouteImport.update({
+  id: '/producao',
+  path: '/producao',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedIndicadoresRoute =
+  AuthenticatedIndicadoresRouteImport.update({
+    id: '/indicadores',
+    path: '/indicadores',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedEstoqueRoute = AuthenticatedEstoqueRouteImport.update({
+  id: '/estoque',
+  path: '/estoque',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedConfiguracoesRoute =
+  AuthenticatedConfiguracoesRouteImport.update({
+    id: '/configuracoes',
+    path: '/configuracoes',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedRelatoriosQualidadeRoute =
+  AuthenticatedRelatoriosQualidadeRouteImport.update({
+    id: '/qualidade',
+    path: '/qualidade',
+    getParentRoute: () => AuthenticatedRelatoriosRoute,
+  } as any)
+const AuthenticatedRelatoriosProducaoRoute =
+  AuthenticatedRelatoriosProducaoRouteImport.update({
+    id: '/producao',
+    path: '/producao',
+    getParentRoute: () => AuthenticatedRelatoriosRoute,
+  } as any)
+const AuthenticatedRelatoriosEstoqueRoute =
+  AuthenticatedRelatoriosEstoqueRouteImport.update({
+    id: '/estoque',
+    path: '/estoque',
+    getParentRoute: () => AuthenticatedRelatoriosRoute,
+  } as any)
+const AuthenticatedProducaoNovaRoute =
+  AuthenticatedProducaoNovaRouteImport.update({
+    id: '/nova',
+    path: '/nova',
+    getParentRoute: () => AuthenticatedProducaoRoute,
+  } as any)
+const AuthenticatedProducaoIdRoute = AuthenticatedProducaoIdRouteImport.update({
+  id: '/$id',
+  path: '/$id',
+  getParentRoute: () => AuthenticatedProducaoRoute,
+} as any)
+const AuthenticatedEstoqueMovimentacaoRoute =
+  AuthenticatedEstoqueMovimentacaoRouteImport.update({
+    id: '/movimentacao',
+    path: '/movimentacao',
+    getParentRoute: () => AuthenticatedEstoqueRoute,
+  } as any)
 const AuthenticatedCadastrosTanquesRoute =
   AuthenticatedCadastrosTanquesRouteImport.update({
     id: '/cadastros/tanques',
@@ -75,6 +149,12 @@ const AuthenticatedCadastrosAnalisesRoute =
     path: '/cadastros/analises',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedEstoqueTanquesIdRoute =
+  AuthenticatedEstoqueTanquesIdRouteImport.update({
+    id: '/tanques/$id',
+    path: '/tanques/$id',
+    getParentRoute: () => AuthenticatedEstoqueRoute,
+  } as any)
 const AuthenticatedCadastrosEquipamentosIdRoute =
   AuthenticatedCadastrosEquipamentosIdRouteImport.update({
     id: '/$id',
@@ -86,25 +166,49 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/estoque': typeof AuthenticatedEstoqueRouteWithChildren
+  '/indicadores': typeof AuthenticatedIndicadoresRoute
+  '/producao': typeof AuthenticatedProducaoRouteWithChildren
+  '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/cadastros/analises': typeof AuthenticatedCadastrosAnalisesRoute
   '/cadastros/equipamentos': typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
   '/cadastros/parametros': typeof AuthenticatedCadastrosParametrosRoute
   '/cadastros/produtos': typeof AuthenticatedCadastrosProdutosRoute
   '/cadastros/tanques': typeof AuthenticatedCadastrosTanquesRoute
+  '/estoque/movimentacao': typeof AuthenticatedEstoqueMovimentacaoRoute
+  '/producao/$id': typeof AuthenticatedProducaoIdRoute
+  '/producao/nova': typeof AuthenticatedProducaoNovaRoute
+  '/relatorios/estoque': typeof AuthenticatedRelatoriosEstoqueRoute
+  '/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
+  '/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
   '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
+  '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/estoque': typeof AuthenticatedEstoqueRouteWithChildren
+  '/indicadores': typeof AuthenticatedIndicadoresRoute
+  '/producao': typeof AuthenticatedProducaoRouteWithChildren
+  '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/cadastros/analises': typeof AuthenticatedCadastrosAnalisesRoute
   '/cadastros/equipamentos': typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
   '/cadastros/parametros': typeof AuthenticatedCadastrosParametrosRoute
   '/cadastros/produtos': typeof AuthenticatedCadastrosProdutosRoute
   '/cadastros/tanques': typeof AuthenticatedCadastrosTanquesRoute
+  '/estoque/movimentacao': typeof AuthenticatedEstoqueMovimentacaoRoute
+  '/producao/$id': typeof AuthenticatedProducaoIdRoute
+  '/producao/nova': typeof AuthenticatedProducaoNovaRoute
+  '/relatorios/estoque': typeof AuthenticatedRelatoriosEstoqueRoute
+  '/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
+  '/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
   '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
+  '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -112,13 +216,25 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/estoque': typeof AuthenticatedEstoqueRouteWithChildren
+  '/_authenticated/indicadores': typeof AuthenticatedIndicadoresRoute
+  '/_authenticated/producao': typeof AuthenticatedProducaoRouteWithChildren
+  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/_authenticated/cadastros/analises': typeof AuthenticatedCadastrosAnalisesRoute
   '/_authenticated/cadastros/equipamentos': typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
   '/_authenticated/cadastros/parametros': typeof AuthenticatedCadastrosParametrosRoute
   '/_authenticated/cadastros/produtos': typeof AuthenticatedCadastrosProdutosRoute
   '/_authenticated/cadastros/tanques': typeof AuthenticatedCadastrosTanquesRoute
+  '/_authenticated/estoque/movimentacao': typeof AuthenticatedEstoqueMovimentacaoRoute
+  '/_authenticated/producao/$id': typeof AuthenticatedProducaoIdRoute
+  '/_authenticated/producao/nova': typeof AuthenticatedProducaoNovaRoute
+  '/_authenticated/relatorios/estoque': typeof AuthenticatedRelatoriosEstoqueRoute
+  '/_authenticated/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
+  '/_authenticated/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
   '/_authenticated/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
+  '/_authenticated/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -126,38 +242,74 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/configuracoes'
     | '/dashboard'
+    | '/estoque'
+    | '/indicadores'
+    | '/producao'
+    | '/relatorios'
     | '/cadastros/analises'
     | '/cadastros/equipamentos'
     | '/cadastros/parametros'
     | '/cadastros/produtos'
     | '/cadastros/tanques'
+    | '/estoque/movimentacao'
+    | '/producao/$id'
+    | '/producao/nova'
+    | '/relatorios/estoque'
+    | '/relatorios/producao'
+    | '/relatorios/qualidade'
     | '/cadastros/equipamentos/$id'
+    | '/estoque/tanques/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/configuracoes'
     | '/dashboard'
+    | '/estoque'
+    | '/indicadores'
+    | '/producao'
+    | '/relatorios'
     | '/cadastros/analises'
     | '/cadastros/equipamentos'
     | '/cadastros/parametros'
     | '/cadastros/produtos'
     | '/cadastros/tanques'
+    | '/estoque/movimentacao'
+    | '/producao/$id'
+    | '/producao/nova'
+    | '/relatorios/estoque'
+    | '/relatorios/producao'
+    | '/relatorios/qualidade'
     | '/cadastros/equipamentos/$id'
+    | '/estoque/tanques/$id'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
     | '/reset-password'
+    | '/_authenticated/configuracoes'
     | '/_authenticated/dashboard'
+    | '/_authenticated/estoque'
+    | '/_authenticated/indicadores'
+    | '/_authenticated/producao'
+    | '/_authenticated/relatorios'
     | '/_authenticated/cadastros/analises'
     | '/_authenticated/cadastros/equipamentos'
     | '/_authenticated/cadastros/parametros'
     | '/_authenticated/cadastros/produtos'
     | '/_authenticated/cadastros/tanques'
+    | '/_authenticated/estoque/movimentacao'
+    | '/_authenticated/producao/$id'
+    | '/_authenticated/producao/nova'
+    | '/_authenticated/relatorios/estoque'
+    | '/_authenticated/relatorios/producao'
+    | '/_authenticated/relatorios/qualidade'
     | '/_authenticated/cadastros/equipamentos/$id'
+    | '/_authenticated/estoque/tanques/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -197,12 +349,89 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/relatorios': {
+      id: '/_authenticated/relatorios'
+      path: '/relatorios'
+      fullPath: '/relatorios'
+      preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/producao': {
+      id: '/_authenticated/producao'
+      path: '/producao'
+      fullPath: '/producao'
+      preLoaderRoute: typeof AuthenticatedProducaoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/indicadores': {
+      id: '/_authenticated/indicadores'
+      path: '/indicadores'
+      fullPath: '/indicadores'
+      preLoaderRoute: typeof AuthenticatedIndicadoresRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/estoque': {
+      id: '/_authenticated/estoque'
+      path: '/estoque'
+      fullPath: '/estoque'
+      preLoaderRoute: typeof AuthenticatedEstoqueRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/configuracoes': {
+      id: '/_authenticated/configuracoes'
+      path: '/configuracoes'
+      fullPath: '/configuracoes'
+      preLoaderRoute: typeof AuthenticatedConfiguracoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/relatorios/qualidade': {
+      id: '/_authenticated/relatorios/qualidade'
+      path: '/qualidade'
+      fullPath: '/relatorios/qualidade'
+      preLoaderRoute: typeof AuthenticatedRelatoriosQualidadeRouteImport
+      parentRoute: typeof AuthenticatedRelatoriosRoute
+    }
+    '/_authenticated/relatorios/producao': {
+      id: '/_authenticated/relatorios/producao'
+      path: '/producao'
+      fullPath: '/relatorios/producao'
+      preLoaderRoute: typeof AuthenticatedRelatoriosProducaoRouteImport
+      parentRoute: typeof AuthenticatedRelatoriosRoute
+    }
+    '/_authenticated/relatorios/estoque': {
+      id: '/_authenticated/relatorios/estoque'
+      path: '/estoque'
+      fullPath: '/relatorios/estoque'
+      preLoaderRoute: typeof AuthenticatedRelatoriosEstoqueRouteImport
+      parentRoute: typeof AuthenticatedRelatoriosRoute
+    }
+    '/_authenticated/producao/nova': {
+      id: '/_authenticated/producao/nova'
+      path: '/nova'
+      fullPath: '/producao/nova'
+      preLoaderRoute: typeof AuthenticatedProducaoNovaRouteImport
+      parentRoute: typeof AuthenticatedProducaoRoute
+    }
+    '/_authenticated/producao/$id': {
+      id: '/_authenticated/producao/$id'
+      path: '/$id'
+      fullPath: '/producao/$id'
+      preLoaderRoute: typeof AuthenticatedProducaoIdRouteImport
+      parentRoute: typeof AuthenticatedProducaoRoute
+    }
+    '/_authenticated/estoque/movimentacao': {
+      id: '/_authenticated/estoque/movimentacao'
+      path: '/movimentacao'
+      fullPath: '/estoque/movimentacao'
+      preLoaderRoute: typeof AuthenticatedEstoqueMovimentacaoRouteImport
+      parentRoute: typeof AuthenticatedEstoqueRoute
     }
     '/_authenticated/cadastros/tanques': {
       id: '/_authenticated/cadastros/tanques'
@@ -239,6 +468,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCadastrosAnalisesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/estoque/tanques/$id': {
+      id: '/_authenticated/estoque/tanques/$id'
+      path: '/tanques/$id'
+      fullPath: '/estoque/tanques/$id'
+      preLoaderRoute: typeof AuthenticatedEstoqueTanquesIdRouteImport
+      parentRoute: typeof AuthenticatedEstoqueRoute
+    }
     '/_authenticated/cadastros/equipamentos/$id': {
       id: '/_authenticated/cadastros/equipamentos/$id'
       path: '/$id'
@@ -248,6 +484,53 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AuthenticatedEstoqueRouteChildren {
+  AuthenticatedEstoqueMovimentacaoRoute: typeof AuthenticatedEstoqueMovimentacaoRoute
+  AuthenticatedEstoqueTanquesIdRoute: typeof AuthenticatedEstoqueTanquesIdRoute
+}
+
+const AuthenticatedEstoqueRouteChildren: AuthenticatedEstoqueRouteChildren = {
+  AuthenticatedEstoqueMovimentacaoRoute: AuthenticatedEstoqueMovimentacaoRoute,
+  AuthenticatedEstoqueTanquesIdRoute: AuthenticatedEstoqueTanquesIdRoute,
+}
+
+const AuthenticatedEstoqueRouteWithChildren =
+  AuthenticatedEstoqueRoute._addFileChildren(AuthenticatedEstoqueRouteChildren)
+
+interface AuthenticatedProducaoRouteChildren {
+  AuthenticatedProducaoIdRoute: typeof AuthenticatedProducaoIdRoute
+  AuthenticatedProducaoNovaRoute: typeof AuthenticatedProducaoNovaRoute
+}
+
+const AuthenticatedProducaoRouteChildren: AuthenticatedProducaoRouteChildren = {
+  AuthenticatedProducaoIdRoute: AuthenticatedProducaoIdRoute,
+  AuthenticatedProducaoNovaRoute: AuthenticatedProducaoNovaRoute,
+}
+
+const AuthenticatedProducaoRouteWithChildren =
+  AuthenticatedProducaoRoute._addFileChildren(
+    AuthenticatedProducaoRouteChildren,
+  )
+
+interface AuthenticatedRelatoriosRouteChildren {
+  AuthenticatedRelatoriosEstoqueRoute: typeof AuthenticatedRelatoriosEstoqueRoute
+  AuthenticatedRelatoriosProducaoRoute: typeof AuthenticatedRelatoriosProducaoRoute
+  AuthenticatedRelatoriosQualidadeRoute: typeof AuthenticatedRelatoriosQualidadeRoute
+}
+
+const AuthenticatedRelatoriosRouteChildren: AuthenticatedRelatoriosRouteChildren =
+  {
+    AuthenticatedRelatoriosEstoqueRoute: AuthenticatedRelatoriosEstoqueRoute,
+    AuthenticatedRelatoriosProducaoRoute: AuthenticatedRelatoriosProducaoRoute,
+    AuthenticatedRelatoriosQualidadeRoute:
+      AuthenticatedRelatoriosQualidadeRoute,
+  }
+
+const AuthenticatedRelatoriosRouteWithChildren =
+  AuthenticatedRelatoriosRoute._addFileChildren(
+    AuthenticatedRelatoriosRouteChildren,
+  )
 
 interface AuthenticatedCadastrosEquipamentosRouteChildren {
   AuthenticatedCadastrosEquipamentosIdRoute: typeof AuthenticatedCadastrosEquipamentosIdRoute
@@ -265,7 +548,12 @@ const AuthenticatedCadastrosEquipamentosRouteWithChildren =
   )
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedEstoqueRoute: typeof AuthenticatedEstoqueRouteWithChildren
+  AuthenticatedIndicadoresRoute: typeof AuthenticatedIndicadoresRoute
+  AuthenticatedProducaoRoute: typeof AuthenticatedProducaoRouteWithChildren
+  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
   AuthenticatedCadastrosAnalisesRoute: typeof AuthenticatedCadastrosAnalisesRoute
   AuthenticatedCadastrosEquipamentosRoute: typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
   AuthenticatedCadastrosParametrosRoute: typeof AuthenticatedCadastrosParametrosRoute
@@ -274,7 +562,12 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedEstoqueRoute: AuthenticatedEstoqueRouteWithChildren,
+  AuthenticatedIndicadoresRoute: AuthenticatedIndicadoresRoute,
+  AuthenticatedProducaoRoute: AuthenticatedProducaoRouteWithChildren,
+  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
   AuthenticatedCadastrosAnalisesRoute: AuthenticatedCadastrosAnalisesRoute,
   AuthenticatedCadastrosEquipamentosRoute:
     AuthenticatedCadastrosEquipamentosRouteWithChildren,
