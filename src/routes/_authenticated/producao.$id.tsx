@@ -106,7 +106,7 @@ function OPPage() {
         <Info label="Qtd. planejada / produzida" value={`${formatNumber(Number(op.data.qtd_planejada))} / ${op.data.qtd_produzida != null ? formatNumber(Number(op.data.qtd_produzida)) : "—"}`} />
       </div>
 
-      <TagsDoEquipamento tagNomes={((op.data.equipamento as any)?.tag_nomes ?? []) as string[]} />
+      <TagsDoEquipamento tagNomes={((op.data.equipamento as any)?.tag_nomes ?? []) as string[]} ordemId={id} disabled={isFinal} />
 
       <Tabs defaultValue="parametros">
         <TabsList>
@@ -186,7 +186,10 @@ function Info({ label, value }: { label: string; value: string }) {
   );
 }
 
-function TagsDoEquipamento({ tagNomes }: { tagNomes: string[] }) {
+function TagsDoEquipamento({ tagNomes, ordemId, disabled }: { tagNomes: string[]; ordemId: string; disabled: boolean }) {
+  const qc = useQueryClient();
+  const [savingTag, setSavingTag] = useState<string | null>(null);
+
   const tags = useQuery({
     queryKey: ["equip-tags-live", tagNomes.slice().sort().join(",")],
     enabled: tagNomes.length > 0,
@@ -201,6 +204,48 @@ function TagsDoEquipamento({ tagNomes }: { tagNomes: string[] }) {
     },
   });
 
+  const registrar = async (t: any) => {
+    if (disabled) return toast.error("Ordem finalizada — não é possível registrar.");
+    if (t?.valor_num == null) return toast.error("Tag sem valor numérico para registrar.");
+    setSavingTag(t.nome);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Não autenticado");
+      // Localizar ou criar parâmetro cadastrado com o mesmo nome da tag
+      const { data: existing, error: selErr } = await supabase
+        .from("parametros_cadastro")
+        .select("id")
+        .eq("owner_id", u.user.id)
+        .eq("nome", t.nome)
+        .maybeSingle();
+      if (selErr) throw selErr;
+      let parametroId = existing?.id;
+      if (!parametroId) {
+        const { data: created, error: insErr } = await supabase
+          .from("parametros_cadastro")
+          .insert({ owner_id: u.user.id, nome: t.nome, unidade: t.unidade ?? null, valor_min: t.valor_min ?? null, valor_max: t.valor_max ?? null })
+          .select("id").single();
+        if (insErr) throw insErr;
+        parametroId = created.id;
+      }
+      const { error: regErr } = await supabase.from("parametros_registrados").insert({
+        owner_id: u.user.id,
+        ordem_id: ordemId,
+        parametro_id: parametroId,
+        valor: Number(t.valor_num),
+        registrado_em: new Date().toISOString(),
+      });
+      if (regErr) throw regErr;
+      toast.success(`${t.nome} registrado: ${t.valor_num}${t.unidade ? " " + t.unidade : ""}`);
+      qc.invalidateQueries({ queryKey: ["params", ordemId] });
+      qc.invalidateQueries({ queryKey: ["param-cat"] });
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally {
+      setSavingTag(null);
+    }
+  };
+
   if (tagNomes.length === 0) return null;
 
   const byName = new Map((tags.data ?? []).map((t) => [t.nome, t]));
@@ -212,7 +257,7 @@ function TagsDoEquipamento({ tagNomes }: { tagNomes: string[] }) {
           <Activity className="h-4 w-4 text-primary" />
           Tags do equipamento
         </CardTitle>
-        <span className="text-xs text-muted-foreground">Atualização a cada 5s</span>
+        <span className="text-xs text-muted-foreground">Clique para registrar o valor atual</span>
       </CardHeader>
       <CardContent>
         <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-4">
@@ -222,8 +267,17 @@ function TagsDoEquipamento({ tagNomes }: { tagNomes: string[] }) {
             const min = t?.valor_min != null ? Number(t.valor_min) : null;
             const max = t?.valor_max != null ? Number(t.valor_max) : null;
             const fora = num != null && ((min != null && num < min) || (max != null && num > max));
+            const clickable = !!t && num != null && !disabled;
+            const saving = savingTag === nome;
             return (
-              <div key={nome} className={`rounded-md border p-3 ${fora ? "border-destructive/40 bg-destructive/5" : "border-border bg-muted/20"}`}>
+              <button
+                type="button"
+                key={nome}
+                onClick={() => clickable && registrar(t)}
+                disabled={!clickable || saving}
+                title={clickable ? "Clique para registrar este valor no histórico" : disabled ? "Ordem finalizada" : "Sem valor numérico"}
+                className={`text-left rounded-md border p-3 transition ${fora ? "border-destructive/40 bg-destructive/5" : "border-border bg-muted/20"} ${clickable ? "hover:border-primary/60 hover:bg-primary/5 cursor-pointer" : "opacity-70 cursor-not-allowed"} ${saving ? "ring-2 ring-primary" : ""}`}
+              >
                 <div className="flex items-center justify-between gap-2">
                   <span className="truncate font-mono text-xs text-muted-foreground" title={nome}>{nome}</span>
                   {fora ? <AlertTriangle className="h-3.5 w-3.5 text-destructive" /> : null}
@@ -236,12 +290,8 @@ function TagsDoEquipamento({ tagNomes }: { tagNomes: string[] }) {
                   <span>{t?.grupo ?? ""}</span>
                   <span>{t?.atualizado_em ? formatDate(t.atualizado_em) : ""}</span>
                 </div>
-                {min != null || max != null ? (
-                  <div className="mt-0.5 text-[10px] text-muted-foreground">
-                    Limites: {min ?? "—"} / {max ?? "—"}
-                  </div>
-                ) : null}
-              </div>
+                {saving ? <div className="mt-1 text-[10px] text-primary">Registrando...</div> : null}
+              </button>
             );
           })}
         </div>
