@@ -437,7 +437,7 @@ function EndpointForm({
       }
     }
     const seg = parseInt(intervalo, 10);
-    if (!Number.isFinite(seg) || seg < 60) throw new Error("Intervalo mínimo é 60 segundos");
+    if (!Number.isFinite(seg) || seg < 2) throw new Error("Intervalo mínimo é 2 segundos");
 
     return {
       headers,
