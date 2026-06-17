@@ -50,6 +50,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { formatRelative } from "@/lib/format";
+import { syncAllTagEndpoints, syncTagEndpointById, testTagEndpointUrl } from "@/lib/tagEndpointSync";
 
 export const Route = createFileRoute("/_authenticated/tags/endpoints")({
   component: EndpointsPage,
@@ -112,15 +113,12 @@ function EndpointsPage() {
 
   const runOne = useMutation({
     mutationFn: async (id: string) => {
-      const res = await fetch(`/api/public/tags/poll?id=${id}&force=1`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Falha");
-      return json;
+      return syncTagEndpointById(id);
     },
     onSuccess: (data) => {
       const r = data?.results?.[0];
       if (r?.ok) toast.success(`Sincronizado: ${r.count ?? 0} tags`);
-      else toast.error(r?.error || `Falha: ${r?.status ?? "?"}`);
+      else toast.error(r?.error || "Falha ao sincronizar");
       qc.invalidateQueries({ queryKey: ["tag_endpoints"] });
       qc.invalidateQueries({ queryKey: ["tags-live"] });
     },
@@ -129,10 +127,7 @@ function EndpointsPage() {
 
   const runAll = useMutation({
     mutationFn: async () => {
-      const res = await fetch(`/api/public/tags/poll?force=1`);
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Falha");
-      return json;
+      return syncAllTagEndpoints();
     },
     onSuccess: (data) => {
       const ok = (data?.results ?? []).filter((r: any) => r.ok).length;
@@ -485,17 +480,8 @@ function EndpointForm({
       return;
     }
     try {
-      const res = await fetch(`/api/public/tags/poll?test=1`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: url.trim(), headers }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        setTestResult({ ok: true, count: data.count ?? 0, sample: data.sample });
-      } else {
-        setTestResult({ ok: false, message: data.message || `HTTP ${res.status}` });
-      }
+      const data = await testTagEndpointUrl(url.trim(), headers);
+      setTestResult({ ok: true, count: data.count ?? 0, sample: data.sample });
     } catch (e: any) {
       setTestResult({ ok: false, message: e.message });
     }
