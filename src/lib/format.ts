@@ -32,3 +32,18 @@ export function formatDuration(ms: number | null | undefined): string {
 export function durationBetween(start: string | Date, end: string | Date): string {
   return formatDuration(new Date(end).getTime() - new Date(start).getTime());
 }
+
+export function formatRelative(d: string | Date | null | undefined): string {
+  if (!d) return "—";
+  const date = typeof d === "string" ? new Date(d) : d;
+  const diffSec = Math.floor((Date.now() - date.getTime()) / 1000);
+  if (diffSec < 5) return "agora";
+  if (diffSec < 60) return `há ${diffSec}s`;
+  const m = Math.floor(diffSec / 60);
+  if (m < 60) return `há ${m}min`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `há ${h}h`;
+  const days = Math.floor(h / 24);
+  return `há ${days}d`;
+}
+

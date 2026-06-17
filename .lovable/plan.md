@@ -1,130 +1,74 @@
+# Refazer Tags ao Vivo
 
-# STHApc — Plano de Implementação
+## Diagnóstico (o que está hoje no backend)
 
-Aplicação web profissional para gestão industrial (produção, estoque, qualidade, indicadores, rastreabilidade). Sistema inicia **vazio**, sem dados mockados. Backend: Lovable Cloud (Postgres + Auth real). Frontend: TanStack Start + Tailwind v4 + shadcn.
+Banco e ingestão estão funcionando — não vou recriar do zero, vou consertar pontos:
 
-## Identidade Visual
+- `tags_live` (5 linhas) e `tag_endpoints` (2 linhas) existem, com RLS correta.
+- `POST /api/public/tags` (push) funciona — última tag chegou às 15:27 UTC hoje.
+- `GET /api/public/tags/poll` (pull) roda via `pg_cron` a cada 1 min. Um dos endpoints cadastrados é a própria URL do poll (loop) e o outro retorna 403 (Cloudflare 1003 — IP direto bloqueado): são problemas de configuração feita na UI antiga, não do código.
+- `UPDATE` em `tags_live` exige role `admin`; a função `handle_new_user` já dá admin no signup — então editar funciona, só não está claro na UI.
 
-- Tema "industrial moderno": fundo escuro (slate/zinc), acento laranja-âmbar (HSE/industrial), tipografia técnica (Inter + JetBrains Mono para números/códigos).
-- Tokens semânticos em `src/styles.css` (sem cores hardcoded).
-- Layout app shell: sidebar fixa colapsável + topbar com usuário/empresa.
+Conclusão: refaço a **interface** completa e faço **pequenos ajustes no backend** (simulação/entrada manual + validação de URL do endpoint para impedir loop).
 
-## Banco de Dados (uma migração inicial)
+## Plano
 
-Schema completo, todas tabelas com `id uuid`, `created_at`, `updated_at`, `user_id`/`owner_id` quando aplicável, RLS + GRANTs.
+### 1. Backend (migração + 1 rota nova)
+- Migração:
+  - Tabela `tags_live`: adicionar coluna `origem` (`text`, default `'push'`) para rotular `push | pull | manual`.
+  - Função `ingest_tags`: aceitar `origem` opcional no payload.
+  - Função nova `delete_tag(_nome text)` — security definer, restrita a admin via `has_role`, para excluir tags da UI.
+- Nova server function autenticada `simulateTags` (`createServerFn` + `requireSupabaseAuth`) que gera valores aleatórios para uma lista de nomes e chama `ingest_tags`. Usada pelo botão "Simular".
+- Sem mudar schema de `tag_endpoints` nem o cron.
 
-- `profiles` (id=auth.users, nome, empresa, email)
-- `user_roles` + enum `app_role` (admin/operador) + função `has_role()` (segurança RLS sem recursão)
-- `equipamentos` (codigo, nome, descricao, tipo, localizacao, status[disponivel/ocupado/parado], ativo)
-- `produtos` (codigo, nome, descricao, unidade, categoria, ativo)
-- `analises_cadastro` (nome, unidade, valor_min, valor_max, obrigatoria)
-- `parametros_cadastro` (nome, unidade, valor_min, valor_max)
-- `tanques` (codigo, nome, capacidade, unidade, produto_id)
-- `ordens_producao` (numero, produto_id, equipamento_id, qtd_planejada, qtd_produzida, obs_iniciais, obs_finais, inicio_em, fim_em, status[em_andamento/finalizada], tanque_destino_id)
-- `parametros_registrados` (ordem_id, parametro_id, valor, registrado_em)
-- `analises_registradas` (ordem_id, analise_id, resultado, registrado_em)
-- `observacoes_producao` (ordem_id, texto, registrado_em)
-- `movimentacoes_estoque` (produto_id, tanque_id, tipo[entrada/saida], quantidade, origem, destino, ordem_id, ocorrido_em)
+### 2. Página `tags.index.tsx` (nova)
+Layout em três zonas:
 
-Cada tabela: RLS habilitada, políticas escopadas por `auth.uid()` (cada usuário vê seus dados — multi-tenant simples por owner_id), GRANTs para `authenticated` e `service_role`.
-
-Trigger `set_updated_at` genérico para todas as tabelas.
-
-## Autenticação
-
-- Página `/auth` com tabs Login / Cadastro (Nome, Empresa, Email, Senha) + link "Recuperar senha".
-- Página `/reset-password` (atualiza senha via recovery).
-- Trigger `handle_new_user()` cria `profiles` automaticamente a partir do raw_user_meta_data (nome, empresa).
-- Layout protegido em `src/routes/_authenticated/route.tsx` (integration-managed) — todas as rotas internas ficam abaixo dele.
-
-## Rotas (TanStack file-based)
-
-```
-/auth                                  pública
-/reset-password                        pública
-/_authenticated/route.tsx              gate
-  /                                    Dashboard
-  /producao                            Lista equipamentos + ações
-  /producao/nova                       Abrir OP
-  /producao/$id                        OP em andamento (parâmetros, análises, observações, finalizar)
-  /producao/$id/finalizar              Modal/etapa de finalização + destino estoque
-  /estoque                             Visão geral + tanques
-  /estoque/tanques/$id                 Histórico do tanque
-  /estoque/movimentacao                Entrada / Saída / Expedição
-  /cadastros/equipamentos
-  /cadastros/equipamentos/$id          Detalhe + histórico produções
-  /cadastros/produtos
-  /cadastros/analises
-  /cadastros/parametros
-  /cadastros/tanques
-  /relatorios                          Hub
-  /relatorios/producao
-  /relatorios/estoque
-  /relatorios/qualidade
-  /indicadores                         KPIs + gráficos (recharts)
-  /configuracoes                       perfil, empresa, logout
+```text
+┌─────────────────────────────────────────────────────────┐
+│ Header: título + indicador "ao vivo" + botões           │
+│ [ + Nova tag (manual) ] [ ▶ Simular ] [ ⚙ Endpoints ]   │
+├─────────────────────────────────────────────────────────┤
+│ KPIs: Tags | Grupos | Fora dos limites | Última leitura │
+├─────────────────────────────────────────────────────────┤
+│ Filtros: busca + select de grupo + toggle "só alertas"  │
+├─────────────────────────────────────────────────────────┤
+│ Grid de cards agrupados por `grupo`:                    │
+│  ┌─ Reator 8 ──────────────┐  ┌─ Tanque 10 ────────┐    │
+│  │ R8.Temp  78.4 °C  ●good │  │ TQ10.Nivel 48.2 %  │    │
+│  │ R8.Pressao 2.1 bar  ●   │  │  …                 │    │
+│  └─────────────────────────┘  └─────────────────── ┘    │
+└─────────────────────────────────────────────────────────┘
 ```
 
-## Dashboard
+- Cada linha do card mostra nome amigável (fallback nome técnico), valor formatado, unidade, badge de qualidade, ícone de alerta se fora de limite, "há Xs" desde a última atualização (relativo). Hover revela botões Editar / Excluir.
+- Tags sem grupo caem em "Sem grupo".
+- Polling do React Query mantido em 2s (1s era exagero).
+- Estado vazio com instruções claras (curl de push + link para Endpoints + botão "Simular").
 
-Cards clicáveis agrupados em seções (Produção, Estoque, Qualidade, Indicadores Gerais) — cada card faz query agregada e linka para a tela correspondente. Quando vazio, exibe "—" e CTA para começar (ex.: "Cadastre seu primeiro equipamento").
+### 3. Diálogos
+- **Editar tag** (igual hoje, mas com Tabs):
+  - Aba "Identificação": nome amigável, grupo, unidade.
+  - Aba "Limites": valor_min, valor_max com validação cruzada.
+- **Nova tag manual**: nome, nome amigável, grupo, unidade, valor inicial. Insere via RPC `ingest_tags` com `origem='manual'`.
+- **Excluir**: confirmação + `delete_tag`.
 
-## Fluxos Principais
+### 4. Página `tags.endpoints.tsx` (reformulada)
+- Card de topo "Como funciona" com dois passos (push vs pull) em vez de dois cards lado a lado confusos. URL de push com botão copiar e exemplo `curl`.
+- Tabela de endpoints: badge colorida para status (OK / HTTP nnn / ERRO / nunca executado), tempo relativo da última execução, contador de tags recebidas.
+- Formulário "Novo/Editar":
+  - Validação client-side: bloquear URL que aponte para o próprio host (`/api/public/tags/poll`) — evita o loop atual.
+  - Botão **"Testar agora"** dentro do formulário (antes de salvar) que chama `runNow` num modo dry-run e mostra status + amostra dos campos detectados.
+  - Intervalo mínimo 5s, com aviso que o cron roda a cada 60s.
+- Botão "Sincronizar tudo agora" no header da tabela.
 
-1. **Abrir OP** → cria ordem, marca equipamento `ocupado`, inicia cronômetro (cálculo via diferença de datas em queries).
-2. **Em andamento** → 3 abas: Parâmetros, Análises, Observações; cada uma com formulário + lista cronológica, registros ilimitados.
-3. **Finalizar** → form (qtd produzida, obs finais, seleção de tanque). Transação no servidor: atualiza ordem, libera equipamento, insere movimentação de estoque tipo `entrada` vinculada à ordem.
-4. **Histórico equipamento** → lista de OPs com tempo total; clicar abre rastreabilidade completa (todos parâmetros/análises/observações).
-5. **Expedição** → form de saída, baixa estoque do tanque selecionado.
-6. **Histórico tanque** → entradas, saídas, saldo calculado (sum entradas − sum saídas).
+### 5. Limpeza
+- `tags.tsx` (layout pai) permanece com `<Outlet />`.
+- Manter `formatDate`; adicionar util `formatRelative(date)` em `src/lib/format.ts`.
+- Remover casts `as never` substituindo por queries tipadas com a `Database` gerada quando possível (as tabelas já estão nos types).
 
-Operações sensíveis (finalizar OP, abrir OP, movimentação) implementadas como `createServerFn` com `requireSupabaseAuth` para garantir atomicidade e RLS no servidor.
+## Fora de escopo
+- Histórico de tags (gráficos por tag) — fica para uma próxima.
+- Alertas por e-mail/webhook quando fora do limite — fica para uma próxima.
 
-## Indicadores
-
-Queries agregadas (SQL via supabase-js) renderizadas com Recharts:
-- Produção diária/mensal/por equipamento/por produto
-- Tempo médio de produção, eficiência (qtd_produzida/qtd_planejada)
-- OEE simplificado (disponibilidade × performance × qualidade aprox.)
-- Tendência por análise, desvios fora de min/max
-- Giro de estoque, saldos
-
-## Relatórios
-
-Tabelas filtráveis (período, equipamento, produto) com export CSV (client-side).
-
-## Componentes Compartilhados
-
-- `AppShell` (sidebar + topbar) em `src/components/layout/`
-- `KpiCard`, `EmptyState`, `DataTable` (wrap shadcn table), `PageHeader`
-- Formulários com `react-hook-form` + `zod`
-
-## Estado Vazio Real
-
-Nenhuma seed. Listas e dashboards mostram componentes `EmptyState` específicos com CTA para a tela de cadastro relacionada.
-
-## Entrega em Fases
-
-Dada a extensão, vou implementar em **uma resposta única e grande**, na seguinte ordem dentro dessa resposta:
-
-1. Design system (`styles.css`) + AppShell + Sidebar + tipos auxiliares
-2. Migração SQL completa (todas tabelas + roles + RLS + GRANTs + trigger profile)
-3. Autenticação (`/auth`, `/reset-password`, layout `_authenticated`)
-4. Cadastros (equipamentos, produtos, análises, parâmetros, tanques) — CRUD genérico
-5. Produção (lista, abrir OP, OP em andamento, finalizar, histórico)
-6. Estoque (movimentações, expedição, histórico tanque)
-7. Dashboard + Indicadores + Relatórios
-8. Configurações + ajustes finais
-
-## Detalhes Técnicos
-
-- TanStack Query para reads, `useMutation` para writes
-- `createServerFn` + `requireSupabaseAuth` para operações multi-tabela (finalizar OP, movimentação de estoque com ordem)
-- Reads simples via `supabase` client diretamente nos componentes (RLS protege)
-- Sem edge functions
-- Sem dados mockados em qualquer lugar
-- SEO/meta básico em `__root.tsx` (título "STHApc")
-
-## Confirmação
-
-Posso prosseguir com este plano? Vou implementar tudo na próxima resposta. Se quiser ajustar algo (ex.: multi-tenant por empresa em vez de por usuário, papéis adicionais, paleta diferente), me diga antes.
+Posso prosseguir?

@@ -528,6 +528,7 @@ export type Database = {
           grupo: string | null
           nome: string
           nome_amigavel: string | null
+          origem: string
           qualidade: string | null
           unidade: string | null
           valor: string | null
@@ -540,6 +541,7 @@ export type Database = {
           grupo?: string | null
           nome: string
           nome_amigavel?: string | null
+          origem?: string
           qualidade?: string | null
           unidade?: string | null
           valor?: string | null
@@ -552,6 +554,7 @@ export type Database = {
           grupo?: string | null
           nome?: string
           nome_amigavel?: string | null
+          origem?: string
           qualidade?: string | null
           unidade?: string | null
           valor?: string | null
@@ -631,6 +634,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      delete_tag: { Args: { _nome: string }; Returns: boolean }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -639,6 +643,16 @@ export type Database = {
         Returns: boolean
       }
       ingest_tags: { Args: { payload: Json }; Returns: number }
+      upsert_manual_tag: {
+        Args: {
+          _grupo?: string
+          _nome: string
+          _nome_amigavel?: string
+          _unidade?: string
+          _valor: string
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "operador"
