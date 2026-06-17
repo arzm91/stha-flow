@@ -468,6 +468,36 @@ export type Database = {
         }
         Relationships: []
       }
+      tags_live: {
+        Row: {
+          atualizado_em: string
+          grupo: string | null
+          nome: string
+          qualidade: string | null
+          unidade: string | null
+          valor: string | null
+          valor_num: number | null
+        }
+        Insert: {
+          atualizado_em?: string
+          grupo?: string | null
+          nome: string
+          qualidade?: string | null
+          unidade?: string | null
+          valor?: string | null
+          valor_num?: number | null
+        }
+        Update: {
+          atualizado_em?: string
+          grupo?: string | null
+          nome?: string
+          qualidade?: string | null
+          unidade?: string | null
+          valor?: string | null
+          valor_num?: number | null
+        }
+        Relationships: []
+      }
       tanques: {
         Row: {
           capacidade: number | null
