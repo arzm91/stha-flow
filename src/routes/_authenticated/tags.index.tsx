@@ -77,6 +77,7 @@ function TagsPage() {
     return (tags.data ?? []).filter(
       (t) =>
         t.nome.toLowerCase().includes(q) ||
+        (t.nome_amigavel ?? "").toLowerCase().includes(q) ||
         (t.grupo ?? "").toLowerCase().includes(q) ||
         (t.valor ?? "").toLowerCase().includes(q),
     );
