@@ -8,7 +8,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Boxes, ArrowDownToLine, ArrowUpFromLine, History } from "lucide-react";
 import { formatNumber } from "@/lib/format";
 
-export const Route = createFileRoute("/_authenticated/estoque")({
+export const Route = createFileRoute("/_authenticated/estoque/")({
   component: EstoquePage,
 });
 

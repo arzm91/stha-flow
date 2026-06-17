@@ -16,11 +16,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedProducaoRouteImport } from './routes/_authenticated/producao'
 import { Route as AuthenticatedIndicadoresRouteImport } from './routes/_authenticated/indicadores'
-import { Route as AuthenticatedEstoqueRouteImport } from './routes/_authenticated/estoque'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedCadastrosRouteImport } from './routes/_authenticated/cadastros'
 import { Route as AuthenticatedProducaoIndexRouteImport } from './routes/_authenticated/producao.index'
+import { Route as AuthenticatedEstoqueIndexRouteImport } from './routes/_authenticated/estoque.index'
 import { Route as AuthenticatedRelatoriosQualidadeRouteImport } from './routes/_authenticated/relatorios.qualidade'
 import { Route as AuthenticatedRelatoriosProducaoRouteImport } from './routes/_authenticated/relatorios.producao'
 import { Route as AuthenticatedRelatoriosEstoqueRouteImport } from './routes/_authenticated/relatorios.estoque'
@@ -70,11 +70,6 @@ const AuthenticatedIndicadoresRoute =
     path: '/indicadores',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
-const AuthenticatedEstoqueRoute = AuthenticatedEstoqueRouteImport.update({
-  id: '/estoque',
-  path: '/estoque',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -96,6 +91,12 @@ const AuthenticatedProducaoIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedProducaoRoute,
+  } as any)
+const AuthenticatedEstoqueIndexRoute =
+  AuthenticatedEstoqueIndexRouteImport.update({
+    id: '/estoque/',
+    path: '/estoque/',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedRelatoriosQualidadeRoute =
   AuthenticatedRelatoriosQualidadeRouteImport.update({
@@ -128,9 +129,9 @@ const AuthenticatedProducaoIdRoute = AuthenticatedProducaoIdRouteImport.update({
 } as any)
 const AuthenticatedEstoqueMovimentacaoRoute =
   AuthenticatedEstoqueMovimentacaoRouteImport.update({
-    id: '/movimentacao',
-    path: '/movimentacao',
-    getParentRoute: () => AuthenticatedEstoqueRoute,
+    id: '/estoque/movimentacao',
+    path: '/estoque/movimentacao',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedCadastrosTanquesRoute =
   AuthenticatedCadastrosTanquesRouteImport.update({
@@ -164,9 +165,9 @@ const AuthenticatedCadastrosAnalisesRoute =
   } as any)
 const AuthenticatedEstoqueTanquesIdRoute =
   AuthenticatedEstoqueTanquesIdRouteImport.update({
-    id: '/tanques/$id',
-    path: '/tanques/$id',
-    getParentRoute: () => AuthenticatedEstoqueRoute,
+    id: '/estoque/tanques/$id',
+    path: '/estoque/tanques/$id',
+    getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedCadastrosEquipamentosIdRoute =
   AuthenticatedCadastrosEquipamentosIdRouteImport.update({
@@ -182,7 +183,6 @@ export interface FileRoutesByFullPath {
   '/cadastros': typeof AuthenticatedCadastrosRouteWithChildren
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/estoque': typeof AuthenticatedEstoqueRouteWithChildren
   '/indicadores': typeof AuthenticatedIndicadoresRoute
   '/producao': typeof AuthenticatedProducaoRouteWithChildren
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
@@ -197,6 +197,7 @@ export interface FileRoutesByFullPath {
   '/relatorios/estoque': typeof AuthenticatedRelatoriosEstoqueRoute
   '/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
   '/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
+  '/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/producao/': typeof AuthenticatedProducaoIndexRoute
   '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
   '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
@@ -208,7 +209,6 @@ export interface FileRoutesByTo {
   '/cadastros': typeof AuthenticatedCadastrosRouteWithChildren
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
-  '/estoque': typeof AuthenticatedEstoqueRouteWithChildren
   '/indicadores': typeof AuthenticatedIndicadoresRoute
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/cadastros/analises': typeof AuthenticatedCadastrosAnalisesRoute
@@ -222,6 +222,7 @@ export interface FileRoutesByTo {
   '/relatorios/estoque': typeof AuthenticatedRelatoriosEstoqueRoute
   '/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
   '/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
+  '/estoque': typeof AuthenticatedEstoqueIndexRoute
   '/producao': typeof AuthenticatedProducaoIndexRoute
   '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
   '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
@@ -235,7 +236,6 @@ export interface FileRoutesById {
   '/_authenticated/cadastros': typeof AuthenticatedCadastrosRouteWithChildren
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
-  '/_authenticated/estoque': typeof AuthenticatedEstoqueRouteWithChildren
   '/_authenticated/indicadores': typeof AuthenticatedIndicadoresRoute
   '/_authenticated/producao': typeof AuthenticatedProducaoRouteWithChildren
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
@@ -250,6 +250,7 @@ export interface FileRoutesById {
   '/_authenticated/relatorios/estoque': typeof AuthenticatedRelatoriosEstoqueRoute
   '/_authenticated/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
   '/_authenticated/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
+  '/_authenticated/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/_authenticated/producao/': typeof AuthenticatedProducaoIndexRoute
   '/_authenticated/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
   '/_authenticated/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
@@ -263,7 +264,6 @@ export interface FileRouteTypes {
     | '/cadastros'
     | '/configuracoes'
     | '/dashboard'
-    | '/estoque'
     | '/indicadores'
     | '/producao'
     | '/relatorios'
@@ -278,6 +278,7 @@ export interface FileRouteTypes {
     | '/relatorios/estoque'
     | '/relatorios/producao'
     | '/relatorios/qualidade'
+    | '/estoque/'
     | '/producao/'
     | '/cadastros/equipamentos/$id'
     | '/estoque/tanques/$id'
@@ -289,7 +290,6 @@ export interface FileRouteTypes {
     | '/cadastros'
     | '/configuracoes'
     | '/dashboard'
-    | '/estoque'
     | '/indicadores'
     | '/relatorios'
     | '/cadastros/analises'
@@ -303,6 +303,7 @@ export interface FileRouteTypes {
     | '/relatorios/estoque'
     | '/relatorios/producao'
     | '/relatorios/qualidade'
+    | '/estoque'
     | '/producao'
     | '/cadastros/equipamentos/$id'
     | '/estoque/tanques/$id'
@@ -315,7 +316,6 @@ export interface FileRouteTypes {
     | '/_authenticated/cadastros'
     | '/_authenticated/configuracoes'
     | '/_authenticated/dashboard'
-    | '/_authenticated/estoque'
     | '/_authenticated/indicadores'
     | '/_authenticated/producao'
     | '/_authenticated/relatorios'
@@ -330,6 +330,7 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios/estoque'
     | '/_authenticated/relatorios/producao'
     | '/_authenticated/relatorios/qualidade'
+    | '/_authenticated/estoque/'
     | '/_authenticated/producao/'
     | '/_authenticated/cadastros/equipamentos/$id'
     | '/_authenticated/estoque/tanques/$id'
@@ -393,13 +394,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedIndicadoresRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/estoque': {
-      id: '/_authenticated/estoque'
-      path: '/estoque'
-      fullPath: '/estoque'
-      preLoaderRoute: typeof AuthenticatedEstoqueRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/dashboard': {
       id: '/_authenticated/dashboard'
       path: '/dashboard'
@@ -427,6 +421,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/producao/'
       preLoaderRoute: typeof AuthenticatedProducaoIndexRouteImport
       parentRoute: typeof AuthenticatedProducaoRoute
+    }
+    '/_authenticated/estoque/': {
+      id: '/_authenticated/estoque/'
+      path: '/estoque'
+      fullPath: '/estoque/'
+      preLoaderRoute: typeof AuthenticatedEstoqueIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/relatorios/qualidade': {
       id: '/_authenticated/relatorios/qualidade'
@@ -465,10 +466,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/estoque/movimentacao': {
       id: '/_authenticated/estoque/movimentacao'
-      path: '/movimentacao'
+      path: '/estoque/movimentacao'
       fullPath: '/estoque/movimentacao'
       preLoaderRoute: typeof AuthenticatedEstoqueMovimentacaoRouteImport
-      parentRoute: typeof AuthenticatedEstoqueRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/cadastros/tanques': {
       id: '/_authenticated/cadastros/tanques'
@@ -507,10 +508,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/estoque/tanques/$id': {
       id: '/_authenticated/estoque/tanques/$id'
-      path: '/tanques/$id'
+      path: '/estoque/tanques/$id'
       fullPath: '/estoque/tanques/$id'
       preLoaderRoute: typeof AuthenticatedEstoqueTanquesIdRouteImport
-      parentRoute: typeof AuthenticatedEstoqueRoute
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/cadastros/equipamentos/$id': {
       id: '/_authenticated/cadastros/equipamentos/$id'
@@ -561,19 +562,6 @@ const AuthenticatedCadastrosRouteWithChildren =
     AuthenticatedCadastrosRouteChildren,
   )
 
-interface AuthenticatedEstoqueRouteChildren {
-  AuthenticatedEstoqueMovimentacaoRoute: typeof AuthenticatedEstoqueMovimentacaoRoute
-  AuthenticatedEstoqueTanquesIdRoute: typeof AuthenticatedEstoqueTanquesIdRoute
-}
-
-const AuthenticatedEstoqueRouteChildren: AuthenticatedEstoqueRouteChildren = {
-  AuthenticatedEstoqueMovimentacaoRoute: AuthenticatedEstoqueMovimentacaoRoute,
-  AuthenticatedEstoqueTanquesIdRoute: AuthenticatedEstoqueTanquesIdRoute,
-}
-
-const AuthenticatedEstoqueRouteWithChildren =
-  AuthenticatedEstoqueRoute._addFileChildren(AuthenticatedEstoqueRouteChildren)
-
 interface AuthenticatedProducaoRouteChildren {
   AuthenticatedProducaoIdRoute: typeof AuthenticatedProducaoIdRoute
   AuthenticatedProducaoNovaRoute: typeof AuthenticatedProducaoNovaRoute
@@ -614,20 +602,24 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedCadastrosRoute: typeof AuthenticatedCadastrosRouteWithChildren
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
-  AuthenticatedEstoqueRoute: typeof AuthenticatedEstoqueRouteWithChildren
   AuthenticatedIndicadoresRoute: typeof AuthenticatedIndicadoresRoute
   AuthenticatedProducaoRoute: typeof AuthenticatedProducaoRouteWithChildren
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
+  AuthenticatedEstoqueMovimentacaoRoute: typeof AuthenticatedEstoqueMovimentacaoRoute
+  AuthenticatedEstoqueIndexRoute: typeof AuthenticatedEstoqueIndexRoute
+  AuthenticatedEstoqueTanquesIdRoute: typeof AuthenticatedEstoqueTanquesIdRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedCadastrosRoute: AuthenticatedCadastrosRouteWithChildren,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
-  AuthenticatedEstoqueRoute: AuthenticatedEstoqueRouteWithChildren,
   AuthenticatedIndicadoresRoute: AuthenticatedIndicadoresRoute,
   AuthenticatedProducaoRoute: AuthenticatedProducaoRouteWithChildren,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
+  AuthenticatedEstoqueMovimentacaoRoute: AuthenticatedEstoqueMovimentacaoRoute,
+  AuthenticatedEstoqueIndexRoute: AuthenticatedEstoqueIndexRoute,
+  AuthenticatedEstoqueTanquesIdRoute: AuthenticatedEstoqueTanquesIdRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -642,13 +634,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
