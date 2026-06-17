@@ -131,8 +131,50 @@ async function processOne(ep: EndpointRow, supabaseAdmin: any) {
   }
 }
 
+async function handleTest(request: Request) {
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ ok: false, message: "JSON inválido" }, 400);
+  }
+  const targetUrl = String(body?.url ?? "").trim();
+  const headers = (body?.headers && typeof body.headers === "object") ? body.headers : {};
+  if (!/^https?:\/\//i.test(targetUrl)) {
+    return json({ ok: false, message: "URL deve começar com http:// ou https://" }, 400);
+  }
+  try {
+    const res = await fetch(targetUrl, {
+      method: "GET",
+      headers: { Accept: "application/json", ...headers },
+      signal: AbortSignal.timeout(10_000),
+    });
+    if (!res.ok) {
+      const text = (await res.text()).slice(0, 300);
+      return json({ ok: false, message: `HTTP ${res.status}`, sample: text });
+    }
+    const text = await res.text();
+    let data: any;
+    try { data = JSON.parse(text); } catch {
+      return json({ ok: false, message: "Resposta não é JSON válido", sample: text.slice(0, 400) });
+    }
+    const tags = normalize(data);
+    return json({
+      ok: true,
+      count: tags.length,
+      sample: JSON.stringify(data, null, 2).slice(0, 400),
+    });
+  } catch (e: any) {
+    return json({
+      ok: false,
+      message: e?.name === "TimeoutError" ? "Timeout (10s)" : String(e?.message ?? e),
+    });
+  }
+}
+
 async function handle(request: Request) {
   const url = new URL(request.url);
+  if (url.searchParams.get("test") === "1") return handleTest(request);
   const idParam = url.searchParams.get("id");
   const force = url.searchParams.get("force") === "1";
 
@@ -170,3 +212,4 @@ export const Route = createFileRoute("/api/public/tags/poll")({
     },
   },
 });
+
