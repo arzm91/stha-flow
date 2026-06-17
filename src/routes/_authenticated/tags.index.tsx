@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
@@ -27,7 +27,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Select,
   SelectContent,
@@ -42,10 +41,7 @@ import {
   Settings,
   Pencil,
   AlertTriangle,
-  Plus,
-  Play,
   Trash2,
-  CheckCircle2,
 } from "lucide-react";
 import { formatRelative, formatNumber } from "@/lib/format";
 import { toast } from "sonner";
@@ -83,12 +79,11 @@ function TagsPage() {
   const [soAlertas, setSoAlertas] = useState(false);
   const [editando, setEditando] = useState<TagRow | null>(null);
   const [excluindo, setExcluindo] = useState<TagRow | null>(null);
-  const [novoAberto, setNovoAberto] = useState(false);
   const [, setTick] = useState(0);
 
-  // re-render a cada 5s para os "há Xs"
+  // re-render a cada 1s para atualizar os "há Xs"
   useEffect(() => {
-    const id = setInterval(() => setTick((t) => t + 1), 5000);
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
@@ -102,8 +97,8 @@ function TagsPage() {
       if (error) throw error;
       return (data ?? []) as TagRow[];
     },
-    refetchInterval: 2000,
-    refetchIntervalInBackground: true,
+    refetchInterval: 1000,
+    refetchIntervalInBackground: false,
   });
 
   const grupos = useMemo(() => {
@@ -147,61 +142,11 @@ function TagsPage() {
     return ts.length ? new Date(Math.max(...ts)).toISOString() : null;
   }, [tags.data]);
 
-  const simular = useMutation({
-    mutationFn: async () => {
-      const lista = tags.data ?? [];
-      if (lista.length === 0) {
-        // sem tags: cria algumas de demonstração
-        const demo = [
-          { nome: "Demo.Temperatura", grupo: "Demonstração", unidade: "°C" },
-          { nome: "Demo.Pressao", grupo: "Demonstração", unidade: "bar" },
-          { nome: "Demo.Nivel", grupo: "Demonstração", unidade: "%" },
-        ];
-        const tagsSim = demo.map((d) => ({
-          ...d,
-          valor: +(Math.random() * 100).toFixed(2),
-          qualidade: "good",
-        }));
-        const res = await fetch("/api/public/tags", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ tags: tagsSim }),
-        });
-        if (!res.ok) throw new Error(await res.text());
-        return tagsSim.length;
-      }
-      const tagsSim = lista.map((t) => {
-        const base = t.valor_num ?? 50;
-        const delta = base * 0.05 || 1;
-        const novo = +(base + (Math.random() - 0.5) * 2 * delta).toFixed(3);
-        return {
-          nome: t.nome,
-          valor: novo,
-          unidade: t.unidade,
-          grupo: t.grupo,
-          qualidade: "good",
-        };
-      });
-      const res = await fetch("/api/public/tags", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tags: tagsSim }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return tagsSim.length;
-    },
-    onSuccess: (n) => {
-      toast.success(`${n} tags simuladas`);
-      tags.refetch();
-    },
-    onError: (e: any) => toast.error(e.message ?? "Falha na simulação"),
-  });
-
   return (
     <div>
       <PageHeader
         title="Tags em Tempo Real"
-        description="Valores atuais recebidos via API, busca periódica ou entrada manual."
+        description="Valores recebidos automaticamente dos endpoints HTTP configurados. Atualização visual a cada 1 segundo."
         actions={
           <>
             <div className="mr-2 flex items-center gap-2 self-center text-xs text-muted-foreground">
@@ -211,20 +156,9 @@ function TagsPage() {
               </span>
               Ao vivo
             </div>
-            <Button size="sm" variant="outline" onClick={() => setNovoAberto(true)}>
-              <Plus className="mr-1 h-4 w-4" /> Nova tag
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => simular.mutate()}
-              disabled={simular.isPending}
-            >
-              <Play className="mr-1 h-4 w-4" /> Simular
-            </Button>
             <Button size="sm" variant="outline" asChild>
               <Link to="/tags/endpoints">
-                <Settings className="mr-1 h-4 w-4" /> Endpoints
+                <Settings className="mr-1 h-4 w-4" /> Endpoints HTTP
               </Link>
             </Button>
           </>
@@ -273,19 +207,14 @@ function TagsPage() {
           <CardContent className="p-8">
             <EmptyState
               icon={<Radio className="h-6 w-6" />}
-              title="Aguardando tags"
-              description="Envie tags via POST para /api/public/tags, configure um endpoint de busca ou clique em Simular para gerar dados de demonstração."
+              title="Nenhuma tag recebida"
+              description="Cadastre um endpoint HTTP para o sistema começar a buscar tags automaticamente."
               action={
-                <div className="flex gap-2">
-                  <Button size="sm" onClick={() => simular.mutate()} disabled={simular.isPending}>
-                    <Play className="mr-1 h-4 w-4" /> Simular
-                  </Button>
-                  <Button size="sm" variant="outline" asChild>
-                    <Link to="/tags/endpoints">
-                      <Settings className="mr-1 h-4 w-4" /> Endpoints
-                    </Link>
-                  </Button>
-                </div>
+                <Button size="sm" asChild>
+                  <Link to="/tags/endpoints">
+                    <Settings className="mr-1 h-4 w-4" /> Configurar endpoints
+                  </Link>
+                </Button>
               }
             />
           </CardContent>
@@ -311,7 +240,6 @@ function TagsPage() {
       )}
 
       <EditTagDialog tag={editando} onClose={() => setEditando(null)} />
-      <NovaTagDialog open={novoAberto} onClose={() => setNovoAberto(false)} />
       <DeleteTagDialog tag={excluindo} onClose={() => setExcluindo(null)} />
     </div>
   );
@@ -374,7 +302,7 @@ function GrupoCard({
       <CardContent className="p-0">
         <ul className="divide-y">
           {tags.map((t) => (
-            <TagRow key={t.nome} tag={t} onEdit={onEdit} onDelete={onDelete} />
+            <TagItem key={t.nome} tag={t} onEdit={onEdit} onDelete={onDelete} />
           ))}
         </ul>
       </CardContent>
@@ -382,7 +310,7 @@ function GrupoCard({
   );
 }
 
-function TagRow({
+function TagItem({
   tag: t,
   onEdit,
   onDelete,
@@ -508,45 +436,39 @@ function EditTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => vo
         <DialogHeader>
           <DialogTitle className="font-mono text-base">{tag?.nome}</DialogTitle>
           <DialogDescription>
-            Configurações desta tag. Os valores aqui não são sobrescritos pela API.
+            Esses campos são locais — não são sobrescritos pelo endpoint HTTP.
           </DialogDescription>
         </DialogHeader>
-        <Tabs defaultValue="id">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="id">Identificação</TabsTrigger>
-            <TabsTrigger value="lim">Limites</TabsTrigger>
-          </TabsList>
-          <TabsContent value="id" className="space-y-3 pt-3">
+        <div className="space-y-3">
+          <div>
+            <Label>Nome amigável</Label>
+            <Input
+              value={nomeAmigavel}
+              onChange={(e) => setNomeAmigavel(e.target.value)}
+              placeholder="Ex.: Temperatura Reator 8"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Nome amigável</Label>
+              <Label>Unidade</Label>
               <Input
-                value={nomeAmigavel}
-                onChange={(e) => setNomeAmigavel(e.target.value)}
-                placeholder="Ex.: Temperatura Reator 8"
+                value={unidade}
+                onChange={(e) => setUnidade(e.target.value)}
+                placeholder="°C, bar, %"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Unidade</Label>
-                <Input
-                  value={unidade}
-                  onChange={(e) => setUnidade(e.target.value)}
-                  placeholder="°C, bar, %"
-                />
-              </div>
-              <div>
-                <Label>Grupo</Label>
-                <Input
-                  value={grupo}
-                  onChange={(e) => setGrupo(e.target.value)}
-                  placeholder="Reator 8"
-                />
-              </div>
+            <div>
+              <Label>Grupo</Label>
+              <Input
+                value={grupo}
+                onChange={(e) => setGrupo(e.target.value)}
+                placeholder="Reator 8"
+              />
             </div>
-          </TabsContent>
-          <TabsContent value="lim" className="space-y-3 pt-3">
-            <p className="text-xs text-muted-foreground">
-              Valores fora desta faixa marcam a tag em vermelho. Deixe vazio para desativar.
+          </div>
+          <div className="pt-2">
+            <p className="mb-2 text-xs text-muted-foreground">
+              Limites de alerta — valores fora desta faixa marcam a tag em vermelho.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -570,116 +492,14 @@ function EditTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => vo
                 />
               </div>
             </div>
-          </TabsContent>
-        </Tabs>
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose}>
-            Cancelar
-          </Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending}>
-            {save.isPending ? "Salvando…" : "Salvar"}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function NovaTagDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const qc = useQueryClient();
-  const [nome, setNome] = useState("");
-  const [nomeAmigavel, setNomeAmigavel] = useState("");
-  const [grupo, setGrupo] = useState("");
-  const [unidade, setUnidade] = useState("");
-  const [valor, setValor] = useState("");
-
-  useEffect(() => {
-    if (open) {
-      setNome("");
-      setNomeAmigavel("");
-      setGrupo("");
-      setUnidade("");
-      setValor("");
-    }
-  }, [open]);
-
-  const criar = useMutation({
-    mutationFn: async () => {
-      if (!nome.trim()) throw new Error("Nome é obrigatório");
-      if (!valor.trim()) throw new Error("Valor é obrigatório");
-      const { error } = await supabase.rpc("upsert_manual_tag" as never, {
-        _nome: nome.trim(),
-        _valor: valor.trim(),
-        _unidade: unidade.trim() || null,
-        _grupo: grupo.trim() || null,
-        _nome_amigavel: nomeAmigavel.trim() || null,
-      } as never);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast.success("Tag criada");
-      qc.invalidateQueries({ queryKey: ["tags-live"] });
-      onClose();
-    },
-    onError: (e: any) => toast.error(e.message),
-  });
-
-  return (
-    <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-md overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Nova tag manual</DialogTitle>
-          <DialogDescription>
-            Crie uma tag local para testes ou para integrações que ainda não enviam dados.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-3">
-          <div>
-            <Label>Nome técnico *</Label>
-            <Input
-              value={nome}
-              onChange={(e) => setNome(e.target.value)}
-              placeholder="R8.Temperatura"
-              className="font-mono"
-            />
-          </div>
-          <div>
-            <Label>Nome amigável</Label>
-            <Input
-              value={nomeAmigavel}
-              onChange={(e) => setNomeAmigavel(e.target.value)}
-              placeholder="Temperatura do Reator 8"
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>Grupo</Label>
-              <Input value={grupo} onChange={(e) => setGrupo(e.target.value)} placeholder="Reator 8" />
-            </div>
-            <div>
-              <Label>Unidade</Label>
-              <Input
-                value={unidade}
-                onChange={(e) => setUnidade(e.target.value)}
-                placeholder="°C"
-              />
-            </div>
-          </div>
-          <div>
-            <Label>Valor inicial *</Label>
-            <Input value={valor} onChange={(e) => setValor(e.target.value)} placeholder="78.4" />
           </div>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancelar
           </Button>
-          <Button onClick={() => criar.mutate()} disabled={criar.isPending}>
-            {criar.isPending ? "Criando…" : (
-              <>
-                <CheckCircle2 className="mr-1 h-4 w-4" /> Criar
-              </>
-            )}
+          <Button onClick={() => save.mutate()} disabled={save.isPending}>
+            {save.isPending ? "Salvando…" : "Salvar"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -708,8 +528,8 @@ function DeleteTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => 
         <AlertDialogHeader>
           <AlertDialogTitle>Remover tag?</AlertDialogTitle>
           <AlertDialogDescription>
-            A tag <span className="font-mono">{tag?.nome}</span> será apagada. Se ela continuar
-            sendo enviada pela API, será recriada automaticamente.
+            A tag <span className="font-mono">{tag?.nome}</span> será apagada. Se o endpoint HTTP
+            continuar enviando, ela será recriada no próximo ciclo.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

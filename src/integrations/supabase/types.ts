@@ -643,16 +643,6 @@ export type Database = {
         Returns: boolean
       }
       ingest_tags: { Args: { payload: Json }; Returns: number }
-      upsert_manual_tag: {
-        Args: {
-          _grupo?: string
-          _nome: string
-          _nome_amigavel?: string
-          _unidade?: string
-          _valor: string
-        }
-        Returns: undefined
-      }
     }
     Enums: {
       app_role: "admin" | "operador"
