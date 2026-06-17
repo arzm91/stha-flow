@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Cpu } from "lucide-react";
+import sthaLogo from "@/assets/stha_logo.png.asset.json";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -80,11 +80,8 @@ function AuthPage() {
       <div className="grid min-h-screen lg:grid-cols-2">
         <div className="hidden flex-col justify-between bg-gradient-to-br from-card via-background to-card p-12 lg:flex">
           <div className="flex items-center gap-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Cpu className="h-7 w-7" />
-            </div>
+            <img src={sthaLogo.url} alt="STHA" className="h-14 w-auto object-contain" />
             <div>
-              <div className="text-2xl font-bold tracking-tight">STHApc</div>
               <div className="text-xs uppercase tracking-widest text-muted-foreground">Gestão Industrial</div>
             </div>
           </div>
@@ -103,7 +100,10 @@ function AuthPage() {
         <div className="flex items-center justify-center p-6">
           <Card className="w-full max-w-md">
             <CardHeader>
-              <CardTitle>Acessar STHApc</CardTitle>
+              <div className="mb-4 flex justify-center lg:hidden">
+                <img src={sthaLogo.url} alt="STHA" className="h-12 w-auto object-contain" />
+              </div>
+              <CardTitle>Acessar STHA</CardTitle>
               <CardDescription>Entre na sua conta ou crie um novo cadastro.</CardDescription>
             </CardHeader>
             <CardContent>
