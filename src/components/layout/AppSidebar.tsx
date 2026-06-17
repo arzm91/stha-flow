@@ -25,7 +25,7 @@ const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Produção", url: "/producao", icon: Factory },
   { title: "Estoque", url: "/estoque", icon: Boxes },
-  { title: "Cadastros", url: "/cadastros/equipamentos", icon: ClipboardList, prefix: "/cadastros" },
+  { title: "Cadastros", url: "/cadastros", icon: ClipboardList, prefix: "/cadastros" },
   { title: "Relatórios", url: "/relatorios", icon: FileBarChart },
   { title: "Indicadores", url: "/indicadores", icon: Activity },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
