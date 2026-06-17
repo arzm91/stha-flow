@@ -25,7 +25,6 @@ import { Route as AuthenticatedTagsIndexRouteImport } from './routes/_authentica
 import { Route as AuthenticatedRelatoriosIndexRouteImport } from './routes/_authenticated/relatorios.index'
 import { Route as AuthenticatedProducaoIndexRouteImport } from './routes/_authenticated/producao.index'
 import { Route as AuthenticatedEstoqueIndexRouteImport } from './routes/_authenticated/estoque.index'
-import { Route as ApiPublicTagsRouteImport } from './routes/api/public/tags'
 import { Route as AuthenticatedTagsEndpointsRouteImport } from './routes/_authenticated/tags.endpoints'
 import { Route as AuthenticatedRelatoriosQualidadeRouteImport } from './routes/_authenticated/relatorios.qualidade'
 import { Route as AuthenticatedRelatoriosProducaoRouteImport } from './routes/_authenticated/relatorios.producao'
@@ -127,11 +126,6 @@ const AuthenticatedEstoqueIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedEstoqueRoute,
   } as any)
-const ApiPublicTagsRoute = ApiPublicTagsRouteImport.update({
-  id: '/api/public/tags',
-  path: '/api/public/tags',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthenticatedTagsEndpointsRoute =
   AuthenticatedTagsEndpointsRouteImport.update({
     id: '/endpoints',
@@ -204,9 +198,9 @@ const AuthenticatedCadastrosAnalisesRoute =
     getParentRoute: () => AuthenticatedCadastrosRoute,
   } as any)
 const ApiPublicTagsPollRoute = ApiPublicTagsPollRouteImport.update({
-  id: '/poll',
-  path: '/poll',
-  getParentRoute: () => ApiPublicTagsRoute,
+  id: '/api/public/tags/poll',
+  path: '/api/public/tags/poll',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedProducaoHistoricoEquipIdRoute =
   AuthenticatedProducaoHistoricoEquipIdRouteImport.update({
@@ -251,7 +245,6 @@ export interface FileRoutesByFullPath {
   '/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
   '/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
   '/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
-  '/api/public/tags': typeof ApiPublicTagsRouteWithChildren
   '/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/producao/': typeof AuthenticatedProducaoIndexRoute
   '/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
@@ -281,7 +274,6 @@ export interface FileRoutesByTo {
   '/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
   '/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
   '/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
-  '/api/public/tags': typeof ApiPublicTagsRouteWithChildren
   '/estoque': typeof AuthenticatedEstoqueIndexRoute
   '/producao': typeof AuthenticatedProducaoIndexRoute
   '/relatorios': typeof AuthenticatedRelatoriosIndexRoute
@@ -317,7 +309,6 @@ export interface FileRoutesById {
   '/_authenticated/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
   '/_authenticated/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
   '/_authenticated/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
-  '/api/public/tags': typeof ApiPublicTagsRouteWithChildren
   '/_authenticated/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/_authenticated/producao/': typeof AuthenticatedProducaoIndexRoute
   '/_authenticated/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
@@ -353,7 +344,6 @@ export interface FileRouteTypes {
     | '/relatorios/producao'
     | '/relatorios/qualidade'
     | '/tags/endpoints'
-    | '/api/public/tags'
     | '/estoque/'
     | '/producao/'
     | '/relatorios/'
@@ -383,7 +373,6 @@ export interface FileRouteTypes {
     | '/relatorios/producao'
     | '/relatorios/qualidade'
     | '/tags/endpoints'
-    | '/api/public/tags'
     | '/estoque'
     | '/producao'
     | '/relatorios'
@@ -418,7 +407,6 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios/producao'
     | '/_authenticated/relatorios/qualidade'
     | '/_authenticated/tags/endpoints'
-    | '/api/public/tags'
     | '/_authenticated/estoque/'
     | '/_authenticated/producao/'
     | '/_authenticated/relatorios/'
@@ -434,7 +422,7 @@ export interface RootRouteChildren {
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
-  ApiPublicTagsRoute: typeof ApiPublicTagsRouteWithChildren
+  ApiPublicTagsPollRoute: typeof ApiPublicTagsPollRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -551,13 +539,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEstoqueIndexRouteImport
       parentRoute: typeof AuthenticatedEstoqueRoute
     }
-    '/api/public/tags': {
-      id: '/api/public/tags'
-      path: '/api/public/tags'
-      fullPath: '/api/public/tags'
-      preLoaderRoute: typeof ApiPublicTagsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authenticated/tags/endpoints': {
       id: '/_authenticated/tags/endpoints'
       path: '/endpoints'
@@ -644,10 +625,10 @@ declare module '@tanstack/react-router' {
     }
     '/api/public/tags/poll': {
       id: '/api/public/tags/poll'
-      path: '/poll'
+      path: '/api/public/tags/poll'
       fullPath: '/api/public/tags/poll'
       preLoaderRoute: typeof ApiPublicTagsPollRouteImport
-      parentRoute: typeof ApiPublicTagsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/producao/historico/$equipId': {
       id: '/_authenticated/producao/historico/$equipId'
@@ -806,24 +787,12 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
-interface ApiPublicTagsRouteChildren {
-  ApiPublicTagsPollRoute: typeof ApiPublicTagsPollRoute
-}
-
-const ApiPublicTagsRouteChildren: ApiPublicTagsRouteChildren = {
-  ApiPublicTagsPollRoute: ApiPublicTagsPollRoute,
-}
-
-const ApiPublicTagsRouteWithChildren = ApiPublicTagsRoute._addFileChildren(
-  ApiPublicTagsRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
-  ApiPublicTagsRoute: ApiPublicTagsRouteWithChildren,
+  ApiPublicTagsPollRoute: ApiPublicTagsPollRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
