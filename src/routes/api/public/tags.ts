@@ -84,9 +84,9 @@ export const Route = createFileRoute("/api/public/tags")({
         });
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-        const { error } = await supabaseAdmin
-          .from("tags_live")
-          .upsert(rows, { onConflict: "nome" });
+        const { error } = await supabaseAdmin.rpc("ingest_tags" as never, {
+          payload: rows as never,
+        } as never);
 
         if (error) {
           return json({ error: error.message }, 500);
