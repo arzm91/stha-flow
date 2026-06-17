@@ -248,6 +248,85 @@ export type Database = {
           },
         ]
       }
+      ordem_etapas: {
+        Row: {
+          atividade_descricao: string | null
+          atividade_id: string | null
+          created_at: string
+          duracao_seg: number | null
+          finalizado_em: string | null
+          id: string
+          iniciado_em: string
+          observacao: string | null
+          ordem_atividade: number
+          ordem_id: string
+          ordem_processo: number
+          owner_id: string
+          processo_id: string | null
+          processo_nome: string
+          tipo: string | null
+          updated_at: string
+        }
+        Insert: {
+          atividade_descricao?: string | null
+          atividade_id?: string | null
+          created_at?: string
+          duracao_seg?: number | null
+          finalizado_em?: string | null
+          id?: string
+          iniciado_em?: string
+          observacao?: string | null
+          ordem_atividade?: number
+          ordem_id: string
+          ordem_processo?: number
+          owner_id: string
+          processo_id?: string | null
+          processo_nome: string
+          tipo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          atividade_descricao?: string | null
+          atividade_id?: string | null
+          created_at?: string
+          duracao_seg?: number | null
+          finalizado_em?: string | null
+          id?: string
+          iniciado_em?: string
+          observacao?: string | null
+          ordem_atividade?: number
+          ordem_id?: string
+          ordem_processo?: number
+          owner_id?: string
+          processo_id?: string | null
+          processo_nome?: string
+          tipo?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordem_etapas_atividade_id_fkey"
+            columns: ["atividade_id"]
+            isOneToOne: false
+            referencedRelation: "produto_atividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordem_etapas_ordem_id_fkey"
+            columns: ["ordem_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_producao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordem_etapas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "produto_processos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ordens_producao: {
         Row: {
           created_at: string
