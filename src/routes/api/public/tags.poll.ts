@@ -16,6 +16,12 @@ function json(body: unknown, status = 200) {
   });
 }
 
+function hasValidApiKey(request: Request) {
+  const provided = request.headers.get("apikey") || request.headers.get("x-api-key");
+  const expected = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY;
+  return Boolean(provided && expected && provided === expected);
+}
+
 type EndpointRow = {
   id: string;
   nome: string;
@@ -78,6 +84,14 @@ async function fetchWithNodeHttp(ep: EndpointRow): Promise<EndpointFetchResult> 
 }
 
 async function fetchEndpoint(ep: EndpointRow): Promise<EndpointFetchResult> {
+  if (ep.url.toLowerCase().startsWith("http://")) {
+    try {
+      return await fetchWithNodeHttp(ep);
+    } catch {
+      // Fall back to fetch below so we still capture the platform error message.
+    }
+  }
+
   const res = await fetch(ep.url, {
     method: ep.metodo || "GET",
     headers: { Accept: "application/json", ...(ep.headers ?? {}) },
@@ -86,7 +100,7 @@ async function fetchEndpoint(ep: EndpointRow): Promise<EndpointFetchResult> {
   });
   const text = await res.text();
 
-  if (res.status === 403 && text.includes("error code: 1003")) {
+  if (res.status === 403) {
     return fetchWithNodeHttp(ep);
   }
 
@@ -178,6 +192,7 @@ async function processOne(ep: EndpointRow, supabaseAdmin: any) {
 }
 
 async function handleTest(request: Request) {
+  if (!hasValidApiKey(request)) return json({ ok: false, message: "Não autorizado" }, 401);
   let body: any;
   try {
     body = await request.json();
@@ -190,19 +205,23 @@ async function handleTest(request: Request) {
     return json({ ok: false, message: "URL deve começar com http:// ou https://" }, 400);
   }
   try {
-    const res = await fetch(targetUrl, {
-      method: "GET",
-      headers: { Accept: "application/json", ...headers },
-      signal: AbortSignal.timeout(10_000),
+    const res = await fetchEndpoint({
+      id: "test",
+      nome: "Teste",
+      url: targetUrl,
+      metodo: "GET",
+      headers,
+      body: null,
+      intervalo_segundos: 2,
+      ativo: true,
+      ultima_execucao: null,
     });
     if (!res.ok) {
-      const text = (await res.text()).slice(0, 300);
-      return json({ ok: false, message: `HTTP ${res.status}`, sample: text });
+      return json({ ok: false, message: `HTTP ${res.status}`, sample: res.text.slice(0, 300) });
     }
-    const text = await res.text();
     let data: any;
-    try { data = JSON.parse(text); } catch {
-      return json({ ok: false, message: "Resposta não é JSON válido", sample: text.slice(0, 400) });
+    try { data = JSON.parse(res.text); } catch {
+      return json({ ok: false, message: "Resposta não é JSON válido", sample: res.text.slice(0, 400) });
     }
     const tags = normalize(data);
     return json({
@@ -219,6 +238,7 @@ async function handleTest(request: Request) {
 }
 
 async function handle(request: Request) {
+  if (!hasValidApiKey(request)) return json({ ok: false, message: "Não autorizado" }, 401);
   const url = new URL(request.url);
   if (url.searchParams.get("test") === "1") return handleTest(request);
   const idParam = url.searchParams.get("id");
