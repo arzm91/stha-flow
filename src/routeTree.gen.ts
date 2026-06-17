@@ -38,6 +38,7 @@ import { Route as AuthenticatedCadastrosParametrosRouteImport } from './routes/_
 import { Route as AuthenticatedCadastrosEquipamentosRouteImport } from './routes/_authenticated/cadastros.equipamentos'
 import { Route as AuthenticatedCadastrosAnalisesRouteImport } from './routes/_authenticated/cadastros.analises'
 import { Route as ApiPublicTagsPollRouteImport } from './routes/api/public/tags.poll'
+import { Route as AuthenticatedProducaoHistoricoEquipIdRouteImport } from './routes/_authenticated/producao.historico.$equipId'
 import { Route as AuthenticatedEstoqueTanquesIdRouteImport } from './routes/_authenticated/estoque.tanques.$id'
 import { Route as AuthenticatedCadastrosEquipamentosIdRouteImport } from './routes/_authenticated/cadastros.equipamentos.$id'
 
@@ -200,6 +201,12 @@ const ApiPublicTagsPollRoute = ApiPublicTagsPollRouteImport.update({
   path: '/poll',
   getParentRoute: () => ApiPublicTagsRoute,
 } as any)
+const AuthenticatedProducaoHistoricoEquipIdRoute =
+  AuthenticatedProducaoHistoricoEquipIdRouteImport.update({
+    id: '/historico/$equipId',
+    path: '/historico/$equipId',
+    getParentRoute: () => AuthenticatedProducaoRoute,
+  } as any)
 const AuthenticatedEstoqueTanquesIdRoute =
   AuthenticatedEstoqueTanquesIdRouteImport.update({
     id: '/tanques/$id',
@@ -243,6 +250,7 @@ export interface FileRoutesByFullPath {
   '/tags/': typeof AuthenticatedTagsIndexRoute
   '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
   '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
+  '/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
 }
 export interface FileRoutesByTo {
@@ -272,6 +280,7 @@ export interface FileRoutesByTo {
   '/tags': typeof AuthenticatedTagsIndexRoute
   '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
   '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
+  '/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
 }
 export interface FileRoutesById {
@@ -306,6 +315,7 @@ export interface FileRoutesById {
   '/_authenticated/tags/': typeof AuthenticatedTagsIndexRoute
   '/_authenticated/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
   '/_authenticated/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
+  '/_authenticated/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
 }
 export interface FileRouteTypes {
@@ -340,6 +350,7 @@ export interface FileRouteTypes {
     | '/tags/'
     | '/cadastros/equipamentos/$id'
     | '/estoque/tanques/$id'
+    | '/producao/historico/$equipId'
     | '/api/public/tags/poll'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -369,6 +380,7 @@ export interface FileRouteTypes {
     | '/tags'
     | '/cadastros/equipamentos/$id'
     | '/estoque/tanques/$id'
+    | '/producao/historico/$equipId'
     | '/api/public/tags/poll'
   id:
     | '__root__'
@@ -402,6 +414,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tags/'
     | '/_authenticated/cadastros/equipamentos/$id'
     | '/_authenticated/estoque/tanques/$id'
+    | '/_authenticated/producao/historico/$equipId'
     | '/api/public/tags/poll'
   fileRoutesById: FileRoutesById
 }
@@ -618,6 +631,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTagsPollRouteImport
       parentRoute: typeof ApiPublicTagsRoute
     }
+    '/_authenticated/producao/historico/$equipId': {
+      id: '/_authenticated/producao/historico/$equipId'
+      path: '/historico/$equipId'
+      fullPath: '/producao/historico/$equipId'
+      preLoaderRoute: typeof AuthenticatedProducaoHistoricoEquipIdRouteImport
+      parentRoute: typeof AuthenticatedProducaoRoute
+    }
     '/_authenticated/estoque/tanques/$id': {
       id: '/_authenticated/estoque/tanques/$id'
       path: '/tanques/$id'
@@ -693,12 +713,15 @@ interface AuthenticatedProducaoRouteChildren {
   AuthenticatedProducaoIdRoute: typeof AuthenticatedProducaoIdRoute
   AuthenticatedProducaoNovaRoute: typeof AuthenticatedProducaoNovaRoute
   AuthenticatedProducaoIndexRoute: typeof AuthenticatedProducaoIndexRoute
+  AuthenticatedProducaoHistoricoEquipIdRoute: typeof AuthenticatedProducaoHistoricoEquipIdRoute
 }
 
 const AuthenticatedProducaoRouteChildren: AuthenticatedProducaoRouteChildren = {
   AuthenticatedProducaoIdRoute: AuthenticatedProducaoIdRoute,
   AuthenticatedProducaoNovaRoute: AuthenticatedProducaoNovaRoute,
   AuthenticatedProducaoIndexRoute: AuthenticatedProducaoIndexRoute,
+  AuthenticatedProducaoHistoricoEquipIdRoute:
+    AuthenticatedProducaoHistoricoEquipIdRoute,
 }
 
 const AuthenticatedProducaoRouteWithChildren =
