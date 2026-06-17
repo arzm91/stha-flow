@@ -138,12 +138,18 @@ function OPPage() {
 
       <TagsDoEquipamento tagNomes={((op.data.equipamento as any)?.tag_nomes ?? []) as string[]} ordemId={id} disabled={isFinal} />
 
-      <Tabs defaultValue="parametros">
+      <Tabs defaultValue="processos">
         <TabsList>
+          <TabsTrigger value="processos"><ListChecks className="mr-1 h-4 w-4" />Processos</TabsTrigger>
           <TabsTrigger value="parametros"><Gauge className="mr-1 h-4 w-4" />Parâmetros</TabsTrigger>
           <TabsTrigger value="analises"><FlaskConical className="mr-1 h-4 w-4" />Análises</TabsTrigger>
           <TabsTrigger value="observacoes"><MessageSquare className="mr-1 h-4 w-4" />Observações</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="processos">
+          <ProcessosSection ordemId={id} produtoId={(op.data as any).produto_id} disabled={isFinal} />
+        </TabsContent>
+
 
         <TabsContent value="parametros">
           <RegistroSection
