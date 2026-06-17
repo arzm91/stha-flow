@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { Tag as TagIcon, Radio, Settings } from "lucide-react";
 import { formatDate } from "@/lib/format";
 
-export const Route = createFileRoute("/_authenticated/tags")({
+export const Route = createFileRoute("/_authenticated/tags/")({
   component: TagsPage,
 });
 
