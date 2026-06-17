@@ -213,7 +213,7 @@ function EndpointsPage() {
         <CardHeader className="pb-2">
           <CardTitle className="text-base">Endpoints cadastrados</CardTitle>
           <CardDescription>
-            O servidor consulta cada endpoint no intervalo configurado (mínimo 60s). A tela "Tags ao
+            O servidor consulta cada endpoint no intervalo configurado (mínimo 2s). A tela "Tags ao
             Vivo" atualiza a exibição a cada 1 segundo.
           </CardDescription>
         </CardHeader>
