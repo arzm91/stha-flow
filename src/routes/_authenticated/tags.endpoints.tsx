@@ -50,7 +50,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { formatRelative } from "@/lib/format";
-import { syncAllTagEndpoints, syncTagEndpointById, testTagEndpointUrl } from "@/lib/tagEndpointSync";
+import { syncAllTagEndpoints, syncTagEndpointById } from "@/lib/tagEndpointSync";
 
 export const Route = createFileRoute("/_authenticated/tags/endpoints")({
   component: EndpointsPage,
