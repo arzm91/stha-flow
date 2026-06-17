@@ -35,6 +35,7 @@ export const Route = createFileRoute("/_authenticated/tags/")({
 
 type TagRow = {
   nome: string;
+  nome_amigavel: string | null;
   valor: string | null;
   valor_num: number | null;
   unidade: string | null;
