@@ -22,12 +22,13 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) return;
+      const { data: s } = await supabase.auth.getSession();
+      const uid = s.session?.user.id;
+      if (!uid) return;
       const { data } = await supabase
         .from("profiles")
         .select("nome,empresa,email")
-        .eq("id", u.user.id)
+        .eq("id", uid)
         .maybeSingle();
       if (data) setProfile(data);
     })();
