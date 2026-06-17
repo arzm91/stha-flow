@@ -318,6 +318,14 @@ function EditTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => vo
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
+          <div>
+            <Label>Nome amigável</Label>
+            <Input
+              value={nomeAmigavel}
+              onChange={(e) => setNomeAmigavel(e.target.value)}
+              placeholder="Ex.: Temperatura Reator 8"
+            />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Unidade</Label>
