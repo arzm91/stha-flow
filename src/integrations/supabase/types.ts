@@ -809,7 +809,6 @@ export type Database = {
         Returns: boolean
       }
       ingest_tags: { Args: { payload: Json }; Returns: number }
-      ingest_tags_admin: { Args: { payload: Json }; Returns: number }
     }
     Enums: {
       app_role: "admin" | "operador"
