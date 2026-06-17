@@ -106,6 +106,8 @@ function OPPage() {
         <Info label="Qtd. planejada / produzida" value={`${formatNumber(Number(op.data.qtd_planejada))} / ${op.data.qtd_produzida != null ? formatNumber(Number(op.data.qtd_produzida)) : "—"}`} />
       </div>
 
+      <TagsDoEquipamento tagNomes={((op.data.equipamento as any)?.tag_nomes ?? []) as string[]} />
+
       <Tabs defaultValue="parametros">
         <TabsList>
           <TabsTrigger value="parametros"><Gauge className="mr-1 h-4 w-4" />Parâmetros</TabsTrigger>
