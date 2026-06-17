@@ -1,0 +1,131 @@
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { PageHeader } from "@/components/PageHeader";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
+import { z } from "zod";
+
+const search = z.object({ equipamento: z.string().optional() });
+
+export const Route = createFileRoute("/_authenticated/producao/nova")({
+  validateSearch: search,
+  component: NovaOPPage,
+});
+
+function NovaOPPage() {
+  const sp = Route.useSearch();
+  const navigate = useNavigate();
+  const qc = useQueryClient();
+  const [numero, setNumero] = useState("");
+  const [produtoId, setProdutoId] = useState("");
+  const [equipamentoId, setEquipamentoId] = useState(sp.equipamento ?? "");
+  const [qtdPlanejada, setQtdPlanejada] = useState<number | "">("");
+  const [obs, setObs] = useState("");
+
+  const equipamentos = useQuery({
+    queryKey: ["equipamentos-disp"],
+    queryFn: async () => {
+      const { data } = await supabase.from("equipamentos").select("id,codigo,nome,status").eq("ativo", true).order("codigo");
+      return data ?? [];
+    },
+  });
+  const produtos = useQuery({
+    queryKey: ["produtos-ativos"],
+    queryFn: async () => {
+      const { data } = await supabase.from("produtos").select("id,codigo,nome").eq("ativo", true).order("nome");
+      return data ?? [];
+    },
+  });
+
+  const create = useMutation({
+    mutationFn: async () => {
+      if (!numero || !produtoId || !equipamentoId || qtdPlanejada === "") throw new Error("Preencha todos os campos");
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Não autenticado");
+      const { data, error } = await supabase
+        .from("ordens_producao")
+        .insert({
+          owner_id: u.user.id,
+          numero,
+          produto_id: produtoId,
+          equipamento_id: equipamentoId,
+          qtd_planejada: Number(qtdPlanejada),
+          obs_iniciais: obs || null,
+          status: "em_andamento",
+          inicio_em: new Date().toISOString(),
+        })
+        .select("id")
+        .single();
+      if (error) throw error;
+      const { error: e2 } = await supabase.from("equipamentos").update({ status: "ocupado" }).eq("id", equipamentoId);
+      if (e2) throw e2;
+      return data.id as string;
+    },
+    onSuccess: (id) => {
+      toast.success("Ordem iniciada");
+      qc.invalidateQueries();
+      navigate({ to: "/producao/$id", params: { id } });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <div>
+      <Button asChild variant="ghost" size="sm" className="mb-3">
+        <Link to="/producao"><ArrowLeft className="mr-1 h-4 w-4" /> Voltar</Link>
+      </Button>
+      <PageHeader title="Nova Ordem de Produção" description="Abra uma OP para iniciar a produção em um equipamento." />
+
+      <Card className="max-w-2xl">
+        <CardContent className="space-y-4 p-6">
+          <form onSubmit={(e) => { e.preventDefault(); create.mutate(); }} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="numero">Número da OP</Label>
+                <Input id="numero" value={numero} onChange={(e) => setNumero(e.target.value)} required />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="qtd">Quantidade planejada</Label>
+                <Input id="qtd" type="number" step="any" value={qtdPlanejada} onChange={(e) => setQtdPlanejada(e.target.value === "" ? "" : Number(e.target.value))} required />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="produto">Produto</Label>
+                <select id="produto" value={produtoId} onChange={(e) => setProdutoId(e.target.value)} required
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm">
+                  <option value="">— selecione —</option>
+                  {produtos.data?.map((p) => <option key={p.id} value={p.id}>{p.codigo} — {p.nome}</option>)}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="equip">Equipamento</Label>
+                <select id="equip" value={equipamentoId} onChange={(e) => setEquipamentoId(e.target.value)} required
+                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm">
+                  <option value="">— selecione —</option>
+                  {equipamentos.data?.map((eq) => (
+                    <option key={eq.id} value={eq.id} disabled={eq.status === "ocupado"}>
+                      {eq.codigo} — {eq.nome}{eq.status === "ocupado" ? " (ocupado)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="obs">Observações iniciais</Label>
+              <textarea id="obs" value={obs} onChange={(e) => setObs(e.target.value)}
+                className="flex min-h-[90px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+            </div>
+            <div className="flex justify-end">
+              <Button type="submit" disabled={create.isPending}>Iniciar Produção</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
