@@ -10,6 +10,7 @@ import {
   Radio,
 } from "lucide-react";
 import sthaLogo from "@/assets/stha_logo.png.asset.json";
+import sthaLogoMini from "@/assets/stha_logo_mini.png.asset.json";
 import {
   Sidebar,
   SidebarContent,
@@ -45,7 +46,12 @@ export function AppSidebar() {
           <img
             src={sthaLogo.url}
             alt="STHA"
-            className="h-10 w-auto object-contain group-data-[collapsible=icon]:h-7"
+            className="h-10 w-auto object-contain group-data-[collapsible=icon]:hidden"
+          />
+          <img
+            src={sthaLogoMini.url}
+            alt="STHA"
+            className="hidden h-7 w-auto object-contain group-data-[collapsible=icon]:block"
           />
         </div>
       </SidebarHeader>
