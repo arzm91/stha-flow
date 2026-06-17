@@ -445,7 +445,7 @@ function EndpointForm({
         nome: nome.trim(),
         url: u,
         metodo: "GET",
-        headers: Object.keys(headers).length ? headers : null,
+        headers,
         body: null,
         intervalo_segundos: seg,
         ativo,
