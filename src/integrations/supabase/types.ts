@@ -527,6 +527,7 @@ export type Database = {
           atualizado_em: string
           grupo: string | null
           nome: string
+          nome_amigavel: string | null
           qualidade: string | null
           unidade: string | null
           valor: string | null
@@ -538,6 +539,7 @@ export type Database = {
           atualizado_em?: string
           grupo?: string | null
           nome: string
+          nome_amigavel?: string | null
           qualidade?: string | null
           unidade?: string | null
           valor?: string | null
@@ -549,6 +551,7 @@ export type Database = {
           atualizado_em?: string
           grupo?: string | null
           nome?: string
+          nome_amigavel?: string | null
           qualidade?: string | null
           unidade?: string | null
           valor?: string | null

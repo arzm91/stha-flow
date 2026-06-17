@@ -35,6 +35,7 @@ export const Route = createFileRoute("/_authenticated/tags/")({
 
 type TagRow = {
   nome: string;
+  nome_amigavel: string | null;
   valor: string | null;
   valor_num: number | null;
   unidade: string | null;
@@ -76,6 +77,7 @@ function TagsPage() {
     return (tags.data ?? []).filter(
       (t) =>
         t.nome.toLowerCase().includes(q) ||
+        (t.nome_amigavel ?? "").toLowerCase().includes(q) ||
         (t.grupo ?? "").toLowerCase().includes(q) ||
         (t.valor ?? "").toLowerCase().includes(q),
     );
@@ -190,10 +192,19 @@ function TagsPage() {
                   const fora = outOfRange(t);
                   return (
                     <TableRow key={t.nome} className={fora ? "bg-destructive/5" : undefined}>
-                      <TableCell className="font-mono text-sm">
+                      <TableCell className="text-sm">
                         <div className="flex items-center gap-2">
                           <TagIcon className="h-3 w-3 text-muted-foreground" />
-                          {t.nome}
+                          <div className="flex flex-col">
+                            {t.nome_amigavel ? (
+                              <>
+                                <span className="font-medium">{t.nome_amigavel}</span>
+                                <span className="font-mono text-[10px] text-muted-foreground">{t.nome}</span>
+                              </>
+                            ) : (
+                              <span className="font-mono">{t.nome}</span>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
@@ -250,14 +261,15 @@ function TagsPage() {
 
 function EditTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => void }) {
   const qc = useQueryClient();
+  const [nomeAmigavel, setNomeAmigavel] = useState("");
   const [unidade, setUnidade] = useState("");
   const [grupo, setGrupo] = useState("");
   const [vMin, setVMin] = useState("");
   const [vMax, setVMax] = useState("");
 
-  // sync when tag changes
   useMemo(() => {
     if (tag) {
+      setNomeAmigavel(tag.nome_amigavel ?? "");
       setUnidade(tag.unidade ?? "");
       setGrupo(tag.grupo ?? "");
       setVMin(tag.valor_min !== null ? String(tag.valor_min) : "");
@@ -278,6 +290,7 @@ function EditTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => vo
       const { error } = await supabase
         .from("tags_live" as never)
         .update({
+          nome_amigavel: nomeAmigavel.trim() || null,
           unidade: unidade.trim() || null,
           grupo: grupo.trim() || null,
           valor_min: min,
@@ -305,6 +318,14 @@ function EditTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => vo
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
+          <div>
+            <Label>Nome amigável</Label>
+            <Input
+              value={nomeAmigavel}
+              onChange={(e) => setNomeAmigavel(e.target.value)}
+              placeholder="Ex.: Temperatura Reator 8"
+            />
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <Label>Unidade</Label>
