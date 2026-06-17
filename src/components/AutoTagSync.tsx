@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { syncDueTagEndpoints } from "@/lib/tagEndpointSync";
 
 const SYNC_INTERVAL_MS = 2_000;
 
@@ -14,11 +15,10 @@ export function AutoTagSync() {
       if (cancelled || inFlight.current) return;
       inFlight.current = true;
       try {
-        const res = await fetch("/api/public/tags/poll?force=1", { cache: "no-store" });
-        const data = await res.json().catch(() => null);
-        const updated = Array.isArray(data?.results) && data.results.some((r: any) => r?.ok);
+        const data = await syncDueTagEndpoints();
+        const updated = data.results.some((r) => r.ok);
 
-        if (res.ok && updated && !cancelled) {
+        if (updated && !cancelled) {
           queryClient.invalidateQueries({ queryKey: ["tags-live"] });
           queryClient.invalidateQueries({ queryKey: ["tag_endpoints"] });
         }
