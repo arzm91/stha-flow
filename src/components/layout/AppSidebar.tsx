@@ -7,9 +7,9 @@ import {
   FileBarChart,
   Activity,
   Settings,
-  Cpu,
   Radio,
 } from "lucide-react";
+import sthaLogo from "@/assets/stha_logo.png.asset.json";
 import {
   Sidebar,
   SidebarContent,
@@ -42,11 +42,13 @@ export function AppSidebar() {
     <Sidebar collapsible="icon">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary text-primary-foreground">
-            <Cpu className="h-5 w-5" />
-          </div>
+          <img
+            src={sthaLogo.url}
+            alt="STHA"
+            className="h-9 w-9 shrink-0 object-contain group-data-[collapsible=icon]:h-7 group-data-[collapsible=icon]:w-7"
+          />
           <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="text-base font-bold tracking-tight">STHApc</span>
+            <span className="text-base font-bold tracking-tight">STHA</span>
             <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Gestão Industrial</span>
           </div>
         </div>
