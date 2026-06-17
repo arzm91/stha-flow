@@ -108,12 +108,33 @@ function OPPage() {
         }
       />
 
-      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
         <Info label="Início" value={formatDate(op.data.inicio_em)} />
         <Info label="Fim" value={op.data.fim_em ? formatDate(op.data.fim_em) : "—"} />
-        <Info label="Tempo" value={op.data.fim_em ? durationBetween(op.data.inicio_em, op.data.fim_em) : durationFromNow(op.data.inicio_em)} />
+        <Info label="Duração total" value={op.data.fim_em ? durationBetween(op.data.inicio_em, op.data.fim_em) : durationFromNow(op.data.inicio_em)} />
         <Info label="Qtd. planejada / produzida" value={`${formatNumber(Number(op.data.qtd_planejada))} / ${op.data.qtd_produzida != null ? formatNumber(Number(op.data.qtd_produzida)) : "—"}`} />
+        <Info label="Operador" value={operador.data?.nome ?? "—"} />
+        <Info label="Equipamento" value={(op.data.equipamento as any)?.nome ?? "—"} />
       </div>
+
+      {(op.data.obs_iniciais || op.data.obs_finais) ? (
+        <Card className="mb-4">
+          <CardContent className="grid gap-3 p-4 md:grid-cols-2">
+            {op.data.obs_iniciais ? (
+              <div>
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">Observações iniciais</div>
+                <div className="mt-1 whitespace-pre-wrap text-sm">{op.data.obs_iniciais}</div>
+              </div>
+            ) : null}
+            {op.data.obs_finais ? (
+              <div>
+                <div className="text-xs uppercase tracking-wider text-muted-foreground">Observações finais</div>
+                <div className="mt-1 whitespace-pre-wrap text-sm">{op.data.obs_finais}</div>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
 
       <TagsDoEquipamento tagNomes={((op.data.equipamento as any)?.tag_nomes ?? []) as string[]} ordemId={id} disabled={isFinal} />
 
