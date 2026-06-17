@@ -468,6 +468,57 @@ export type Database = {
         }
         Relationships: []
       }
+      tag_endpoints: {
+        Row: {
+          ativo: boolean
+          body: string | null
+          created_at: string
+          headers: Json
+          id: string
+          intervalo_segundos: number
+          metodo: string
+          nome: string
+          tags_recebidas: number
+          ultima_execucao: string | null
+          ultimo_erro: string | null
+          ultimo_status: string | null
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          ativo?: boolean
+          body?: string | null
+          created_at?: string
+          headers?: Json
+          id?: string
+          intervalo_segundos?: number
+          metodo?: string
+          nome: string
+          tags_recebidas?: number
+          ultima_execucao?: string | null
+          ultimo_erro?: string | null
+          ultimo_status?: string | null
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          ativo?: boolean
+          body?: string | null
+          created_at?: string
+          headers?: Json
+          id?: string
+          intervalo_segundos?: number
+          metodo?: string
+          nome?: string
+          tags_recebidas?: number
+          ultima_execucao?: string | null
+          ultimo_erro?: string | null
+          ultimo_status?: string | null
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
+      }
       tags_live: {
         Row: {
           atualizado_em: string

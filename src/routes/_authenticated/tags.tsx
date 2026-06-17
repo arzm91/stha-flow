@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -6,9 +6,10 @@ import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { EmptyState } from "@/components/EmptyState";
-import { Tag as TagIcon, Radio } from "lucide-react";
+import { Tag as TagIcon, Radio, Settings } from "lucide-react";
 import { formatDate } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/tags")({
@@ -65,12 +66,19 @@ function TagsPage() {
         title="Tags em Tempo Real"
         description="Valores atuais recebidos via API. Atualização automática a cada 1s."
         actions={
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
-            </span>
-            Ao vivo
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success opacity-75" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
+              </span>
+              Ao vivo
+            </div>
+            <Button size="sm" variant="outline" asChild>
+              <Link to="/tags/endpoints">
+                <Settings className="mr-1 h-4 w-4" /> Endpoints
+              </Link>
+            </Button>
           </div>
         }
       />
