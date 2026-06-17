@@ -73,7 +73,7 @@ export function CrudTable({
         if (payload[k] === "") payload[k] = null;
       }
       if (editing) {
-        const { error } = await supabase.from(table as never).update(payload).eq("id", editing.id);
+        const { error } = await supabase.from(table as never).update(payload as never).eq("id", editing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from(table as never).insert(payload as never);
