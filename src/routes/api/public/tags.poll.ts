@@ -42,6 +42,57 @@ type IncomingTag = {
   quality?: string;
 };
 
+type EndpointFetchResult = {
+  ok: boolean;
+  status: number;
+  text: string;
+};
+
+async function fetchWithNodeHttp(ep: EndpointRow): Promise<EndpointFetchResult> {
+  const target = new URL(ep.url);
+  const transport = target.protocol === "https:" ? await import("node:https") : await import("node:http");
+
+  return new Promise((resolve, reject) => {
+    const req = transport.request(
+      target,
+      {
+        method: ep.metodo || "GET",
+        headers: { Accept: "application/json", ...(ep.headers ?? {}) },
+        timeout: 10_000,
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+        res.on("end", () => {
+          const status = res.statusCode ?? 0;
+          resolve({ ok: status >= 200 && status < 300, status, text: Buffer.concat(chunks).toString("utf8") });
+        });
+      },
+    );
+
+    req.on("timeout", () => req.destroy(new Error("Timeout (10s)")));
+    req.on("error", reject);
+    if (ep.metodo && ep.metodo !== "GET" && ep.body) req.write(ep.body);
+    req.end();
+  });
+}
+
+async function fetchEndpoint(ep: EndpointRow): Promise<EndpointFetchResult> {
+  const res = await fetch(ep.url, {
+    method: ep.metodo || "GET",
+    headers: { Accept: "application/json", ...(ep.headers ?? {}) },
+    body: ep.metodo && ep.metodo !== "GET" && ep.body ? ep.body : undefined,
+    signal: AbortSignal.timeout(10_000),
+  });
+  const text = await res.text();
+
+  if (res.status === 403 && text.includes("error code: 1003")) {
+    return fetchWithNodeHttp(ep);
+  }
+
+  return { ok: res.ok, status: res.status, text };
+}
+
 function normalize(input: unknown): IncomingTag[] {
   if (!input) return [];
   if (Array.isArray(input)) return input as IncomingTag[];
@@ -67,21 +118,16 @@ function normalize(input: unknown): IncomingTag[] {
 async function processOne(ep: EndpointRow, supabaseAdmin: any) {
   const now = new Date().toISOString();
   try {
-    const res = await fetch(ep.url, {
-      method: ep.metodo || "GET",
-      headers: { Accept: "application/json", ...(ep.headers ?? {}) },
-      body: ep.metodo && ep.metodo !== "GET" && ep.body ? ep.body : undefined,
-      signal: AbortSignal.timeout(10_000),
-    });
+    const res = await fetchEndpoint(ep);
     if (!res.ok) {
       await supabaseAdmin.from("tag_endpoints").update({
         ultima_execucao: now,
         ultimo_status: `HTTP ${res.status}`,
-        ultimo_erro: (await res.text()).slice(0, 500),
+        ultimo_erro: res.text.slice(0, 500),
       }).eq("id", ep.id);
       return { id: ep.id, ok: false, status: res.status };
     }
-    const data = await res.json();
+    const data = JSON.parse(res.text);
     const tags = normalize(data);
     const rows = tags
       .map((t) => {
