@@ -37,6 +37,15 @@ function OPPage() {
     refetchInterval: 10_000,
   });
 
+  const operador = useQuery({
+    queryKey: ["operador", op.data?.owner_id],
+    enabled: !!op.data?.owner_id,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("nome,email").eq("id", op.data!.owner_id).maybeSingle();
+      return data;
+    },
+  });
+
   const parametros = useQuery({
     queryKey: ["params", id],
     queryFn: async () => {
