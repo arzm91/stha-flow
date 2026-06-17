@@ -13,6 +13,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedTagsRouteImport } from './routes/_authenticated/tags'
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedProducaoRouteImport } from './routes/_authenticated/producao'
 import { Route as AuthenticatedIndicadoresRouteImport } from './routes/_authenticated/indicadores'
@@ -59,6 +60,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedTagsRoute = AuthenticatedTagsRouteImport.update({
+  id: '/tags',
+  path: '/tags',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
   id: '/relatorios',
   path: '/relatorios',
@@ -97,9 +103,9 @@ const AuthenticatedCadastrosRoute = AuthenticatedCadastrosRouteImport.update({
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedTagsIndexRoute = AuthenticatedTagsIndexRouteImport.update({
-  id: '/tags/',
-  path: '/tags/',
-  getParentRoute: () => AuthenticatedRouteRoute,
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthenticatedTagsRoute,
 } as any)
 const AuthenticatedProducaoIndexRoute =
   AuthenticatedProducaoIndexRouteImport.update({
@@ -120,9 +126,9 @@ const ApiPublicTagsRoute = ApiPublicTagsRouteImport.update({
 } as any)
 const AuthenticatedTagsEndpointsRoute =
   AuthenticatedTagsEndpointsRouteImport.update({
-    id: '/tags/endpoints',
-    path: '/tags/endpoints',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/endpoints',
+    path: '/endpoints',
+    getParentRoute: () => AuthenticatedTagsRoute,
   } as any)
 const AuthenticatedRelatoriosQualidadeRoute =
   AuthenticatedRelatoriosQualidadeRouteImport.update({
@@ -218,6 +224,7 @@ export interface FileRoutesByFullPath {
   '/indicadores': typeof AuthenticatedIndicadoresRoute
   '/producao': typeof AuthenticatedProducaoRouteWithChildren
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
+  '/tags': typeof AuthenticatedTagsRouteWithChildren
   '/cadastros/analises': typeof AuthenticatedCadastrosAnalisesRoute
   '/cadastros/equipamentos': typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
   '/cadastros/parametros': typeof AuthenticatedCadastrosParametrosRoute
@@ -280,6 +287,7 @@ export interface FileRoutesById {
   '/_authenticated/indicadores': typeof AuthenticatedIndicadoresRoute
   '/_authenticated/producao': typeof AuthenticatedProducaoRouteWithChildren
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
+  '/_authenticated/tags': typeof AuthenticatedTagsRouteWithChildren
   '/_authenticated/cadastros/analises': typeof AuthenticatedCadastrosAnalisesRoute
   '/_authenticated/cadastros/equipamentos': typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
   '/_authenticated/cadastros/parametros': typeof AuthenticatedCadastrosParametrosRoute
@@ -313,6 +321,7 @@ export interface FileRouteTypes {
     | '/indicadores'
     | '/producao'
     | '/relatorios'
+    | '/tags'
     | '/cadastros/analises'
     | '/cadastros/equipamentos'
     | '/cadastros/parametros'
@@ -374,6 +383,7 @@ export interface FileRouteTypes {
     | '/_authenticated/indicadores'
     | '/_authenticated/producao'
     | '/_authenticated/relatorios'
+    | '/_authenticated/tags'
     | '/_authenticated/cadastros/analises'
     | '/_authenticated/cadastros/equipamentos'
     | '/_authenticated/cadastros/parametros'
@@ -433,6 +443,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/tags': {
+      id: '/_authenticated/tags'
+      path: '/tags'
+      fullPath: '/tags'
+      preLoaderRoute: typeof AuthenticatedTagsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/relatorios': {
       id: '/_authenticated/relatorios'
       path: '/relatorios'
@@ -484,10 +501,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/tags/': {
       id: '/_authenticated/tags/'
-      path: '/tags'
+      path: '/'
       fullPath: '/tags/'
       preLoaderRoute: typeof AuthenticatedTagsIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedTagsRoute
     }
     '/_authenticated/producao/': {
       id: '/_authenticated/producao/'
@@ -512,10 +529,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/tags/endpoints': {
       id: '/_authenticated/tags/endpoints'
-      path: '/tags/endpoints'
+      path: '/endpoints'
       fullPath: '/tags/endpoints'
       preLoaderRoute: typeof AuthenticatedTagsEndpointsRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedTagsRoute
     }
     '/_authenticated/relatorios/qualidade': {
       id: '/_authenticated/relatorios/qualidade'
@@ -708,6 +725,19 @@ const AuthenticatedRelatoriosRouteWithChildren =
     AuthenticatedRelatoriosRouteChildren,
   )
 
+interface AuthenticatedTagsRouteChildren {
+  AuthenticatedTagsEndpointsRoute: typeof AuthenticatedTagsEndpointsRoute
+  AuthenticatedTagsIndexRoute: typeof AuthenticatedTagsIndexRoute
+}
+
+const AuthenticatedTagsRouteChildren: AuthenticatedTagsRouteChildren = {
+  AuthenticatedTagsEndpointsRoute: AuthenticatedTagsEndpointsRoute,
+  AuthenticatedTagsIndexRoute: AuthenticatedTagsIndexRoute,
+}
+
+const AuthenticatedTagsRouteWithChildren =
+  AuthenticatedTagsRoute._addFileChildren(AuthenticatedTagsRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedCadastrosRoute: typeof AuthenticatedCadastrosRouteWithChildren
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
@@ -716,8 +746,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndicadoresRoute: typeof AuthenticatedIndicadoresRoute
   AuthenticatedProducaoRoute: typeof AuthenticatedProducaoRouteWithChildren
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
-  AuthenticatedTagsEndpointsRoute: typeof AuthenticatedTagsEndpointsRoute
-  AuthenticatedTagsIndexRoute: typeof AuthenticatedTagsIndexRoute
+  AuthenticatedTagsRoute: typeof AuthenticatedTagsRouteWithChildren
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -728,8 +757,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndicadoresRoute: AuthenticatedIndicadoresRoute,
   AuthenticatedProducaoRoute: AuthenticatedProducaoRouteWithChildren,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
-  AuthenticatedTagsEndpointsRoute: AuthenticatedTagsEndpointsRoute,
-  AuthenticatedTagsIndexRoute: AuthenticatedTagsIndexRoute,
+  AuthenticatedTagsRoute: AuthenticatedTagsRouteWithChildren,
 }
 
 const AuthenticatedRouteRouteWithChildren =
