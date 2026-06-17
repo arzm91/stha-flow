@@ -192,10 +192,19 @@ function TagsPage() {
                   const fora = outOfRange(t);
                   return (
                     <TableRow key={t.nome} className={fora ? "bg-destructive/5" : undefined}>
-                      <TableCell className="font-mono text-sm">
+                      <TableCell className="text-sm">
                         <div className="flex items-center gap-2">
                           <TagIcon className="h-3 w-3 text-muted-foreground" />
-                          {t.nome}
+                          <div className="flex flex-col">
+                            {t.nome_amigavel ? (
+                              <>
+                                <span className="font-medium">{t.nome_amigavel}</span>
+                                <span className="font-mono text-[10px] text-muted-foreground">{t.nome}</span>
+                              </>
+                            ) : (
+                              <span className="font-mono">{t.nome}</span>
+                            )}
+                          </div>
                         </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
