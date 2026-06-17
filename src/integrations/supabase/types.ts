@@ -109,6 +109,7 @@ export type Database = {
           nome: string
           owner_id: string
           status: string
+          tag_nomes: string[]
           tipo: string | null
           updated_at: string
         }
@@ -122,6 +123,7 @@ export type Database = {
           nome: string
           owner_id: string
           status?: string
+          tag_nomes?: string[]
           tipo?: string | null
           updated_at?: string
         }
@@ -135,6 +137,7 @@ export type Database = {
           nome?: string
           owner_id?: string
           status?: string
+          tag_nomes?: string[]
           tipo?: string | null
           updated_at?: string
         }
