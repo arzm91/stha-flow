@@ -472,16 +472,23 @@ function EndpointForm({
 
   async function testar() {
     setTestResult(null);
-    let headers: Record<string, string> = {};
     try {
-      ({ headers } = validate());
+      validate();
     } catch (e: any) {
       setTestResult({ ok: false, message: e.message });
       return;
     }
+    if (!editing) {
+      setTestResult({
+        ok: false,
+        message: "Salve o endpoint primeiro e use o botão Sincronizar para testar.",
+      });
+      return;
+    }
     try {
-      const data = await testTagEndpointUrl(url.trim(), headers);
-      setTestResult({ ok: true, count: data.count ?? 0, sample: data.sample });
+      const data = await syncTagEndpointById(editing.id);
+      const count = data.results[0]?.count ?? 0;
+      setTestResult({ ok: true, count, sample: undefined });
     } catch (e: any) {
       setTestResult({ ok: false, message: e.message });
     }
