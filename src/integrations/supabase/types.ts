@@ -405,6 +405,94 @@ export type Database = {
           },
         ]
       }
+      produto_atividades: {
+        Row: {
+          created_at: string
+          descricao: string
+          id: string
+          ordem: number
+          owner_id: string
+          processo_id: string
+          quantidade: number | null
+          tempo_estimado_min: number | null
+          tipo: string
+          unidade: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao: string
+          id?: string
+          ordem?: number
+          owner_id: string
+          processo_id: string
+          quantidade?: number | null
+          tempo_estimado_min?: number | null
+          tipo?: string
+          unidade?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string
+          id?: string
+          ordem?: number
+          owner_id?: string
+          processo_id?: string
+          quantidade?: number | null
+          tempo_estimado_min?: number | null
+          tipo?: string
+          unidade?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produto_atividades_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "produto_processos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produto_processos: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          ordem: number
+          owner_id: string
+          produto_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          ordem?: number
+          owner_id: string
+          produto_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          owner_id?: string
+          produto_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produto_processos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produtos: {
         Row: {
           ativo: boolean
