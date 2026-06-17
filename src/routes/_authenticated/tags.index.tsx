@@ -26,7 +26,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/tooltip";
+} from "@/components/ui/alert-dialog";
 import {
   Select,
   SelectContent,
