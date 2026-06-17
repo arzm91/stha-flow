@@ -677,6 +677,7 @@ export type Database = {
           intervalo_segundos: number
           metodo: string
           nome: string
+          push_token: string
           tags_recebidas: number
           ultima_execucao: string | null
           ultimo_erro: string | null
@@ -693,6 +694,7 @@ export type Database = {
           intervalo_segundos?: number
           metodo?: string
           nome: string
+          push_token?: string
           tags_recebidas?: number
           ultima_execucao?: string | null
           ultimo_erro?: string | null
@@ -709,6 +711,7 @@ export type Database = {
           intervalo_segundos?: number
           metodo?: string
           nome?: string
+          push_token?: string
           tags_recebidas?: number
           ultima_execucao?: string | null
           ultimo_erro?: string | null
