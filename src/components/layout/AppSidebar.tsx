@@ -28,7 +28,7 @@ const items = [
   { title: "Estoque", url: "/estoque", icon: Boxes },
   { title: "Tags ao Vivo", url: "/tags", icon: Radio },
   { title: "Cadastros", url: "/cadastros", icon: ClipboardList, prefix: "/cadastros" },
-  { title: "Relatórios", url: "/relatorios", icon: FileBarChart },
+  { title: "Relatórios", url: "/relatorios/producao", icon: FileBarChart, prefix: "/relatorios" },
   { title: "Indicadores", url: "/indicadores", icon: Activity },
   { title: "Configurações", url: "/configuracoes", icon: Settings },
 ];
