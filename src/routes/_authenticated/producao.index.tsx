@@ -116,7 +116,7 @@ function ProducaoPage() {
                       </Button>
                     )}
                     <Button asChild size="sm" variant="ghost">
-                      <Link to="/cadastros/equipamentos/$id" params={{ id: e.id }}>Histórico</Link>
+                      <Link to="/producao/historico/$equipId" params={{ equipId: e.id }}>Histórico</Link>
                     </Button>
                   </div>
                 </CardContent>
