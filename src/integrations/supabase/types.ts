@@ -14,16 +14,540 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      analises_cadastro: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          obrigatoria: boolean
+          owner_id: string
+          unidade: string | null
+          updated_at: string
+          valor_max: number | null
+          valor_min: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          obrigatoria?: boolean
+          owner_id: string
+          unidade?: string | null
+          updated_at?: string
+          valor_max?: number | null
+          valor_min?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          obrigatoria?: boolean
+          owner_id?: string
+          unidade?: string | null
+          updated_at?: string
+          valor_max?: number | null
+          valor_min?: number | null
+        }
+        Relationships: []
+      }
+      analises_registradas: {
+        Row: {
+          analise_id: string
+          created_at: string
+          id: string
+          ordem_id: string
+          owner_id: string
+          registrado_em: string
+          resultado: number
+          updated_at: string
+        }
+        Insert: {
+          analise_id: string
+          created_at?: string
+          id?: string
+          ordem_id: string
+          owner_id: string
+          registrado_em?: string
+          resultado: number
+          updated_at?: string
+        }
+        Update: {
+          analise_id?: string
+          created_at?: string
+          id?: string
+          ordem_id?: string
+          owner_id?: string
+          registrado_em?: string
+          resultado?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analises_registradas_analise_id_fkey"
+            columns: ["analise_id"]
+            isOneToOne: false
+            referencedRelation: "analises_cadastro"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analises_registradas_ordem_id_fkey"
+            columns: ["ordem_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_producao"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      equipamentos: {
+        Row: {
+          ativo: boolean
+          codigo: string
+          created_at: string
+          descricao: string | null
+          id: string
+          localizacao: string | null
+          nome: string
+          owner_id: string
+          status: string
+          tipo: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          codigo: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          localizacao?: string | null
+          nome: string
+          owner_id: string
+          status?: string
+          tipo?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          codigo?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          localizacao?: string | null
+          nome?: string
+          owner_id?: string
+          status?: string
+          tipo?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      movimentacoes_estoque: {
+        Row: {
+          created_at: string
+          destino: string | null
+          id: string
+          ocorrido_em: string
+          ordem_id: string | null
+          origem: string | null
+          owner_id: string
+          produto_id: string
+          quantidade: number
+          tanque_id: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          destino?: string | null
+          id?: string
+          ocorrido_em?: string
+          ordem_id?: string | null
+          origem?: string | null
+          owner_id: string
+          produto_id: string
+          quantidade: number
+          tanque_id?: string | null
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          destino?: string | null
+          id?: string
+          ocorrido_em?: string
+          ordem_id?: string | null
+          origem?: string | null
+          owner_id?: string
+          produto_id?: string
+          quantidade?: number
+          tanque_id?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimentacoes_estoque_ordem_id_fkey"
+            columns: ["ordem_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_producao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_estoque_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "movimentacoes_estoque_tanque_id_fkey"
+            columns: ["tanque_id"]
+            isOneToOne: false
+            referencedRelation: "tanques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      observacoes_producao: {
+        Row: {
+          created_at: string
+          id: string
+          ordem_id: string
+          owner_id: string
+          registrado_em: string
+          texto: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ordem_id: string
+          owner_id: string
+          registrado_em?: string
+          texto: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ordem_id?: string
+          owner_id?: string
+          registrado_em?: string
+          texto?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "observacoes_producao_ordem_id_fkey"
+            columns: ["ordem_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_producao"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ordens_producao: {
+        Row: {
+          created_at: string
+          equipamento_id: string
+          fim_em: string | null
+          id: string
+          inicio_em: string
+          numero: string
+          obs_finais: string | null
+          obs_iniciais: string | null
+          owner_id: string
+          produto_id: string
+          qtd_planejada: number
+          qtd_produzida: number | null
+          status: string
+          tanque_destino_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          equipamento_id: string
+          fim_em?: string | null
+          id?: string
+          inicio_em?: string
+          numero: string
+          obs_finais?: string | null
+          obs_iniciais?: string | null
+          owner_id: string
+          produto_id: string
+          qtd_planejada: number
+          qtd_produzida?: number | null
+          status?: string
+          tanque_destino_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          equipamento_id?: string
+          fim_em?: string | null
+          id?: string
+          inicio_em?: string
+          numero?: string
+          obs_finais?: string | null
+          obs_iniciais?: string | null
+          owner_id?: string
+          produto_id?: string
+          qtd_planejada?: number
+          qtd_produzida?: number | null
+          status?: string
+          tanque_destino_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordens_producao_equipamento_id_fkey"
+            columns: ["equipamento_id"]
+            isOneToOne: false
+            referencedRelation: "equipamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_producao_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordens_producao_tanque_destino_id_fkey"
+            columns: ["tanque_destino_id"]
+            isOneToOne: false
+            referencedRelation: "tanques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parametros_cadastro: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          owner_id: string
+          unidade: string | null
+          updated_at: string
+          valor_max: number | null
+          valor_min: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          owner_id: string
+          unidade?: string | null
+          updated_at?: string
+          valor_max?: number | null
+          valor_min?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          owner_id?: string
+          unidade?: string | null
+          updated_at?: string
+          valor_max?: number | null
+          valor_min?: number | null
+        }
+        Relationships: []
+      }
+      parametros_registrados: {
+        Row: {
+          created_at: string
+          id: string
+          ordem_id: string
+          owner_id: string
+          parametro_id: string
+          registrado_em: string
+          updated_at: string
+          valor: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ordem_id: string
+          owner_id: string
+          parametro_id: string
+          registrado_em?: string
+          updated_at?: string
+          valor: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ordem_id?: string
+          owner_id?: string
+          parametro_id?: string
+          registrado_em?: string
+          updated_at?: string
+          valor?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parametros_registrados_ordem_id_fkey"
+            columns: ["ordem_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_producao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parametros_registrados_parametro_id_fkey"
+            columns: ["parametro_id"]
+            isOneToOne: false
+            referencedRelation: "parametros_cadastro"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produtos: {
+        Row: {
+          ativo: boolean
+          categoria: string | null
+          codigo: string
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          owner_id: string
+          unidade: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          categoria?: string | null
+          codigo: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          owner_id: string
+          unidade: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          categoria?: string | null
+          codigo?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          owner_id?: string
+          unidade?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          empresa: string | null
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          empresa?: string | null
+          id: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          empresa?: string | null
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tanques: {
+        Row: {
+          capacidade: number | null
+          codigo: string
+          created_at: string
+          id: string
+          nome: string
+          owner_id: string
+          produto_id: string | null
+          unidade: string | null
+          updated_at: string
+        }
+        Insert: {
+          capacidade?: number | null
+          codigo: string
+          created_at?: string
+          id?: string
+          nome: string
+          owner_id: string
+          produto_id?: string | null
+          unidade?: string | null
+          updated_at?: string
+        }
+        Update: {
+          capacidade?: number | null
+          codigo?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          owner_id?: string
+          produto_id?: string | null
+          unidade?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tanques_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "operador"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +674,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "operador"],
+    },
   },
 } as const
