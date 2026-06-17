@@ -213,3 +213,51 @@ export function CrudTable({
     </div>
   );
 }
+
+function MultiSelectField({
+  value, onChange, options, placeholder,
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+  options: { value: string; label: string; hint?: string }[];
+  placeholder?: string;
+}) {
+  const [query, setQuery] = useState("");
+  const toggle = (v: string) => {
+    onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+  };
+  const filtered = options.filter((o) =>
+    !query ||
+    o.label.toLowerCase().includes(query.toLowerCase()) ||
+    o.value.toLowerCase().includes(query.toLowerCase()),
+  );
+  return (
+    <div className="space-y-2 rounded-md border border-input bg-background p-2">
+      <Input placeholder={placeholder} value={query} onChange={(e) => setQuery(e.target.value)} className="h-8" />
+      {value.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {value.map((v) => (
+            <button type="button" key={v} onClick={() => toggle(v)}
+              className="inline-flex items-center gap-1 rounded-md bg-primary/15 px-2 py-0.5 text-xs text-primary hover:bg-primary/25">
+              {v} <span aria-hidden>×</span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+      <div className="max-h-48 overflow-auto rounded border border-border">
+        {filtered.length === 0 ? (
+          <p className="p-2 text-xs text-muted-foreground">Nenhuma tag encontrada.</p>
+        ) : filtered.map((o) => {
+          const checked = value.includes(o.value);
+          return (
+            <label key={o.value} className="flex cursor-pointer items-center gap-2 px-2 py-1 text-sm hover:bg-muted/50">
+              <input type="checkbox" checked={checked} onChange={() => toggle(o.value)} className="h-4 w-4 accent-primary" />
+              <span className="flex-1 truncate font-mono text-xs">{o.label}</span>
+              {o.hint ? <span className="text-xs text-muted-foreground">{o.hint}</span> : null}
+            </label>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
