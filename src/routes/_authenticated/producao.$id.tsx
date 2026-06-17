@@ -540,3 +540,227 @@ function FinalizarDialog({
     </Dialog>
   );
 }
+
+const TIPO_BADGE: Record<string, { label: string; cls: string }> = {
+  materia_prima: { label: "Matéria-prima", cls: "bg-amber-500/15 text-amber-700 border-amber-500/30" },
+  medicao: { label: "Medição", cls: "bg-blue-500/15 text-blue-700 border-blue-500/30" },
+  acao: { label: "Ação", cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30" },
+};
+
+function formatDuracao(seg: number) {
+  if (seg < 60) return `${seg}s`;
+  const h = Math.floor(seg / 3600);
+  const m = Math.floor((seg % 3600) / 60);
+  const s = seg % 60;
+  return h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
+}
+
+function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; produtoId: string; disabled: boolean }) {
+  const qc = useQueryClient();
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const processos = useQuery({
+    queryKey: ["produto-processos", produtoId],
+    enabled: !!produtoId,
+    queryFn: async () => {
+      const { data: ps, error } = await supabase
+        .from("produto_processos")
+        .select("id, nome, ordem")
+        .eq("produto_id", produtoId)
+        .order("ordem", { ascending: true });
+      if (error) throw error;
+      const ids = (ps ?? []).map((p) => p.id);
+      const { data: ats } = ids.length
+        ? await supabase
+            .from("produto_atividades")
+            .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min")
+            .in("processo_id", ids)
+            .order("ordem", { ascending: true })
+        : { data: [] };
+      return (ps ?? []).map((p) => ({
+        ...p,
+        atividades: ((ats ?? []) as any[]).filter((a) => a.processo_id === p.id),
+      }));
+    },
+  });
+
+  const etapas = useQuery({
+    queryKey: ["ordem-etapas", ordemId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ordem_etapas")
+        .select("*")
+        .eq("ordem_id", ordemId)
+        .order("iniciado_em", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+    refetchInterval: 5_000,
+  });
+
+  const iniciar = async (params: {
+    processoId: string; processoNome: string; ordemProcesso: number;
+    atividadeId?: string | null; descricao?: string | null; tipo?: string | null; ordemAtividade?: number;
+  }) => {
+    if (disabled) return toast.error("Ordem finalizada.");
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Não autenticado");
+      const { error } = await supabase.from("ordem_etapas").insert({
+        owner_id: u.user.id,
+        ordem_id: ordemId,
+        processo_id: params.processoId,
+        processo_nome: params.processoNome,
+        ordem_processo: params.ordemProcesso,
+        atividade_id: params.atividadeId ?? null,
+        atividade_descricao: params.descricao ?? null,
+        tipo: params.tipo ?? null,
+        ordem_atividade: params.ordemAtividade ?? 0,
+        iniciado_em: new Date().toISOString(),
+      });
+      if (error) throw error;
+      toast.success("Etapa iniciada");
+      qc.invalidateQueries({ queryKey: ["ordem-etapas", ordemId] });
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
+  const finalizar = async (etapaId: string, iniciadoEm: string) => {
+    try {
+      const fim = new Date();
+      const dur = Math.max(0, Math.floor((fim.getTime() - new Date(iniciadoEm).getTime()) / 1000));
+      const { error } = await supabase
+        .from("ordem_etapas")
+        .update({ finalizado_em: fim.toISOString(), duracao_seg: dur })
+        .eq("id", etapaId);
+      if (error) throw error;
+      toast.success(`Etapa finalizada (${formatDuracao(dur)})`);
+      qc.invalidateQueries({ queryKey: ["ordem-etapas", ordemId] });
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
+  const abertas = (etapas.data ?? []).filter((e: any) => !e.finalizado_em);
+  const abertaPorChave = new Map<string, any>();
+  for (const e of abertas) {
+    const key = `${e.processo_id ?? ""}|${e.atividade_id ?? ""}`;
+    if (!abertaPorChave.has(key)) abertaPorChave.set(key, e);
+  }
+
+  return (
+    <div className="mt-4 grid gap-4 lg:grid-cols-3">
+      <div className="space-y-3 lg:col-span-2">
+        {processos.isLoading ? <p className="text-sm text-muted-foreground">Carregando...</p> : null}
+        {processos.data && processos.data.length === 0 ? (
+          <Card><CardContent className="p-4 text-sm text-muted-foreground">Nenhum processo cadastrado para este produto.</CardContent></Card>
+        ) : null}
+        {(processos.data ?? []).map((p: any) => {
+          const procKey = `${p.id}|`;
+          const procAberta = abertaPorChave.get(procKey);
+          return (
+            <Card key={p.id}>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-base">
+                  <span className="mr-2 font-mono text-xs text-muted-foreground">{p.ordem + 1}.</span>
+                  {p.nome}
+                </CardTitle>
+                {procAberta ? (
+                  <Button size="sm" variant="outline" onClick={() => finalizar(procAberta.id, procAberta.iniciado_em)} disabled={disabled}>
+                    <Square className="mr-1 h-3.5 w-3.5" /> Finalizar processo
+                    <span className="ml-2 font-mono text-xs text-muted-foreground">
+                      {formatDuracao(Math.floor((now - new Date(procAberta.iniciado_em).getTime()) / 1000))}
+                    </span>
+                  </Button>
+                ) : (
+                  <Button size="sm" onClick={() => iniciar({ processoId: p.id, processoNome: p.nome, ordemProcesso: p.ordem })} disabled={disabled}>
+                    <Play className="mr-1 h-3.5 w-3.5" /> Iniciar processo
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {p.atividades.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Sem atividades.</p>
+                ) : p.atividades.map((a: any) => {
+                  const key = `${p.id}|${a.id}`;
+                  const aberta = abertaPorChave.get(key);
+                  const tipoInfo = TIPO_BADGE[a.tipo] ?? { label: a.tipo, cls: "" };
+                  return (
+                    <div key={a.id} className="flex items-center gap-2 rounded border border-border/60 p-2">
+                      <span className="font-mono text-xs text-muted-foreground">{p.ordem + 1}.{a.ordem + 1}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm">{a.descricao}</span>
+                          <Badge variant="outline" className={`text-[10px] ${tipoInfo.cls}`}>{tipoInfo.label}</Badge>
+                        </div>
+                        <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
+                          {a.quantidade != null ? <span>{a.quantidade}{a.unidade ? ` ${a.unidade}` : ""}</span> : null}
+                          {a.tempo_estimado_min != null ? <span>~{a.tempo_estimado_min} min</span> : null}
+                        </div>
+                      </div>
+                      {aberta ? (
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-xs text-primary">
+                            {formatDuracao(Math.floor((now - new Date(aberta.iniciado_em).getTime()) / 1000))}
+                          </span>
+                          <Button size="sm" variant="outline" onClick={() => finalizar(aberta.id, aberta.iniciado_em)} disabled={disabled}>
+                            <Square className="mr-1 h-3.5 w-3.5" /> Finalizar
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button size="sm" variant="ghost" onClick={() => iniciar({
+                          processoId: p.id, processoNome: p.nome, ordemProcesso: p.ordem,
+                          atividadeId: a.id, descricao: a.descricao, tipo: a.tipo, ordemAtividade: a.ordem,
+                        })} disabled={disabled}>
+                          <Play className="mr-1 h-3.5 w-3.5" /> Iniciar
+                        </Button>
+                      )}
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <Card className="lg:col-span-1">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center gap-2 text-base"><Clock className="h-4 w-4" />Histórico de etapas</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {(etapas.data ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">Nenhuma etapa registrada.</p>
+          ) : (etapas.data ?? []).map((e: any) => {
+            const dur = e.duracao_seg != null
+              ? formatDuracao(e.duracao_seg)
+              : formatDuracao(Math.floor((now - new Date(e.iniciado_em).getTime()) / 1000));
+            return (
+              <div key={e.id} className={`rounded-md border p-2 text-xs ${e.finalizado_em ? "border-border bg-muted/20" : "border-primary/40 bg-primary/5"}`}>
+                <div className="font-medium">
+                  {e.processo_nome}
+                  {e.atividade_descricao ? <span className="text-muted-foreground"> · {e.atividade_descricao}</span> : null}
+                </div>
+                <div className="mt-1 flex items-center justify-between text-muted-foreground">
+                  <span>{formatDate(e.iniciado_em)}</span>
+                  <span className={`font-mono ${e.finalizado_em ? "" : "text-primary"}`}>{dur}</span>
+                </div>
+                {e.finalizado_em ? (
+                  <div className="text-[10px] text-muted-foreground">Fim: {formatDate(e.finalizado_em)}</div>
+                ) : (
+                  <div className="text-[10px] text-primary">em andamento</div>
+                )}
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
