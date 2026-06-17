@@ -527,6 +527,8 @@ export type Database = {
           qualidade: string | null
           unidade: string | null
           valor: string | null
+          valor_max: number | null
+          valor_min: number | null
           valor_num: number | null
         }
         Insert: {
@@ -536,6 +538,8 @@ export type Database = {
           qualidade?: string | null
           unidade?: string | null
           valor?: string | null
+          valor_max?: number | null
+          valor_min?: number | null
           valor_num?: number | null
         }
         Update: {
@@ -545,6 +549,8 @@ export type Database = {
           qualidade?: string | null
           unidade?: string | null
           valor?: string | null
+          valor_max?: number | null
+          valor_min?: number | null
           valor_num?: number | null
         }
         Relationships: []
@@ -626,6 +632,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      ingest_tags: { Args: { payload: Json }; Returns: number }
     }
     Enums: {
       app_role: "admin" | "operador"
