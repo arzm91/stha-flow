@@ -22,7 +22,7 @@ import { Factory, Play, Eye } from "lucide-react";
 import { toast } from "sonner";
 import { durationFromNow } from "@/lib/format";
 
-export const Route = createFileRoute("/_authenticated/producao")({
+export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
 });
 
