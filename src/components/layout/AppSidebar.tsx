@@ -8,6 +8,7 @@ import {
   Activity,
   Settings,
   Cpu,
+  Radio,
 } from "lucide-react";
 import {
   Sidebar,
@@ -25,6 +26,7 @@ const items = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Produção", url: "/producao", icon: Factory },
   { title: "Estoque", url: "/estoque", icon: Boxes },
+  { title: "Tags ao Vivo", url: "/tags", icon: Radio },
   { title: "Cadastros", url: "/cadastros", icon: ClipboardList, prefix: "/cadastros" },
   { title: "Relatórios", url: "/relatorios", icon: FileBarChart },
   { title: "Indicadores", url: "/indicadores", icon: Activity },
