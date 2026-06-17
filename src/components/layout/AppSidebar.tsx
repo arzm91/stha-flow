@@ -41,16 +41,12 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader>
-        <div className="flex items-center gap-2 px-2 py-3">
+        <div className="flex items-center justify-center px-2 py-3">
           <img
             src={sthaLogo.url}
             alt="STHA"
-            className="h-9 w-9 shrink-0 object-contain group-data-[collapsible=icon]:h-7 group-data-[collapsible=icon]:w-7"
+            className="h-10 w-auto object-contain group-data-[collapsible=icon]:h-7"
           />
-          <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="text-base font-bold tracking-tight">STHA</span>
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground">Gestão Industrial</span>
-          </div>
         </div>
       </SidebarHeader>
       <SidebarContent>
