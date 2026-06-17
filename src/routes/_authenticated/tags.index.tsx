@@ -261,14 +261,15 @@ function TagsPage() {
 
 function EditTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => void }) {
   const qc = useQueryClient();
+  const [nomeAmigavel, setNomeAmigavel] = useState("");
   const [unidade, setUnidade] = useState("");
   const [grupo, setGrupo] = useState("");
   const [vMin, setVMin] = useState("");
   const [vMax, setVMax] = useState("");
 
-  // sync when tag changes
   useMemo(() => {
     if (tag) {
+      setNomeAmigavel(tag.nome_amigavel ?? "");
       setUnidade(tag.unidade ?? "");
       setGrupo(tag.grupo ?? "");
       setVMin(tag.valor_min !== null ? String(tag.valor_min) : "");
@@ -289,6 +290,7 @@ function EditTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => vo
       const { error } = await supabase
         .from("tags_live" as never)
         .update({
+          nome_amigavel: nomeAmigavel.trim() || null,
           unidade: unidade.trim() || null,
           grupo: grupo.trim() || null,
           valor_min: min,
