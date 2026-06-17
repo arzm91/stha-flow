@@ -152,12 +152,20 @@ export function CrudTable({
                         onChange={(e) => setForm({ ...form, [f.key]: e.target.value })}
                         placeholder={f.placeholder}
                         className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+                    ) : f.type === "multiselect" ? (
+                      <MultiSelectField
+                        value={Array.isArray(form[f.key]) ? (form[f.key] as string[]) : []}
+                        onChange={(v) => setForm({ ...form, [f.key]: v })}
+                        options={f.options ?? []}
+                        placeholder={f.placeholder ?? "Selecione..."}
+                      />
                     ) : (
                       <Input id={f.key} type={f.type ?? "text"} step={f.step} required={f.required}
                         placeholder={f.placeholder}
                         value={(form[f.key] as string | number) ?? ""}
                         onChange={(e) => setForm({ ...form, [f.key]: f.type === "number" ? (e.target.value === "" ? "" : Number(e.target.value)) : e.target.value })} />
                     )}
+                    {f.help ? <p className="text-xs text-muted-foreground">{f.help}</p> : null}
                   </div>
                 ))}
                 <DialogFooter>
