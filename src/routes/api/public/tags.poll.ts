@@ -107,9 +107,9 @@ async function processOne(ep: EndpointRow, supabaseAdmin: any) {
       .filter(Boolean);
 
     if (rows.length > 0) {
-      const { error } = await supabaseAdmin
-        .from("tags_live")
-        .upsert(rows as any, { onConflict: "nome" });
+      const { error } = await supabaseAdmin.rpc("ingest_tags" as any, {
+        payload: rows as any,
+      } as any);
       if (error) throw new Error(error.message);
     }
 
