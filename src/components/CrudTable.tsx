@@ -17,11 +17,12 @@ import { EmptyState } from "@/components/EmptyState";
 export type FieldDef = {
   key: string;
   label: string;
-  type?: "text" | "number" | "checkbox" | "select" | "textarea";
+  type?: "text" | "number" | "checkbox" | "select" | "textarea" | "multiselect";
   required?: boolean;
-  options?: { value: string; label: string }[];
+  options?: { value: string; label: string; hint?: string }[];
   step?: string;
   placeholder?: string;
+  help?: string;
 };
 
 type Row = Record<string, unknown> & { id: string };
