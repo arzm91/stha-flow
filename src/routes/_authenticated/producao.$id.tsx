@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, CheckCircle2, Gauge, FlaskConical, MessageSquare, Activity, AlertTriangle, Play, Square, ListChecks, Clock } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Gauge, FlaskConical, MessageSquare, Activity, AlertTriangle, Play, Square, ListChecks, Clock, History } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate, formatNumber, durationFromNow, durationBetween } from "@/lib/format";
 
@@ -144,6 +144,7 @@ function OPPage() {
           <TabsTrigger value="parametros"><Gauge className="mr-1 h-4 w-4" />Parâmetros</TabsTrigger>
           <TabsTrigger value="analises"><FlaskConical className="mr-1 h-4 w-4" />Análises</TabsTrigger>
           <TabsTrigger value="observacoes"><MessageSquare className="mr-1 h-4 w-4" />Observações</TabsTrigger>
+          <TabsTrigger value="historico"><History className="mr-1 h-4 w-4" />Histórico</TabsTrigger>
         </TabsList>
 
         <TabsContent value="processos">
@@ -208,8 +209,158 @@ function OPPage() {
             }}
           />
         </TabsContent>
+
+        <TabsContent value="historico">
+          <TimelineUnificada ordemId={id} />
+        </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+function TimelineUnificada({ ordemId }: { ordemId: string }) {
+  const parametros = useQuery({
+    queryKey: ["params", ordemId],
+    queryFn: async () => {
+      const { data } = await supabase.from("parametros_registrados")
+        .select("*, parametro:parametro_id(nome,unidade)")
+        .eq("ordem_id", ordemId).order("registrado_em", { ascending: false });
+      return data ?? [];
+    },
+  });
+  const analises = useQuery({
+    queryKey: ["analises", ordemId],
+    queryFn: async () => {
+      const { data } = await supabase.from("analises_registradas")
+        .select("*, analise:analise_id(nome,unidade)")
+        .eq("ordem_id", ordemId).order("registrado_em", { ascending: false });
+      return data ?? [];
+    },
+  });
+  const observacoes = useQuery({
+    queryKey: ["obs", ordemId],
+    queryFn: async () => {
+      const { data } = await supabase.from("observacoes_producao")
+        .select("*").eq("ordem_id", ordemId).order("registrado_em", { ascending: false });
+      return data ?? [];
+    },
+  });
+  const etapas = useQuery({
+    queryKey: ["ordem-etapas", ordemId],
+    queryFn: async () => {
+      const { data } = await supabase.from("ordem_etapas")
+        .select("*").eq("ordem_id", ordemId).order("iniciado_em", { ascending: false });
+      return data ?? [];
+    },
+  });
+
+  type Evt = {
+    when: string;
+    tipo: "parametro" | "analise" | "observacao" | "processo_inicio" | "processo_fim";
+    titulo: string;
+    detalhe?: string;
+    key: string;
+  };
+
+  const eventos: Evt[] = [];
+  for (const p of parametros.data ?? []) {
+    eventos.push({
+      key: `par-${p.id}`,
+      when: p.registrado_em,
+      tipo: "parametro",
+      titulo: (p.parametro as any)?.nome ?? "Parâmetro",
+      detalhe: `${formatNumber(Number(p.valor))}${(p.parametro as any)?.unidade ? " " + (p.parametro as any).unidade : ""}`,
+    });
+  }
+  for (const a of analises.data ?? []) {
+    eventos.push({
+      key: `anl-${a.id}`,
+      when: a.registrado_em,
+      tipo: "analise",
+      titulo: (a.analise as any)?.nome ?? "Análise",
+      detalhe: `${formatNumber(Number(a.resultado))}${(a.analise as any)?.unidade ? " " + (a.analise as any).unidade : ""}`,
+    });
+  }
+  for (const o of observacoes.data ?? []) {
+    eventos.push({
+      key: `obs-${o.id}`,
+      when: o.registrado_em,
+      tipo: "observacao",
+      titulo: "Observação",
+      detalhe: o.texto,
+    });
+  }
+  for (const e of etapas.data ?? []) {
+    const ev: any = e;
+    const nome = ev.atividade_descricao ? `${ev.processo_nome} · ${ev.atividade_descricao}` : ev.processo_nome;
+    eventos.push({
+      key: `etp-ini-${ev.id}`,
+      when: ev.iniciado_em,
+      tipo: "processo_inicio",
+      titulo: `Início: ${nome}`,
+    });
+    if (ev.finalizado_em) {
+      eventos.push({
+        key: `etp-fim-${ev.id}`,
+        when: ev.finalizado_em,
+        tipo: "processo_fim",
+        titulo: `Fim: ${nome}`,
+        detalhe: ev.duracao_seg != null ? `Duração ${formatDuracao(ev.duracao_seg)}` : undefined,
+      });
+    }
+  }
+
+  eventos.sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime());
+
+  const META: Record<Evt["tipo"], { label: string; icon: any; cls: string; dot: string }> = {
+    parametro: { label: "Parâmetro", icon: Gauge, cls: "bg-blue-500/10 text-blue-700 border-blue-500/30", dot: "bg-blue-500" },
+    analise: { label: "Análise", icon: FlaskConical, cls: "bg-purple-500/10 text-purple-700 border-purple-500/30", dot: "bg-purple-500" },
+    observacao: { label: "Observação", icon: MessageSquare, cls: "bg-amber-500/10 text-amber-700 border-amber-500/30", dot: "bg-amber-500" },
+    processo_inicio: { label: "Processo iniciado", icon: Play, cls: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30", dot: "bg-emerald-500" },
+    processo_fim: { label: "Processo finalizado", icon: Square, cls: "bg-slate-500/10 text-slate-700 border-slate-500/30", dot: "bg-slate-500" },
+  };
+
+  const loading = parametros.isLoading || analises.isLoading || observacoes.isLoading || etapas.isLoading;
+
+  return (
+    <Card className="mt-4">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <History className="h-4 w-4" /> Histórico e eventos
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <p className="text-sm text-muted-foreground">Carregando...</p>
+        ) : eventos.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhum evento registrado.</p>
+        ) : (
+          <ol className="relative space-y-3 border-l border-border pl-5">
+            {eventos.map((e) => {
+              const m = META[e.tipo];
+              const Icon = m.icon;
+              return (
+                <li key={e.key} className="relative">
+                  <span className={`absolute -left-[26px] top-1.5 h-3 w-3 rounded-full ring-2 ring-background ${m.dot}`} />
+                  <div className="rounded-md border border-border bg-muted/20 p-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline" className={`text-[10px] ${m.cls}`}>
+                        <Icon className="mr-1 h-3 w-3" />{m.label}
+                      </Badge>
+                      <span className="text-sm font-medium">{e.titulo}</span>
+                      <span className="ml-auto font-mono text-xs text-muted-foreground">{formatDate(e.when)}</span>
+                    </div>
+                    {e.detalhe ? (
+                      <div className="mt-1 whitespace-pre-wrap text-sm text-muted-foreground">{e.detalhe}</div>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
