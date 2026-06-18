@@ -37,6 +37,7 @@ import { Route as AuthenticatedCadastrosProdutosRouteImport } from './routes/_au
 import { Route as AuthenticatedCadastrosParametrosRouteImport } from './routes/_authenticated/cadastros.parametros'
 import { Route as AuthenticatedCadastrosEquipamentosRouteImport } from './routes/_authenticated/cadastros.equipamentos'
 import { Route as AuthenticatedCadastrosAnalisesRouteImport } from './routes/_authenticated/cadastros.analises'
+import { Route as ApiPublicTagsPushRouteImport } from './routes/api/public/tags.push'
 import { Route as ApiPublicTagsPollRouteImport } from './routes/api/public/tags.poll'
 import { Route as AuthenticatedProducaoHistoricoEquipIdRouteImport } from './routes/_authenticated/producao.historico.$equipId'
 import { Route as AuthenticatedEstoqueTanquesIdRouteImport } from './routes/_authenticated/estoque.tanques.$id'
@@ -197,6 +198,11 @@ const AuthenticatedCadastrosAnalisesRoute =
     path: '/analises',
     getParentRoute: () => AuthenticatedCadastrosRoute,
   } as any)
+const ApiPublicTagsPushRoute = ApiPublicTagsPushRouteImport.update({
+  id: '/api/public/tags/push',
+  path: '/api/public/tags/push',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTagsPollRoute = ApiPublicTagsPollRouteImport.update({
   id: '/api/public/tags/poll',
   path: '/api/public/tags/poll',
@@ -253,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
   '/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
+  '/api/public/tags/push': typeof ApiPublicTagsPushRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -282,6 +289,7 @@ export interface FileRoutesByTo {
   '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
   '/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
+  '/api/public/tags/push': typeof ApiPublicTagsPushRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -317,6 +325,7 @@ export interface FileRoutesById {
   '/_authenticated/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
   '/_authenticated/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
+  '/api/public/tags/push': typeof ApiPublicTagsPushRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -352,6 +361,7 @@ export interface FileRouteTypes {
     | '/estoque/tanques/$id'
     | '/producao/historico/$equipId'
     | '/api/public/tags/poll'
+    | '/api/public/tags/push'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -381,6 +391,7 @@ export interface FileRouteTypes {
     | '/estoque/tanques/$id'
     | '/producao/historico/$equipId'
     | '/api/public/tags/poll'
+    | '/api/public/tags/push'
   id:
     | '__root__'
     | '/'
@@ -415,6 +426,7 @@ export interface FileRouteTypes {
     | '/_authenticated/estoque/tanques/$id'
     | '/_authenticated/producao/historico/$equipId'
     | '/api/public/tags/poll'
+    | '/api/public/tags/push'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -423,6 +435,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   ApiPublicTagsPollRoute: typeof ApiPublicTagsPollRoute
+  ApiPublicTagsPushRoute: typeof ApiPublicTagsPushRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -623,6 +636,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCadastrosAnalisesRouteImport
       parentRoute: typeof AuthenticatedCadastrosRoute
     }
+    '/api/public/tags/push': {
+      id: '/api/public/tags/push'
+      path: '/api/public/tags/push'
+      fullPath: '/api/public/tags/push'
+      preLoaderRoute: typeof ApiPublicTagsPushRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/tags/poll': {
       id: '/api/public/tags/poll'
       path: '/api/public/tags/poll'
@@ -793,6 +813,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   ApiPublicTagsPollRoute: ApiPublicTagsPollRoute,
+  ApiPublicTagsPushRoute: ApiPublicTagsPushRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
