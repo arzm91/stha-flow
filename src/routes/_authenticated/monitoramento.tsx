@@ -263,7 +263,7 @@ function MonitoramentoPage() {
     },
   });
 
-  const handleLayoutChange = (next: Layout[]) => {
+  const handleLayoutChange = (next: LayoutItem[]) => {
     if (!widgets.data) return;
     const changed: { id: string; layout: WidgetLayout }[] = [];
     for (const l of next) {
@@ -399,7 +399,7 @@ function DashboardGrid({
   tagsByName: Map<string, TagRow>;
   onEdit: (w: Widget) => void;
   onDelete: (id: string) => void;
-  onLayoutChange: (l: Layout[]) => void;
+  onLayoutChange: (l: readonly LayoutItem[]) => void;
 }) {
   const [width, setWidth] = useState(1200);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -423,7 +423,7 @@ function DashboardGrid({
     );
   }
 
-  const layout: Layout[] = widgets.map((w) => ({
+  const layout: LayoutItem[] = widgets.map((w) => ({
     i: w.id, x: w.layout.x, y: w.layout.y, w: w.layout.w, h: w.layout.h, minW: 2, minH: 2,
   }));
 
