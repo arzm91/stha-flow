@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { AppShell } from "@/components/layout/AppShell";
 import { AutoTagSync } from "@/components/AutoTagSync";
 import { PendingApprovalsDock } from "@/components/automation/PendingApprovalsDock";
+import { AlertasFloatingPopup } from "@/components/alertas/AlertasFloatingPopup";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -16,6 +17,7 @@ export const Route = createFileRoute("/_authenticated")({
       <AutoTagSync />
       <Outlet />
       <PendingApprovalsDock />
+      <AlertasFloatingPopup />
     </AppShell>
   ),
 });
