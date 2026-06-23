@@ -36,7 +36,7 @@ async function runActions(
           observacao: `[Automação] ${String(cfg.observacao ?? "")}`.trim(),
         }).select().single();
         if (error) throw new Error(error.message);
-        results.push({ action: actionType, ok: true, data });
+        results.push({ action: actionType, ok: true, info: data?.id ? String(data.id) : undefined });
       } else if (actionType === "webhook_http") {
         const res = await fetch(String(cfg.url ?? ""), {
           method: String(cfg.metodo ?? "POST"),
@@ -61,7 +61,7 @@ async function runActions(
           status: "planejada",
         }).select().single();
         if (error) throw new Error(error.message);
-        results.push({ action: actionType, ok: true, data });
+        results.push({ action: actionType, ok: true, info: data?.id ? String(data.id) : undefined });
       } else if (actionType === "avancar_ordem") {
         const ordemId = (cfg.ordem_id as string) ?? (triggerContext.ordem_id as string);
         if (!ordemId) throw new Error("ordem_id ausente");
