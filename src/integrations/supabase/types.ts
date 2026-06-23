@@ -14,6 +14,122 @@ export type Database = {
   }
   public: {
     Tables: {
+      alertas: {
+        Row: {
+          ativo: boolean
+          cooldown_minutes: number
+          created_at: string
+          descricao: string | null
+          id: string
+          last_fired_at: string | null
+          max_val: number | null
+          min_val: number | null
+          nome: string
+          notificar_email: boolean
+          owner_id: string
+          severidade: string
+          stale_minutes: number | null
+          tag_nome: string | null
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cooldown_minutes?: number
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          last_fired_at?: string | null
+          max_val?: number | null
+          min_val?: number | null
+          nome: string
+          notificar_email?: boolean
+          owner_id: string
+          severidade?: string
+          stale_minutes?: number | null
+          tag_nome?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cooldown_minutes?: number
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          last_fired_at?: string | null
+          max_val?: number | null
+          min_val?: number | null
+          nome?: string
+          notificar_email?: boolean
+          owner_id?: string
+          severidade?: string
+          stale_minutes?: number | null
+          tag_nome?: string | null
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      alertas_disparos: {
+        Row: {
+          alerta_id: string | null
+          alerta_nome: string
+          contexto: Json | null
+          created_at: string
+          email_enviado: boolean
+          id: string
+          mensagem: string
+          owner_id: string
+          resolucao_nota: string | null
+          resolvido_em: string | null
+          resolvido_por: string | null
+          severidade: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          alerta_id?: string | null
+          alerta_nome: string
+          contexto?: Json | null
+          created_at?: string
+          email_enviado?: boolean
+          id?: string
+          mensagem: string
+          owner_id: string
+          resolucao_nota?: string | null
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          severidade?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          alerta_id?: string | null
+          alerta_nome?: string
+          contexto?: Json | null
+          created_at?: string
+          email_enviado?: boolean
+          id?: string
+          mensagem?: string
+          owner_id?: string
+          resolucao_nota?: string | null
+          resolvido_em?: string | null
+          resolvido_por?: string | null
+          severidade?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alertas_disparos_alerta_id_fkey"
+            columns: ["alerta_id"]
+            isOneToOne: false
+            referencedRelation: "alertas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       analises_cadastro: {
         Row: {
           created_at: string
@@ -948,6 +1064,16 @@ export type Database = {
     Functions: {
       dispatch_automation_trigger: {
         Args: { p_context: Json; p_owner_id: string; p_trigger_type: string }
+        Returns: number
+      }
+      evaluate_tag_alertas: {
+        Args: {
+          p_owner_id: string
+          p_tag_nome: string
+          p_unidade: string
+          p_valor: string
+          p_valor_num: number
+        }
         Returns: number
       }
       has_role: {
