@@ -119,6 +119,7 @@ export const setUserPermissions = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await assertOwnsUser(context, supabaseAdmin, data.user_id);
 
     await supabaseAdmin.from("user_permissions").delete().eq("user_id", data.user_id);
     const rows = data.permissions
@@ -145,6 +146,7 @@ export const deleteManagedUser = createServerFn({ method: "POST" })
       throw new Error("Você não pode excluir a si mesmo.");
     }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await assertOwnsUser(context, supabaseAdmin, data.user_id);
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
     if (error) throw new Error(error.message);
     return { ok: true };
