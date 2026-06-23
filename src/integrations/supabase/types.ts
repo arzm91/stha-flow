@@ -1036,6 +1036,36 @@ export type Database = {
           },
         ]
       }
+      user_permissions: {
+        Row: {
+          can_edit: boolean
+          can_view: boolean
+          created_at: string
+          id: string
+          page_key: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          id?: string
+          page_key: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          can_edit?: boolean
+          can_view?: boolean
+          created_at?: string
+          id?: string
+          page_key?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1062,6 +1092,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_access_page: {
+        Args: { _need_edit?: boolean; _page: string; _user: string }
+        Returns: boolean
+      }
       dispatch_automation_trigger: {
         Args: { p_context: Json; p_owner_id: string; p_trigger_type: string }
         Returns: number
