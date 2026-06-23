@@ -21,6 +21,7 @@ import { Route as AuthenticatedEstoqueRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedCadastrosRouteImport } from './routes/_authenticated/cadastros'
+import { Route as AuthenticatedAutomacoesRouteImport } from './routes/_authenticated/automacoes'
 import { Route as AuthenticatedTagsIndexRouteImport } from './routes/_authenticated/tags.index'
 import { Route as AuthenticatedRelatoriosIndexRouteImport } from './routes/_authenticated/relatorios.index'
 import { Route as AuthenticatedProducaoIndexRouteImport } from './routes/_authenticated/producao.index'
@@ -106,6 +107,11 @@ const AuthenticatedCadastrosRoute = AuthenticatedCadastrosRouteImport.update({
   path: '/cadastros',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedAutomacoesRoute = AuthenticatedAutomacoesRouteImport.update({
+  id: '/automacoes',
+  path: '/automacoes',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedTagsIndexRoute = AuthenticatedTagsIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -131,9 +137,9 @@ const AuthenticatedEstoqueIndexRoute =
   } as any)
 const AuthenticatedAutomacoesIndexRoute =
   AuthenticatedAutomacoesIndexRouteImport.update({
-    id: '/automacoes/',
-    path: '/automacoes/',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAutomacoesRoute,
   } as any)
 const AuthenticatedTagsEndpointsRoute =
   AuthenticatedTagsEndpointsRouteImport.update({
@@ -208,9 +214,9 @@ const AuthenticatedCadastrosAnalisesRoute =
   } as any)
 const AuthenticatedAutomacoesIdRoute =
   AuthenticatedAutomacoesIdRouteImport.update({
-    id: '/automacoes/$id',
-    path: '/automacoes/$id',
-    getParentRoute: () => AuthenticatedRouteRoute,
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedAutomacoesRoute,
   } as any)
 const ApiPublicTagsPushRoute = ApiPublicTagsPushRouteImport.update({
   id: '/api/public/tags/push',
@@ -245,6 +251,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/automacoes': typeof AuthenticatedAutomacoesRouteWithChildren
   '/cadastros': typeof AuthenticatedCadastrosRouteWithChildren
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -315,6 +322,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/_authenticated/automacoes': typeof AuthenticatedAutomacoesRouteWithChildren
   '/_authenticated/cadastros': typeof AuthenticatedCadastrosRouteWithChildren
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
@@ -353,6 +361,7 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
+    | '/automacoes'
     | '/cadastros'
     | '/configuracoes'
     | '/dashboard'
@@ -422,6 +431,7 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/auth'
     | '/reset-password'
+    | '/_authenticated/automacoes'
     | '/_authenticated/cadastros'
     | '/_authenticated/configuracoes'
     | '/_authenticated/dashboard'
@@ -550,6 +560,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCadastrosRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/automacoes': {
+      id: '/_authenticated/automacoes'
+      path: '/automacoes'
+      fullPath: '/automacoes'
+      preLoaderRoute: typeof AuthenticatedAutomacoesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/tags/': {
       id: '/_authenticated/tags/'
       path: '/'
@@ -580,10 +597,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/automacoes/': {
       id: '/_authenticated/automacoes/'
-      path: '/automacoes'
+      path: '/'
       fullPath: '/automacoes/'
       preLoaderRoute: typeof AuthenticatedAutomacoesIndexRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAutomacoesRoute
     }
     '/_authenticated/tags/endpoints': {
       id: '/_authenticated/tags/endpoints'
@@ -671,10 +688,10 @@ declare module '@tanstack/react-router' {
     }
     '/_authenticated/automacoes/$id': {
       id: '/_authenticated/automacoes/$id'
-      path: '/automacoes/$id'
+      path: '/$id'
       fullPath: '/automacoes/$id'
       preLoaderRoute: typeof AuthenticatedAutomacoesIdRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
+      parentRoute: typeof AuthenticatedAutomacoesRoute
     }
     '/api/public/tags/push': {
       id: '/api/public/tags/push'
@@ -713,6 +730,22 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface AuthenticatedAutomacoesRouteChildren {
+  AuthenticatedAutomacoesIdRoute: typeof AuthenticatedAutomacoesIdRoute
+  AuthenticatedAutomacoesIndexRoute: typeof AuthenticatedAutomacoesIndexRoute
+}
+
+const AuthenticatedAutomacoesRouteChildren: AuthenticatedAutomacoesRouteChildren =
+  {
+    AuthenticatedAutomacoesIdRoute: AuthenticatedAutomacoesIdRoute,
+    AuthenticatedAutomacoesIndexRoute: AuthenticatedAutomacoesIndexRoute,
+  }
+
+const AuthenticatedAutomacoesRouteWithChildren =
+  AuthenticatedAutomacoesRoute._addFileChildren(
+    AuthenticatedAutomacoesRouteChildren,
+  )
 
 interface AuthenticatedCadastrosEquipamentosRouteChildren {
   AuthenticatedCadastrosEquipamentosIdRoute: typeof AuthenticatedCadastrosEquipamentosIdRoute
@@ -823,6 +856,7 @@ const AuthenticatedTagsRouteWithChildren =
   AuthenticatedTagsRoute._addFileChildren(AuthenticatedTagsRouteChildren)
 
 interface AuthenticatedRouteRouteChildren {
+  AuthenticatedAutomacoesRoute: typeof AuthenticatedAutomacoesRouteWithChildren
   AuthenticatedCadastrosRoute: typeof AuthenticatedCadastrosRouteWithChildren
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
@@ -831,11 +865,10 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedProducaoRoute: typeof AuthenticatedProducaoRouteWithChildren
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
   AuthenticatedTagsRoute: typeof AuthenticatedTagsRouteWithChildren
-  AuthenticatedAutomacoesIdRoute: typeof AuthenticatedAutomacoesIdRoute
-  AuthenticatedAutomacoesIndexRoute: typeof AuthenticatedAutomacoesIndexRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
+  AuthenticatedAutomacoesRoute: AuthenticatedAutomacoesRouteWithChildren,
   AuthenticatedCadastrosRoute: AuthenticatedCadastrosRouteWithChildren,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
@@ -844,8 +877,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedProducaoRoute: AuthenticatedProducaoRouteWithChildren,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
   AuthenticatedTagsRoute: AuthenticatedTagsRouteWithChildren,
-  AuthenticatedAutomacoesIdRoute: AuthenticatedAutomacoesIdRoute,
-  AuthenticatedAutomacoesIndexRoute: AuthenticatedAutomacoesIndexRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
