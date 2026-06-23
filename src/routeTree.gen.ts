@@ -28,6 +28,7 @@ import { Route as AuthenticatedRelatoriosIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedProducaoIndexRouteImport } from './routes/_authenticated/producao.index'
 import { Route as AuthenticatedEstoqueIndexRouteImport } from './routes/_authenticated/estoque.index'
 import { Route as AuthenticatedAutomacoesIndexRouteImport } from './routes/_authenticated/automacoes.index'
+import { Route as AuthenticatedAlertasIndexRouteImport } from './routes/_authenticated/alertas.index'
 import { Route as AuthenticatedTagsEndpointsRouteImport } from './routes/_authenticated/tags.endpoints'
 import { Route as AuthenticatedRelatoriosQualidadeRouteImport } from './routes/_authenticated/relatorios.qualidade'
 import { Route as AuthenticatedRelatoriosProducaoRouteImport } from './routes/_authenticated/relatorios.producao'
@@ -147,6 +148,12 @@ const AuthenticatedAutomacoesIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedAutomacoesRoute,
   } as any)
+const AuthenticatedAlertasIndexRoute =
+  AuthenticatedAlertasIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAlertasRoute,
+  } as any)
 const AuthenticatedTagsEndpointsRoute =
   AuthenticatedTagsEndpointsRouteImport.update({
     id: '/endpoints',
@@ -257,7 +264,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/alertas': typeof AuthenticatedAlertasRoute
+  '/alertas': typeof AuthenticatedAlertasRouteWithChildren
   '/automacoes': typeof AuthenticatedAutomacoesRouteWithChildren
   '/cadastros': typeof AuthenticatedCadastrosRouteWithChildren
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -280,6 +287,7 @@ export interface FileRoutesByFullPath {
   '/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
   '/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
   '/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
+  '/alertas/': typeof AuthenticatedAlertasIndexRoute
   '/automacoes/': typeof AuthenticatedAutomacoesIndexRoute
   '/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/producao/': typeof AuthenticatedProducaoIndexRoute
@@ -295,7 +303,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/alertas': typeof AuthenticatedAlertasRoute
   '/cadastros': typeof AuthenticatedCadastrosRouteWithChildren
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -313,6 +320,7 @@ export interface FileRoutesByTo {
   '/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
   '/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
   '/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
+  '/alertas': typeof AuthenticatedAlertasIndexRoute
   '/automacoes': typeof AuthenticatedAutomacoesIndexRoute
   '/estoque': typeof AuthenticatedEstoqueIndexRoute
   '/producao': typeof AuthenticatedProducaoIndexRoute
@@ -330,7 +338,7 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/_authenticated/alertas': typeof AuthenticatedAlertasRoute
+  '/_authenticated/alertas': typeof AuthenticatedAlertasRouteWithChildren
   '/_authenticated/automacoes': typeof AuthenticatedAutomacoesRouteWithChildren
   '/_authenticated/cadastros': typeof AuthenticatedCadastrosRouteWithChildren
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
@@ -353,6 +361,7 @@ export interface FileRoutesById {
   '/_authenticated/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
   '/_authenticated/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
   '/_authenticated/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
+  '/_authenticated/alertas/': typeof AuthenticatedAlertasIndexRoute
   '/_authenticated/automacoes/': typeof AuthenticatedAutomacoesIndexRoute
   '/_authenticated/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/_authenticated/producao/': typeof AuthenticatedProducaoIndexRoute
@@ -393,6 +402,7 @@ export interface FileRouteTypes {
     | '/relatorios/producao'
     | '/relatorios/qualidade'
     | '/tags/endpoints'
+    | '/alertas/'
     | '/automacoes/'
     | '/estoque/'
     | '/producao/'
@@ -408,7 +418,6 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
-    | '/alertas'
     | '/cadastros'
     | '/configuracoes'
     | '/dashboard'
@@ -426,6 +435,7 @@ export interface FileRouteTypes {
     | '/relatorios/producao'
     | '/relatorios/qualidade'
     | '/tags/endpoints'
+    | '/alertas'
     | '/automacoes'
     | '/estoque'
     | '/producao'
@@ -465,6 +475,7 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios/producao'
     | '/_authenticated/relatorios/qualidade'
     | '/_authenticated/tags/endpoints'
+    | '/_authenticated/alertas/'
     | '/_authenticated/automacoes/'
     | '/_authenticated/estoque/'
     | '/_authenticated/producao/'
@@ -621,6 +632,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAutomacoesIndexRouteImport
       parentRoute: typeof AuthenticatedAutomacoesRoute
     }
+    '/_authenticated/alertas/': {
+      id: '/_authenticated/alertas/'
+      path: '/'
+      fullPath: '/alertas/'
+      preLoaderRoute: typeof AuthenticatedAlertasIndexRouteImport
+      parentRoute: typeof AuthenticatedAlertasRoute
+    }
     '/_authenticated/tags/endpoints': {
       id: '/_authenticated/tags/endpoints'
       path: '/endpoints'
@@ -750,6 +768,17 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedAlertasRouteChildren {
+  AuthenticatedAlertasIndexRoute: typeof AuthenticatedAlertasIndexRoute
+}
+
+const AuthenticatedAlertasRouteChildren: AuthenticatedAlertasRouteChildren = {
+  AuthenticatedAlertasIndexRoute: AuthenticatedAlertasIndexRoute,
+}
+
+const AuthenticatedAlertasRouteWithChildren =
+  AuthenticatedAlertasRoute._addFileChildren(AuthenticatedAlertasRouteChildren)
+
 interface AuthenticatedAutomacoesRouteChildren {
   AuthenticatedAutomacoesIdRoute: typeof AuthenticatedAutomacoesIdRoute
   AuthenticatedAutomacoesIndexRoute: typeof AuthenticatedAutomacoesIndexRoute
@@ -875,7 +904,7 @@ const AuthenticatedTagsRouteWithChildren =
   AuthenticatedTagsRoute._addFileChildren(AuthenticatedTagsRouteChildren)
 
 interface AuthenticatedRouteRouteChildren {
-  AuthenticatedAlertasRoute: typeof AuthenticatedAlertasRoute
+  AuthenticatedAlertasRoute: typeof AuthenticatedAlertasRouteWithChildren
   AuthenticatedAutomacoesRoute: typeof AuthenticatedAutomacoesRouteWithChildren
   AuthenticatedCadastrosRoute: typeof AuthenticatedCadastrosRouteWithChildren
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
@@ -888,7 +917,7 @@ interface AuthenticatedRouteRouteChildren {
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
-  AuthenticatedAlertasRoute: AuthenticatedAlertasRoute,
+  AuthenticatedAlertasRoute: AuthenticatedAlertasRouteWithChildren,
   AuthenticatedAutomacoesRoute: AuthenticatedAutomacoesRouteWithChildren,
   AuthenticatedCadastrosRoute: AuthenticatedCadastrosRouteWithChildren,
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
