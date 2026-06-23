@@ -39,7 +39,6 @@ import { Route as AuthenticatedCadastrosProdutosRouteImport } from './routes/_au
 import { Route as AuthenticatedCadastrosParametrosRouteImport } from './routes/_authenticated/cadastros.parametros'
 import { Route as AuthenticatedCadastrosEquipamentosRouteImport } from './routes/_authenticated/cadastros.equipamentos'
 import { Route as AuthenticatedCadastrosAnalisesRouteImport } from './routes/_authenticated/cadastros.analises'
-import { Route as AuthenticatedAutomacoesIdRouteImport } from './routes/_authenticated/automacoes.$id'
 import { Route as ApiPublicTagsPushRouteImport } from './routes/api/public/tags.push'
 import { Route as ApiPublicTagsPollRouteImport } from './routes/api/public/tags.poll'
 import { Route as AuthenticatedProducaoHistoricoEquipIdRouteImport } from './routes/_authenticated/producao.historico.$equipId'
@@ -212,12 +211,6 @@ const AuthenticatedCadastrosAnalisesRoute =
     path: '/analises',
     getParentRoute: () => AuthenticatedCadastrosRoute,
   } as any)
-const AuthenticatedAutomacoesIdRoute =
-  AuthenticatedAutomacoesIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => AuthenticatedAutomacoesRoute,
-  } as any)
 const ApiPublicTagsPushRoute = ApiPublicTagsPushRouteImport.update({
   id: '/api/public/tags/push',
   path: '/api/public/tags/push',
@@ -260,7 +253,6 @@ export interface FileRoutesByFullPath {
   '/producao': typeof AuthenticatedProducaoRouteWithChildren
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/tags': typeof AuthenticatedTagsRouteWithChildren
-  '/automacoes/$id': typeof AuthenticatedAutomacoesIdRoute
   '/cadastros/analises': typeof AuthenticatedCadastrosAnalisesRoute
   '/cadastros/equipamentos': typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
   '/cadastros/parametros': typeof AuthenticatedCadastrosParametrosRoute
@@ -292,7 +284,6 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/indicadores': typeof AuthenticatedIndicadoresRoute
-  '/automacoes/$id': typeof AuthenticatedAutomacoesIdRoute
   '/cadastros/analises': typeof AuthenticatedCadastrosAnalisesRoute
   '/cadastros/equipamentos': typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
   '/cadastros/parametros': typeof AuthenticatedCadastrosParametrosRoute
@@ -331,7 +322,6 @@ export interface FileRoutesById {
   '/_authenticated/producao': typeof AuthenticatedProducaoRouteWithChildren
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/_authenticated/tags': typeof AuthenticatedTagsRouteWithChildren
-  '/_authenticated/automacoes/$id': typeof AuthenticatedAutomacoesIdRoute
   '/_authenticated/cadastros/analises': typeof AuthenticatedCadastrosAnalisesRoute
   '/_authenticated/cadastros/equipamentos': typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
   '/_authenticated/cadastros/parametros': typeof AuthenticatedCadastrosParametrosRoute
@@ -370,7 +360,6 @@ export interface FileRouteTypes {
     | '/producao'
     | '/relatorios'
     | '/tags'
-    | '/automacoes/$id'
     | '/cadastros/analises'
     | '/cadastros/equipamentos'
     | '/cadastros/parametros'
@@ -402,7 +391,6 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/dashboard'
     | '/indicadores'
-    | '/automacoes/$id'
     | '/cadastros/analises'
     | '/cadastros/equipamentos'
     | '/cadastros/parametros'
@@ -440,7 +428,6 @@ export interface FileRouteTypes {
     | '/_authenticated/producao'
     | '/_authenticated/relatorios'
     | '/_authenticated/tags'
-    | '/_authenticated/automacoes/$id'
     | '/_authenticated/cadastros/analises'
     | '/_authenticated/cadastros/equipamentos'
     | '/_authenticated/cadastros/parametros'
@@ -686,13 +673,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCadastrosAnalisesRouteImport
       parentRoute: typeof AuthenticatedCadastrosRoute
     }
-    '/_authenticated/automacoes/$id': {
-      id: '/_authenticated/automacoes/$id'
-      path: '/$id'
-      fullPath: '/automacoes/$id'
-      preLoaderRoute: typeof AuthenticatedAutomacoesIdRouteImport
-      parentRoute: typeof AuthenticatedAutomacoesRoute
-    }
     '/api/public/tags/push': {
       id: '/api/public/tags/push'
       path: '/api/public/tags/push'
@@ -732,13 +712,11 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthenticatedAutomacoesRouteChildren {
-  AuthenticatedAutomacoesIdRoute: typeof AuthenticatedAutomacoesIdRoute
   AuthenticatedAutomacoesIndexRoute: typeof AuthenticatedAutomacoesIndexRoute
 }
 
 const AuthenticatedAutomacoesRouteChildren: AuthenticatedAutomacoesRouteChildren =
   {
-    AuthenticatedAutomacoesIdRoute: AuthenticatedAutomacoesIdRoute,
     AuthenticatedAutomacoesIndexRoute: AuthenticatedAutomacoesIndexRoute,
   }
 
