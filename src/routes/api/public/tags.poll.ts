@@ -142,45 +142,22 @@ async function processOne(ep: EndpointRow, supabaseAdmin: any) {
       return { id: ep.id, ok: false, status: res.status };
     }
     const data = JSON.parse(res.text);
-    const tags = normalize(data);
-    const rows = tags
-      .map((t) => {
-        const nome = (t.nome || t.name || t.tag || "").toString().trim();
-        if (!nome) return null;
-        const valor = t.valor ?? t.value ?? null;
-        const num =
-          typeof valor === "number"
-            ? valor
-            : typeof valor === "string" && valor.trim() !== "" && !isNaN(Number(valor))
-              ? Number(valor)
-              : null;
-        return {
-          nome,
-          valor: valor === null || valor === undefined ? null : String(valor),
-          valor_num: num,
-          unidade: t.unidade ?? t.unit ?? null,
-          grupo: t.grupo ?? t.group ?? ep.nome,
-          qualidade: t.qualidade ?? t.quality ?? null,
-          atualizado_em: now,
-        };
-      })
-      .filter(Boolean);
-
-    if (rows.length > 0) {
-      const { error } = await supabaseAdmin.rpc("ingest_tags" as any, {
-        payload: rows as any,
-      } as any);
-      if (error) throw new Error(error.message);
-    }
+    const { data: ingested, error } = await supabaseAdmin.rpc("ingest_endpoint_payload" as any, {
+      p_endpoint_id: ep.id,
+      p_endpoint_name: ep.nome,
+      p_payload: data as any,
+    } as any);
+    if (error) throw new Error(error.message);
+    const count = Number(ingested ?? 0);
 
     await supabaseAdmin.from("tag_endpoints").update({
       ultima_execucao: now,
-      ultimo_status: `OK ${rows.length} tags`,
+      ultimo_status: `OK ${count} tags`,
       ultimo_erro: null,
-      tags_recebidas: rows.length,
+      tags_recebidas: count,
     }).eq("id", ep.id);
 
-    return { id: ep.id, ok: true, count: rows.length };
+    return { id: ep.id, ok: true, count };
   } catch (e: any) {
     await supabaseAdmin.from("tag_endpoints").update({
       ultima_execucao: now,
