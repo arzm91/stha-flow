@@ -285,8 +285,8 @@ function MonitoramentoPage() {
       <PageHeader
         title="Monitoramento"
         description="Centro de excelência operacional — crie painéis, gráficos e indicadores em tempo real."
-        icon={LayoutGrid}
         actions={
+
           <Dialog open={newDashOpen} onOpenChange={setNewDashOpen}>
             <DialogTrigger asChild>
               <Button><Plus className="mr-2 h-4 w-4" />Novo painel</Button>
