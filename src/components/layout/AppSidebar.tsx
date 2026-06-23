@@ -24,22 +24,29 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 const items = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Produção", url: "/producao", icon: Factory },
-  { title: "Estoque", url: "/estoque", icon: Boxes },
-  { title: "Tags ao Vivo", url: "/tags", icon: Radio },
-  { title: "Automações", url: "/automacoes", icon: Workflow, prefix: "/automacoes" },
-  { title: "Alertas", url: "/alertas", icon: Bell, prefix: "/alertas" },
-  { title: "Cadastros", url: "/cadastros", icon: ClipboardList, prefix: "/cadastros" },
-  { title: "Relatórios", url: "/relatorios/producao", icon: FileBarChart, prefix: "/relatorios" },
-  { title: "Indicadores", url: "/indicadores", icon: Activity },
-  { title: "Configurações", url: "/configuracoes", icon: Settings },
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard, pageKey: "dashboard" },
+  { title: "Produção", url: "/producao", icon: Factory, pageKey: "producao" },
+  { title: "Estoque", url: "/estoque", icon: Boxes, pageKey: "estoque" },
+  { title: "Tags ao Vivo", url: "/tags", icon: Radio, pageKey: "tags" },
+  { title: "Automações", url: "/automacoes", icon: Workflow, prefix: "/automacoes", pageKey: "automacoes" },
+  { title: "Alertas", url: "/alertas", icon: Bell, prefix: "/alertas", pageKey: "alertas" },
+  { title: "Cadastros", url: "/cadastros", icon: ClipboardList, prefix: "/cadastros", pageKey: "cadastros" },
+  { title: "Relatórios", url: "/relatorios/producao", icon: FileBarChart, prefix: "/relatorios", pageKey: "relatorios" },
+  { title: "Indicadores", url: "/indicadores", icon: Activity, pageKey: "indicadores" },
+  { title: "Configurações", url: "/configuracoes", icon: Settings, adminOnly: true },
 ];
 
 export function AppSidebar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { isAdmin, canView } = usePagePermissions();
+  const visible = items.filter((it) => {
+    if (it.adminOnly) return isAdmin;
+    if (!it.pageKey) return true;
+    return canView(it.pageKey);
+  });
   const isActive = (it: (typeof items)[number]) =>
     it.prefix ? pathname.startsWith(it.prefix) : pathname === it.url || pathname.startsWith(it.url + "/");
 
@@ -64,7 +71,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navegação</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
+              {visible.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild isActive={isActive(item)} tooltip={item.title}>
                     <Link to={item.url}>
