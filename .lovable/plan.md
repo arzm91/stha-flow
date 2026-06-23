@@ -1,74 +1,69 @@
-# Refazer Tags ao Vivo
+## Visão geral
 
-## Diagnóstico (o que está hoje no backend)
+Vou criar um **motor de automação** com editor visual em canvas (estilo n8n) onde você desenha fluxos conectando gatilhos → condições → ações. Toda execução fica como **tarefa pendente** num popup flutuante no canto inferior direito, aguardando aprovação humana antes de movimentar estoque, criar ordem, chamar webhook ou disparar email.
 
-Banco e ingestão estão funcionando — não vou recriar do zero, vou consertar pontos:
+## O que vai ser construído
 
-- `tags_live` (5 linhas) e `tag_endpoints` (2 linhas) existem, com RLS correta.
-- `POST /api/public/tags` (push) funciona — última tag chegou às 15:27 UTC hoje.
-- `GET /api/public/tags/poll` (pull) roda via `pg_cron` a cada 1 min. Um dos endpoints cadastrados é a própria URL do poll (loop) e o outro retorna 403 (Cloudflare 1003 — IP direto bloqueado): são problemas de configuração feita na UI antiga, não do código.
-- `UPDATE` em `tags_live` exige role `admin`; a função `handle_new_user` já dá admin no signup — então editar funciona, só não está claro na UI.
+### 1. Página `/automacoes` (canvas drag-and-drop)
+- Lista de fluxos salvos (ativo/inativo, últimas execuções).
+- Editor visual usando **React Flow** (`@xyflow/react`) — nós conectáveis por linhas, painel lateral para configurar cada nó.
+- Tipos de nó:
+  - **Gatilho** (1 por fluxo): tag atinge valor, tag stale, evento de produção, agendamento cron.
+  - **Condição** (opcional, várias): comparações `E`/`OU` sobre valores de tags ou contexto.
+  - **Ação** (uma ou mais): movimentação estoque/tanque, criar/avançar ordem, enviar alerta, chamar webhook HTTP.
+- Botão "Testar" simula execução sem efetivar ações.
 
-Conclusão: refaço a **interface** completa e faço **pequenos ajustes no backend** (simulação/entrada manual + validação de URL do endpoint para impedir loop).
+### 2. Popup flutuante de aprovação (global)
+- Componente fixo no canto inferior direito, presente em todas as páginas autenticadas.
+- Badge com contador de pendências; ao clicar abre card com: nome do fluxo, gatilho disparado, ações propostas (com parâmetros calculados), botões **Aprovar / Rejeitar / Adiar**.
+- Realtime via Supabase channels — surge automaticamente quando uma execução pendente é criada.
 
-## Plano
+### 3. Motor de execução (backend)
+- Tabela de fluxos + tabela de execuções pendentes.
+- **Avaliação dos gatilhos**:
+  - *Tag atinge valor* e *tag stale*: trigger no banco em `tags_live` checa fluxos ativos relevantes.
+  - *Evento de produção*: triggers em `ordens_producao` / `ordem_etapas`.
+  - *Agendamento*: pg_cron chamando rota pública a cada minuto.
+- Quando dispara, cria linha em `automation_runs` com status `pending_approval` e snapshot dos parâmetros da ação → popup acende.
+- Ao aprovar, server function `executeAutomationRun` roda as ações em sequência (com idempotência) e marca como `completed`/`failed`.
 
-### 1. Backend (migração + 1 rota nova)
-- Migração:
-  - Tabela `tags_live`: adicionar coluna `origem` (`text`, default `'push'`) para rotular `push | pull | manual`.
-  - Função `ingest_tags`: aceitar `origem` opcional no payload.
-  - Função nova `delete_tag(_nome text)` — security definer, restrita a admin via `has_role`, para excluir tags da UI.
-- Nova server function autenticada `simulateTags` (`createServerFn` + `requireSupabaseAuth`) que gera valores aleatórios para uma lista de nomes e chama `ingest_tags`. Usada pelo botão "Simular".
-- Sem mudar schema de `tag_endpoints` nem o cron.
+### 4. Email de notificação (opcional por fluxo)
+- Uso do **Lovable Emails** nativo (precisa configurar um subdomínio depois, mas a infra já fica pronta).
+- Template "Aprovação pendente" enviado para o dono do fluxo quando há nova pendência.
 
-### 2. Página `tags.index.tsx` (nova)
-Layout em três zonas:
+## Estrutura técnica
 
 ```text
-┌─────────────────────────────────────────────────────────┐
-│ Header: título + indicador "ao vivo" + botões           │
-│ [ + Nova tag (manual) ] [ ▶ Simular ] [ ⚙ Endpoints ]   │
-├─────────────────────────────────────────────────────────┤
-│ KPIs: Tags | Grupos | Fora dos limites | Última leitura │
-├─────────────────────────────────────────────────────────┤
-│ Filtros: busca + select de grupo + toggle "só alertas"  │
-├─────────────────────────────────────────────────────────┤
-│ Grid de cards agrupados por `grupo`:                    │
-│  ┌─ Reator 8 ──────────────┐  ┌─ Tanque 10 ────────┐    │
-│  │ R8.Temp  78.4 °C  ●good │  │ TQ10.Nivel 48.2 %  │    │
-│  │ R8.Pressao 2.1 bar  ●   │  │  …                 │    │
-│  └─────────────────────────┘  └─────────────────── ┘    │
-└─────────────────────────────────────────────────────────┘
+src/routes/_authenticated/
+  automacoes.index.tsx        # lista de fluxos
+  automacoes.$id.tsx          # editor canvas (React Flow)
+
+src/components/automation/
+  FlowCanvas.tsx              # wrapper React Flow
+  nodes/{TriggerNode,ConditionNode,ActionNode}.tsx
+  NodeConfigPanel.tsx         # painel lateral de config
+  PendingApprovalsDock.tsx    # popup flutuante global (renderizado no _authenticated/route)
+
+src/lib/automation/
+  types.ts                    # schemas Zod dos nós
+  evaluator.functions.ts      # createServerFn: dispatchTrigger, executeRun, approveRun, rejectRun
+  actions/{movimentacao,ordem,webhook,email}.ts
+
+supabase migrations:
+  automation_flows(id, owner_id, nome, ativo, graph jsonb, created_at, updated_at)
+  automation_runs(id, flow_id, owner_id, status, trigger_context jsonb, planned_actions jsonb, result jsonb, created_at, approved_at, approved_by)
+  triggers em tags_live / ordens_producao chamando função public.enqueue_automation_runs
+  pg_cron 1x/min para fluxos com gatilho de agendamento
 ```
 
-- Cada linha do card mostra nome amigável (fallback nome técnico), valor formatado, unidade, badge de qualidade, ícone de alerta se fora de limite, "há Xs" desde a última atualização (relativo). Hover revela botões Editar / Excluir.
-- Tags sem grupo caem em "Sem grupo".
-- Polling do React Query mantido em 2s (1s era exagero).
-- Estado vazio com instruções claras (curl de push + link para Endpoints + botão "Simular").
+Todas as tabelas com RLS escopado por `owner_id = auth.uid()`, GRANT para `authenticated`/`service_role`.
 
-### 3. Diálogos
-- **Editar tag** (igual hoje, mas com Tabs):
-  - Aba "Identificação": nome amigável, grupo, unidade.
-  - Aba "Limites": valor_min, valor_max com validação cruzada.
-- **Nova tag manual**: nome, nome amigável, grupo, unidade, valor inicial. Insere via RPC `ingest_tags` com `origem='manual'`.
-- **Excluir**: confirmação + `delete_tag`.
+## Limites desta entrega
 
-### 4. Página `tags.endpoints.tsx` (reformulada)
-- Card de topo "Como funciona" com dois passos (push vs pull) em vez de dois cards lado a lado confusos. URL de push com botão copiar e exemplo `curl`.
-- Tabela de endpoints: badge colorida para status (OK / HTTP nnn / ERRO / nunca executado), tempo relativo da última execução, contador de tags recebidas.
-- Formulário "Novo/Editar":
-  - Validação client-side: bloquear URL que aponte para o próprio host (`/api/public/tags/poll`) — evita o loop atual.
-  - Botão **"Testar agora"** dentro do formulário (antes de salvar) que chama `runNow` num modo dry-run e mostra status + amostra dos campos detectados.
-  - Intervalo mínimo 5s, com aviso que o cron roda a cada 60s.
-- Botão "Sincronizar tudo agora" no header da tabela.
+- Email usa Lovable Emails — vou deixar a infra pronta mas a verificação do domínio é um passo seu (te aviso quando chegar lá).
+- Nesta primeira versão **não** terei: loops, branches paralelas, retry com backoff configurável, versionamento de fluxo, ou marketplace de templates. Dá pra adicionar depois.
+- Página de **Alertas** (que você mencionou antes) vou construir num passo seguinte, reaproveitando esse motor — alerta vira só uma ação "enviar alerta" dentro de um fluxo.
 
-### 5. Limpeza
-- `tags.tsx` (layout pai) permanece com `<Outlet />`.
-- Manter `formatDate`; adicionar util `formatRelative(date)` em `src/lib/format.ts`.
-- Remover casts `as never` substituindo por queries tipadas com a `Database` gerada quando possível (as tabelas já estão nos types).
+## Próximo passo
 
-## Fora de escopo
-- Histórico de tags (gráficos por tag) — fica para uma próxima.
-- Alertas por e-mail/webhook quando fora do limite — fica para uma próxima.
-
-Posso prosseguir?
+Se aprovar, eu sigo nesta ordem: (1) migration do schema e triggers, (2) editor canvas + CRUD de fluxos, (3) motor de execução + dock de aprovação, (4) ações concretas (estoque, ordem, webhook), (5) email + cron de agendamento.
