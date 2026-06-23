@@ -207,7 +207,7 @@ function RowDialog({
       }
       const { error } = await supabase.from("custom_sheet_rows").insert({
         sheet_id: sheetId,
-        data: payload,
+        data: payload as never,
         owner_id: u.user.id,
         created_by: u.user.id,
       });
