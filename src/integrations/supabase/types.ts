@@ -321,6 +321,74 @@ export type Database = {
           },
         ]
       }
+      custom_sheet_rows: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          data: Json
+          id: string
+          owner_id: string
+          sheet_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          data?: Json
+          id?: string
+          owner_id: string
+          sheet_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          data?: Json
+          id?: string
+          owner_id?: string
+          sheet_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "custom_sheet_rows_sheet_id_fkey"
+            columns: ["sheet_id"]
+            isOneToOne: false
+            referencedRelation: "custom_sheets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      custom_sheets: {
+        Row: {
+          columns: Json
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          columns?: Json
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          columns?: Json
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       equipamentos: {
         Row: {
           ativo: boolean
