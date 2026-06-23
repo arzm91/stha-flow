@@ -432,14 +432,11 @@ function DashboardGrid({
     <div ref={containerRef} className="w-full">
       <GridLayout
         className="layout"
-        layout={layout}
-        cols={COLS}
-        rowHeight={ROW_H}
+        layout={layout as unknown as Layout}
         width={width}
-        margin={[12, 12]}
-        draggableHandle=".widget-drag"
-        onLayoutChange={onLayoutChange}
-        compactType="vertical"
+        gridConfig={{ cols: COLS, rowHeight: ROW_H, margin: [12, 12] }}
+        dragConfig={{ handle: ".widget-drag" }}
+        onLayoutChange={onLayoutChange as (l: Layout) => void}
       >
         {widgets.map((w) => (
           <div key={w.id}>
@@ -456,6 +453,7 @@ function DashboardGrid({
     </div>
   );
 }
+
 
 // ---------- Widget Card ----------
 function WidgetCard({
