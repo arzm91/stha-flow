@@ -33,6 +33,7 @@ import { Route as AuthenticatedAutomacoesIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedAlertasIndexRouteImport } from './routes/_authenticated/alertas.index'
 import { Route as AuthenticatedTagsEndpointsRouteImport } from './routes/_authenticated/tags.endpoints'
 import { Route as AuthenticatedTabelasIdRouteImport } from './routes/_authenticated/tabelas.$id'
+import { Route as AuthenticatedRelatoriosTurnoRouteImport } from './routes/_authenticated/relatorios.turno'
 import { Route as AuthenticatedRelatoriosQualidadeRouteImport } from './routes/_authenticated/relatorios.qualidade'
 import { Route as AuthenticatedRelatoriosProducaoRouteImport } from './routes/_authenticated/relatorios.producao'
 import { Route as AuthenticatedRelatoriosEstoqueRouteImport } from './routes/_authenticated/relatorios.estoque'
@@ -179,6 +180,12 @@ const AuthenticatedTabelasIdRoute = AuthenticatedTabelasIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AuthenticatedTabelasRoute,
 } as any)
+const AuthenticatedRelatoriosTurnoRoute =
+  AuthenticatedRelatoriosTurnoRouteImport.update({
+    id: '/turno',
+    path: '/turno',
+    getParentRoute: () => AuthenticatedRelatoriosRoute,
+  } as any)
 const AuthenticatedRelatoriosQualidadeRoute =
   AuthenticatedRelatoriosQualidadeRouteImport.update({
     id: '/qualidade',
@@ -306,6 +313,7 @@ export interface FileRoutesByFullPath {
   '/relatorios/estoque': typeof AuthenticatedRelatoriosEstoqueRoute
   '/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
   '/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
+  '/relatorios/turno': typeof AuthenticatedRelatoriosTurnoRoute
   '/tabelas/$id': typeof AuthenticatedTabelasIdRoute
   '/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
   '/alertas/': typeof AuthenticatedAlertasIndexRoute
@@ -341,6 +349,7 @@ export interface FileRoutesByTo {
   '/relatorios/estoque': typeof AuthenticatedRelatoriosEstoqueRoute
   '/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
   '/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
+  '/relatorios/turno': typeof AuthenticatedRelatoriosTurnoRoute
   '/tabelas/$id': typeof AuthenticatedTabelasIdRoute
   '/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
   '/alertas': typeof AuthenticatedAlertasIndexRoute
@@ -385,6 +394,7 @@ export interface FileRoutesById {
   '/_authenticated/relatorios/estoque': typeof AuthenticatedRelatoriosEstoqueRoute
   '/_authenticated/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
   '/_authenticated/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
+  '/_authenticated/relatorios/turno': typeof AuthenticatedRelatoriosTurnoRoute
   '/_authenticated/tabelas/$id': typeof AuthenticatedTabelasIdRoute
   '/_authenticated/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
   '/_authenticated/alertas/': typeof AuthenticatedAlertasIndexRoute
@@ -429,6 +439,7 @@ export interface FileRouteTypes {
     | '/relatorios/estoque'
     | '/relatorios/producao'
     | '/relatorios/qualidade'
+    | '/relatorios/turno'
     | '/tabelas/$id'
     | '/tags/endpoints'
     | '/alertas/'
@@ -464,6 +475,7 @@ export interface FileRouteTypes {
     | '/relatorios/estoque'
     | '/relatorios/producao'
     | '/relatorios/qualidade'
+    | '/relatorios/turno'
     | '/tabelas/$id'
     | '/tags/endpoints'
     | '/alertas'
@@ -507,6 +519,7 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios/estoque'
     | '/_authenticated/relatorios/producao'
     | '/_authenticated/relatorios/qualidade'
+    | '/_authenticated/relatorios/turno'
     | '/_authenticated/tabelas/$id'
     | '/_authenticated/tags/endpoints'
     | '/_authenticated/alertas/'
@@ -701,6 +714,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/tabelas/$id'
       preLoaderRoute: typeof AuthenticatedTabelasIdRouteImport
       parentRoute: typeof AuthenticatedTabelasRoute
+    }
+    '/_authenticated/relatorios/turno': {
+      id: '/_authenticated/relatorios/turno'
+      path: '/turno'
+      fullPath: '/relatorios/turno'
+      preLoaderRoute: typeof AuthenticatedRelatoriosTurnoRouteImport
+      parentRoute: typeof AuthenticatedRelatoriosRoute
     }
     '/_authenticated/relatorios/qualidade': {
       id: '/_authenticated/relatorios/qualidade'
@@ -929,6 +949,7 @@ interface AuthenticatedRelatoriosRouteChildren {
   AuthenticatedRelatoriosEstoqueRoute: typeof AuthenticatedRelatoriosEstoqueRoute
   AuthenticatedRelatoriosProducaoRoute: typeof AuthenticatedRelatoriosProducaoRoute
   AuthenticatedRelatoriosQualidadeRoute: typeof AuthenticatedRelatoriosQualidadeRoute
+  AuthenticatedRelatoriosTurnoRoute: typeof AuthenticatedRelatoriosTurnoRoute
   AuthenticatedRelatoriosIndexRoute: typeof AuthenticatedRelatoriosIndexRoute
 }
 
@@ -938,6 +959,7 @@ const AuthenticatedRelatoriosRouteChildren: AuthenticatedRelatoriosRouteChildren
     AuthenticatedRelatoriosProducaoRoute: AuthenticatedRelatoriosProducaoRoute,
     AuthenticatedRelatoriosQualidadeRoute:
       AuthenticatedRelatoriosQualidadeRoute,
+    AuthenticatedRelatoriosTurnoRoute: AuthenticatedRelatoriosTurnoRoute,
     AuthenticatedRelatoriosIndexRoute: AuthenticatedRelatoriosIndexRoute,
   }
 
