@@ -18,7 +18,7 @@ type Flow = {
   last_triggered_at: string | null;
 };
 
-export const Route = createFileRoute("/_authenticated/automacoes/")({
+export const Route = createFileRoute("/_authenticated/automacoes")({
   component: AutomacoesIndex,
 });
 
