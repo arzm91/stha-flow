@@ -1,12 +1,11 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { Boxes, Factory, FlaskConical, ClipboardList } from "lucide-react";
+import { Boxes, Factory, FlaskConical } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
   { to: "/relatorios/producao", label: "Produção", icon: Factory },
   { to: "/relatorios/estoque", label: "Estoque", icon: Boxes },
   { to: "/relatorios/qualidade", label: "Qualidade", icon: FlaskConical },
-  { to: "/relatorios/turno", label: "Turno", icon: ClipboardList },
 ] as const;
 
 export const Route = createFileRoute("/_authenticated/relatorios")({
