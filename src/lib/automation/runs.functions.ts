@@ -10,13 +10,15 @@ type PlannedAction = {
   data?: { config?: Record<string, unknown> };
 } & Record<string, unknown>;
 
+type ActionResult = { action: string; ok: boolean; error?: string; info?: string };
+
 async function runActions(
-  supabase: ReturnType<typeof requireSupabaseAuth extends never ? never : any>,
+  supabase: any,
   ownerId: string,
   actions: PlannedAction[],
   triggerContext: Record<string, unknown>,
-): Promise<{ ok: boolean; results: Array<{ action: string; ok: boolean; error?: string; data?: unknown }> }> {
-  const results: Array<{ action: string; ok: boolean; error?: string; data?: unknown }> = [];
+): Promise<{ ok: boolean; results: ActionResult[] }> {
+  const results: ActionResult[] = [];
   let okAll = true;
 
   for (const node of actions) {
