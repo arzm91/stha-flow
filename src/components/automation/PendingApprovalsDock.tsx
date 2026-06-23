@@ -33,7 +33,7 @@ export function PendingApprovalsDock() {
       .eq("status", "pending_approval")
       .order("created_at", { ascending: false })
       .limit(20);
-    setRuns((data as unknown as Run[]) ?? []);
+    setRuns(((data as unknown) as Run[]) ?? []);
   }
 
   useEffect(() => {

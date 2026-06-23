@@ -113,7 +113,7 @@ export const approveRun = createServerFn({ method: "POST" })
     await supabase.from("automation_runs").update({
       status: result.ok ? "completed" : "failed",
       executed_at: new Date().toISOString(),
-      result: result as unknown as Record<string, unknown>,
+      result: JSON.parse(JSON.stringify(result)),
       error_message: result.ok ? null : result.results.find(r => !r.ok)?.error ?? "Falha",
     }).eq("id", data.runId);
 
