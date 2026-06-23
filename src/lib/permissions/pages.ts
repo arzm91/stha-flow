@@ -14,6 +14,7 @@ export const MANAGED_PAGES: PageDef[] = [
   { key: "alertas", label: "Alertas", pathPrefix: "/alertas" },
   { key: "cadastros", label: "Cadastros", pathPrefix: "/cadastros" },
   { key: "relatorios", label: "Relatórios", pathPrefix: "/relatorios" },
+  { key: "turnos", label: "Turnos", pathPrefix: "/turnos" },
   { key: "indicadores", label: "Indicadores", pathPrefix: "/indicadores" },
 ];
 

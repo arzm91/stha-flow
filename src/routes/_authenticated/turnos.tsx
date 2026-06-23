@@ -25,11 +25,12 @@ import {
   Trash2,
   Wrench,
   FileText,
+  Filter,
 } from "lucide-react";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 
-export const Route = createFileRoute("/_authenticated/relatorios/turno")({
-  component: RelatorioTurnoPage,
+export const Route = createFileRoute("/_authenticated/turnos")({
+  component: TurnosPage,
 });
 
 const CATEGORIAS = [
@@ -41,6 +42,8 @@ const CATEGORIAS = [
 ] as const;
 
 type Categoria = (typeof CATEGORIAS)[number]["value"];
+const TURNOS = ["A", "B", "C", "D"] as const;
+type TurnoLetra = (typeof TURNOS)[number];
 
 function categoriaMeta(value: string) {
   return CATEGORIAS.find((c) => c.value === value) ?? CATEGORIAS[0];
@@ -51,25 +54,56 @@ function toLocalInput(d: Date) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-function RelatorioTurnoPage() {
+function toDateInput(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+function TurnosPage() {
   const qc = useQueryClient();
   const { canEdit } = usePagePermissions();
-  const editable = canEdit("relatorios");
+  const editable = canEdit("turnos");
 
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
   const [categoria, setCategoria] = useState<Categoria>("geral");
+  const [turno, setTurno] = useState<TurnoLetra>("A");
   const [ocorridoEm, setOcorridoEm] = useState(() => toLocalInput(new Date()));
 
+  // Filtros: últimos 7 dias por padrão
+  const today = new Date();
+  const sevenAgo = new Date();
+  sevenAgo.setDate(today.getDate() - 7);
+  const [dataInicio, setDataInicio] = useState(toDateInput(sevenAgo));
+  const [dataFim, setDataFim] = useState(toDateInput(today));
+  const [filtroTurno, setFiltroTurno] = useState<"todos" | TurnoLetra>("todos");
+  const [filtroCategoria, setFiltroCategoria] = useState<"todas" | Categoria>("todas");
+
   const { data: eventos = [], isLoading } = useQuery({
-    queryKey: ["relatorio_turno_eventos"],
+    queryKey: ["turnos_eventos", dataInicio, dataFim, filtroTurno, filtroCategoria],
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("relatorio_turno_eventos")
         .select("id, ocorrido_em, categoria, titulo, descricao, created_at")
         .order("ocorrido_em", { ascending: false });
+      if (dataInicio) {
+        q = q.gte("ocorrido_em", new Date(`${dataInicio}T00:00:00`).toISOString());
+      }
+      if (dataFim) {
+        q = q.lte("ocorrido_em", new Date(`${dataFim}T23:59:59`).toISOString());
+      }
+      if (filtroCategoria !== "todas") {
+        q = q.eq("categoria", filtroCategoria);
+      }
+      const { data, error } = await q;
       if (error) throw error;
-      return data;
+      let rows = data ?? [];
+      if (filtroTurno !== "todos") {
+        rows = rows.filter((r) =>
+          (r.descricao ?? "").startsWith(`[Turno ${filtroTurno}]`),
+        );
+      }
+      return rows;
     },
   });
 
@@ -80,13 +114,16 @@ function RelatorioTurnoPage() {
       if (!titulo.trim()) throw new Error("Informe um título");
       const ts = new Date(ocorridoEm);
       if (isNaN(ts.getTime())) throw new Error("Data/hora inválida");
+      const tag = `[Turno ${turno}]`;
+      const body = descricao.trim();
+      const finalDesc = body ? `${tag} ${body}` : tag;
       const { error } = await supabase.from("relatorio_turno_eventos").insert({
         owner_id: u.user.id,
         created_by: u.user.id,
         ocorrido_em: ts.toISOString(),
         categoria,
         titulo: titulo.trim(),
-        descricao: descricao.trim() || null,
+        descricao: finalDesc,
       });
       if (error) throw error;
     },
@@ -96,7 +133,7 @@ function RelatorioTurnoPage() {
       setDescricao("");
       setCategoria("geral");
       setOcorridoEm(toLocalInput(new Date()));
-      qc.invalidateQueries({ queryKey: ["relatorio_turno_eventos"] });
+      qc.invalidateQueries({ queryKey: ["turnos_eventos"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -108,7 +145,7 @@ function RelatorioTurnoPage() {
     },
     onSuccess: () => {
       toast.success("Evento removido");
-      qc.invalidateQueries({ queryKey: ["relatorio_turno_eventos"] });
+      qc.invalidateQueries({ queryKey: ["turnos_eventos"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -130,11 +167,19 @@ function RelatorioTurnoPage() {
     return Array.from(map.entries());
   }, [eventos]);
 
+  const setRangeShortcut = (days: number) => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - days);
+    setDataInicio(toDateInput(start));
+    setDataFim(toDateInput(end));
+  };
+
   return (
     <div>
       <PageHeader
-        title="Relatório de Turno"
-        description="Registre as informações do dia a dia com data e hora e acompanhe a linha do tempo dos eventos."
+        title="Turnos"
+        description="Registre as atividades e eventos de cada turno com data e hora. Filtre por período para revisar acontecimentos passados."
       />
 
       {editable && (
@@ -147,7 +192,7 @@ function RelatorioTurnoPage() {
               }}
               className="space-y-4"
             >
-              <div className="grid gap-4 md:grid-cols-[1fr,200px,220px]">
+              <div className="grid gap-4 md:grid-cols-[1fr,140px,180px,220px]">
                 <div className="space-y-1.5">
                   <Label htmlFor="titulo">Título</Label>
                   <Input
@@ -156,6 +201,21 @@ function RelatorioTurnoPage() {
                     value={titulo}
                     onChange={(e) => setTitulo(e.target.value)}
                   />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Turno</Label>
+                  <Select value={turno} onValueChange={(v) => setTurno(v as TurnoLetra)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TURNOS.map((t) => (
+                        <SelectItem key={t} value={t}>
+                          Turno {t}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-1.5">
                   <Label>Categoria</Label>
@@ -202,6 +262,66 @@ function RelatorioTurnoPage() {
         </Card>
       )}
 
+      <Card className="mb-6">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+              <Filter className="h-4 w-4" />
+              Filtros
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="ini" className="text-xs">De</Label>
+              <Input
+                id="ini"
+                type="date"
+                value={dataInicio}
+                onChange={(e) => setDataInicio(e.target.value)}
+                className="w-[160px]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="fim" className="text-xs">Até</Label>
+              <Input
+                id="fim"
+                type="date"
+                value={dataFim}
+                onChange={(e) => setDataFim(e.target.value)}
+                className="w-[160px]"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Turno</Label>
+              <Select value={filtroTurno} onValueChange={(v) => setFiltroTurno(v as typeof filtroTurno)}>
+                <SelectTrigger className="w-[140px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todos">Todos</SelectItem>
+                  {TURNOS.map((t) => (
+                    <SelectItem key={t} value={t}>Turno {t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Categoria</Label>
+              <Select value={filtroCategoria} onValueChange={(v) => setFiltroCategoria(v as typeof filtroCategoria)}>
+                <SelectTrigger className="w-[170px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas</SelectItem>
+                  {CATEGORIAS.map((c) => (
+                    <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="ml-auto flex gap-2">
+              <Button type="button" variant="outline" size="sm" onClick={() => setRangeShortcut(0)}>Hoje</Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => setRangeShortcut(7)}>7 dias</Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => setRangeShortcut(30)}>30 dias</Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="space-y-6">
         <h2 className="text-lg font-semibold">Linha do tempo</h2>
 
@@ -210,7 +330,7 @@ function RelatorioTurnoPage() {
         ) : eventos.length === 0 ? (
           <Card>
             <CardContent className="p-8 text-center text-sm text-muted-foreground">
-              Nenhum evento registrado ainda.
+              Nenhum evento encontrado para o período selecionado.
             </CardContent>
           </Card>
         ) : (
@@ -243,7 +363,10 @@ function RelatorioTurnoPage() {
                                 </Badge>
                               </div>
                               <div className="mt-1 text-xs text-muted-foreground">
-                                {dt.toLocaleTimeString("pt-BR", {
+                                {dt.toLocaleString("pt-BR", {
+                                  day: "2-digit",
+                                  month: "2-digit",
+                                  year: "numeric",
                                   hour: "2-digit",
                                   minute: "2-digit",
                                 })}
