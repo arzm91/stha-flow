@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { LogOut } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
+import { UserManagementCard } from "@/components/configuracoes/UserManagementCard";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
   component: ConfiguracoesPage,
@@ -17,6 +19,7 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
 function ConfiguracoesPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { isAdmin } = usePagePermissions();
   const [nome, setNome] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [email, setEmail] = useState("");
@@ -71,6 +74,11 @@ function ConfiguracoesPage() {
           </CardContent>
         </Card>
       </div>
+      {isAdmin && (
+        <div className="mt-4">
+          <UserManagementCard />
+        </div>
+      )}
     </div>
   );
 }
