@@ -26,6 +26,7 @@ import { Route as AuthenticatedTagsIndexRouteImport } from './routes/_authentica
 import { Route as AuthenticatedRelatoriosIndexRouteImport } from './routes/_authenticated/relatorios.index'
 import { Route as AuthenticatedProducaoIndexRouteImport } from './routes/_authenticated/producao.index'
 import { Route as AuthenticatedEstoqueIndexRouteImport } from './routes/_authenticated/estoque.index'
+import { Route as AuthenticatedAutomacoesIndexRouteImport } from './routes/_authenticated/automacoes.index'
 import { Route as AuthenticatedTagsEndpointsRouteImport } from './routes/_authenticated/tags.endpoints'
 import { Route as AuthenticatedRelatoriosQualidadeRouteImport } from './routes/_authenticated/relatorios.qualidade'
 import { Route as AuthenticatedRelatoriosProducaoRouteImport } from './routes/_authenticated/relatorios.producao'
@@ -133,6 +134,12 @@ const AuthenticatedEstoqueIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedEstoqueRoute,
+  } as any)
+const AuthenticatedAutomacoesIndexRoute =
+  AuthenticatedAutomacoesIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedAutomacoesRoute,
   } as any)
 const AuthenticatedTagsEndpointsRoute =
   AuthenticatedTagsEndpointsRouteImport.update({
@@ -266,6 +273,7 @@ export interface FileRoutesByFullPath {
   '/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
   '/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
   '/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
+  '/automacoes/': typeof AuthenticatedAutomacoesIndexRoute
   '/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/producao/': typeof AuthenticatedProducaoIndexRoute
   '/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
@@ -280,7 +288,6 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/reset-password': typeof ResetPasswordRoute
-  '/automacoes': typeof AuthenticatedAutomacoesRouteWithChildren
   '/cadastros': typeof AuthenticatedCadastrosRouteWithChildren
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
@@ -298,6 +305,7 @@ export interface FileRoutesByTo {
   '/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
   '/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
   '/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
+  '/automacoes': typeof AuthenticatedAutomacoesIndexRoute
   '/estoque': typeof AuthenticatedEstoqueIndexRoute
   '/producao': typeof AuthenticatedProducaoIndexRoute
   '/relatorios': typeof AuthenticatedRelatoriosIndexRoute
@@ -336,6 +344,7 @@ export interface FileRoutesById {
   '/_authenticated/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
   '/_authenticated/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
   '/_authenticated/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
+  '/_authenticated/automacoes/': typeof AuthenticatedAutomacoesIndexRoute
   '/_authenticated/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/_authenticated/producao/': typeof AuthenticatedProducaoIndexRoute
   '/_authenticated/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
@@ -374,6 +383,7 @@ export interface FileRouteTypes {
     | '/relatorios/producao'
     | '/relatorios/qualidade'
     | '/tags/endpoints'
+    | '/automacoes/'
     | '/estoque/'
     | '/producao/'
     | '/relatorios/'
@@ -388,7 +398,6 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/reset-password'
-    | '/automacoes'
     | '/cadastros'
     | '/configuracoes'
     | '/dashboard'
@@ -406,6 +415,7 @@ export interface FileRouteTypes {
     | '/relatorios/producao'
     | '/relatorios/qualidade'
     | '/tags/endpoints'
+    | '/automacoes'
     | '/estoque'
     | '/producao'
     | '/relatorios'
@@ -443,6 +453,7 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios/producao'
     | '/_authenticated/relatorios/qualidade'
     | '/_authenticated/tags/endpoints'
+    | '/_authenticated/automacoes/'
     | '/_authenticated/estoque/'
     | '/_authenticated/producao/'
     | '/_authenticated/relatorios/'
@@ -584,6 +595,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedEstoqueIndexRouteImport
       parentRoute: typeof AuthenticatedEstoqueRoute
     }
+    '/_authenticated/automacoes/': {
+      id: '/_authenticated/automacoes/'
+      path: '/'
+      fullPath: '/automacoes/'
+      preLoaderRoute: typeof AuthenticatedAutomacoesIndexRouteImport
+      parentRoute: typeof AuthenticatedAutomacoesRoute
+    }
     '/_authenticated/tags/endpoints': {
       id: '/_authenticated/tags/endpoints'
       path: '/endpoints'
@@ -715,11 +733,13 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedAutomacoesRouteChildren {
   AuthenticatedAutomacoesIdRoute: typeof AuthenticatedAutomacoesIdRoute
+  AuthenticatedAutomacoesIndexRoute: typeof AuthenticatedAutomacoesIndexRoute
 }
 
 const AuthenticatedAutomacoesRouteChildren: AuthenticatedAutomacoesRouteChildren =
   {
     AuthenticatedAutomacoesIdRoute: AuthenticatedAutomacoesIdRoute,
+    AuthenticatedAutomacoesIndexRoute: AuthenticatedAutomacoesIndexRoute,
   }
 
 const AuthenticatedAutomacoesRouteWithChildren =
