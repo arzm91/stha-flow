@@ -1,8 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import GridLayout, { type Layout as RglLayout } from "react-grid-layout";
-type LayoutItem = RglLayout extends ReadonlyArray<infer U> ? U : never;
+import GridLayout, { type Layout, type LayoutItem } from "react-grid-layout";
+
 
 import {
   LineChart,
