@@ -263,7 +263,7 @@ function MonitoramentoPage() {
     },
   });
 
-  const handleLayoutChange = (next: LayoutItem[]) => {
+  const handleLayoutChange = (next: readonly LayoutItem[]) => {
     if (!widgets.data) return;
     const changed: { id: string; layout: WidgetLayout }[] = [];
     for (const l of next) {
