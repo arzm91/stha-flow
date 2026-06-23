@@ -932,6 +932,42 @@ export type Database = {
         }
         Relationships: []
       }
+      relatorio_turno_eventos: {
+        Row: {
+          categoria: string
+          created_at: string
+          created_by: string
+          descricao: string | null
+          id: string
+          ocorrido_em: string
+          owner_id: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          categoria?: string
+          created_at?: string
+          created_by: string
+          descricao?: string | null
+          id?: string
+          ocorrido_em?: string
+          owner_id: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          created_by?: string
+          descricao?: string | null
+          id?: string
+          ocorrido_em?: string
+          owner_id?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tag_endpoint_requests: {
         Row: {
           endpoint_id: string
