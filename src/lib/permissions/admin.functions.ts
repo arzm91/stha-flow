@@ -16,35 +16,66 @@ export const listManagedUsers = createServerFn({ method: "GET" })
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    // Only users created by the current admin, plus the admin's own profile.
+    const { data: ownedProfiles, error: profErr } = await supabaseAdmin
+      .from("profiles")
+      .select("id, nome, created_by")
+      .or(`created_by.eq.${context.userId},id.eq.${context.userId}`);
+    if (profErr) throw new Error(profErr.message);
+
+    const ids = (ownedProfiles ?? []).map((p) => p.id);
+    if (ids.length === 0) return [];
+
     const { data: usersData, error: usersErr } =
       await supabaseAdmin.auth.admin.listUsers({ page: 1, perPage: 200 });
     if (usersErr) throw new Error(usersErr.message);
+    const usersById = new Map(usersData.users.map((u) => [u.id, u]));
 
-    const ids = usersData.users.map((u) => u.id);
-    const [{ data: roles }, { data: perms }, { data: profiles }] = await Promise.all([
+    const [{ data: roles }, { data: perms }] = await Promise.all([
       supabaseAdmin.from("user_roles").select("user_id, role").in("user_id", ids),
       supabaseAdmin
         .from("user_permissions")
         .select("user_id, page_key, can_view, can_edit")
         .in("user_id", ids),
-      supabaseAdmin.from("profiles").select("id, nome").in("id", ids),
     ]);
 
-    return usersData.users.map((u) => ({
-      id: u.id,
-      email: u.email ?? "",
-      created_at: u.created_at,
-      nome: profiles?.find((p) => p.id === u.id)?.nome ?? null,
-      roles: (roles ?? []).filter((r) => r.user_id === u.id).map((r) => r.role),
-      permissions: (perms ?? [])
-        .filter((p) => p.user_id === u.id)
-        .map((p) => ({
-          page_key: p.page_key,
-          can_view: p.can_view,
-          can_edit: p.can_edit,
-        })),
-    }));
+    return ids
+      .map((id) => {
+        const u = usersById.get(id);
+        if (!u) return null;
+        return {
+          id,
+          email: u.email ?? "",
+          created_at: u.created_at,
+          nome: ownedProfiles?.find((p) => p.id === id)?.nome ?? null,
+          roles: (roles ?? []).filter((r) => r.user_id === id).map((r) => r.role),
+          permissions: (perms ?? [])
+            .filter((p) => p.user_id === id)
+            .map((p) => ({
+              page_key: p.page_key,
+              can_view: p.can_view,
+              can_edit: p.can_edit,
+            })),
+        };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
   });
+
+async function assertOwnsUser(
+  ctx: { userId: string },
+  supabaseAdmin: any,
+  targetId: string,
+) {
+  const { data, error } = await supabaseAdmin
+    .from("profiles")
+    .select("created_by")
+    .eq("id", targetId)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data || data.created_by !== ctx.userId) {
+    throw new Error("Forbidden: usuário não pertence a você.");
+  }
+}
 
 export const createManagedUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -63,14 +94,19 @@ export const createManagedUser = createServerFn({ method: "POST" })
     const newId = created.user!.id;
 
     // handle_new_user trigger creates profile + grants 'admin' role.
-    // Demote to 'operador' so admin role is reserved for the first owner.
+    // Demote to 'operador' and stamp ownership.
     await supabaseAdmin.from("user_roles").delete().eq("user_id", newId);
     await supabaseAdmin
       .from("user_roles")
       .insert({ user_id: newId, role: "operador" });
+    await supabaseAdmin
+      .from("profiles")
+      .update({ created_by: context.userId })
+      .eq("id", newId);
 
     return { id: newId };
   });
+
 
 export const setUserPermissions = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -83,6 +119,7 @@ export const setUserPermissions = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await assertOwnsUser(context, supabaseAdmin, data.user_id);
 
     await supabaseAdmin.from("user_permissions").delete().eq("user_id", data.user_id);
     const rows = data.permissions
@@ -109,6 +146,7 @@ export const deleteManagedUser = createServerFn({ method: "POST" })
       throw new Error("Você não pode excluir a si mesmo.");
     }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await assertOwnsUser(context, supabaseAdmin, data.user_id);
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
     if (error) throw new Error(error.message);
     return { ok: true };
