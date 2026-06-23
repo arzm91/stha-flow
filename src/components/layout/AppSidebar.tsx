@@ -8,6 +8,7 @@ import {
   Activity,
   Settings,
   Radio,
+  Workflow,
 } from "lucide-react";
 import sthaLogo from "@/assets/stha_logo.png.asset.json";
 import sthaLogoMini from "@/assets/stha_logo_mini.png.asset.json";
@@ -28,6 +29,7 @@ const items = [
   { title: "Produção", url: "/producao", icon: Factory },
   { title: "Estoque", url: "/estoque", icon: Boxes },
   { title: "Tags ao Vivo", url: "/tags", icon: Radio },
+  { title: "Automações", url: "/automacoes", icon: Workflow, prefix: "/automacoes" },
   { title: "Cadastros", url: "/cadastros", icon: ClipboardList, prefix: "/cadastros" },
   { title: "Relatórios", url: "/relatorios/producao", icon: FileBarChart, prefix: "/relatorios" },
   { title: "Indicadores", url: "/indicadores", icon: Activity },

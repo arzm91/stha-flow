@@ -98,6 +98,113 @@ export type Database = {
           },
         ]
       }
+      automation_flows: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          graph: Json
+          id: string
+          last_triggered_at: string | null
+          nome: string
+          notify_emails: string[]
+          owner_id: string
+          requires_approval: boolean
+          trigger_config: Json
+          trigger_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          graph?: Json
+          id?: string
+          last_triggered_at?: string | null
+          nome: string
+          notify_emails?: string[]
+          owner_id: string
+          requires_approval?: boolean
+          trigger_config?: Json
+          trigger_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          graph?: Json
+          id?: string
+          last_triggered_at?: string | null
+          nome?: string
+          notify_emails?: string[]
+          owner_id?: string
+          requires_approval?: boolean
+          trigger_config?: Json
+          trigger_type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      automation_runs: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          error_message: string | null
+          executed_at: string | null
+          flow_id: string
+          id: string
+          owner_id: string
+          planned_actions: Json
+          result: Json | null
+          snoozed_until: string | null
+          status: string
+          trigger_context: Json
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          error_message?: string | null
+          executed_at?: string | null
+          flow_id: string
+          id?: string
+          owner_id: string
+          planned_actions?: Json
+          result?: Json | null
+          snoozed_until?: string | null
+          status?: string
+          trigger_context?: Json
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          error_message?: string | null
+          executed_at?: string | null
+          flow_id?: string
+          id?: string
+          owner_id?: string
+          planned_actions?: Json
+          result?: Json | null
+          snoozed_until?: string | null
+          status?: string
+          trigger_context?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_runs_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: false
+            referencedRelation: "automation_flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipamentos: {
         Row: {
           ativo: boolean
@@ -839,6 +946,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      dispatch_automation_trigger: {
+        Args: { p_context: Json; p_owner_id: string; p_trigger_type: string }
+        Returns: number
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
