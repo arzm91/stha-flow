@@ -4,6 +4,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { AutoTagSync } from "@/components/AutoTagSync";
 import { PendingApprovalsDock } from "@/components/automation/PendingApprovalsDock";
 import { AlertasFloatingPopup } from "@/components/alertas/AlertasFloatingPopup";
+import { PageAccessGuard } from "@/components/PageAccessGuard";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -15,7 +16,9 @@ export const Route = createFileRoute("/_authenticated")({
   component: () => (
     <AppShell>
       <AutoTagSync />
-      <Outlet />
+      <PageAccessGuard>
+        <Outlet />
+      </PageAccessGuard>
       <PendingApprovalsDock />
       <AlertasFloatingPopup />
     </AppShell>
