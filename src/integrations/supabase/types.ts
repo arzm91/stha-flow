@@ -1103,6 +1103,7 @@ export type Database = {
         Args: { p_context: Json; p_owner_id: string; p_trigger_type: string }
         Returns: number
       }
+      effective_owner: { Args: { _user: string }; Returns: string }
       evaluate_tag_alertas: {
         Args: {
           p_owner_id: string
