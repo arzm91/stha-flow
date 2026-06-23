@@ -12,7 +12,9 @@ import {
   Bell,
   Table as TableIcon,
   CalendarClock,
+  LineChart,
 } from "lucide-react";
+
 import sthaLogo from "@/assets/stha_logo.png.asset.json";
 import sthaLogoMini from "@/assets/stha_logo_mini.png.asset.json";
 import {
