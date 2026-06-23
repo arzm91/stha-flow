@@ -434,6 +434,83 @@ export type Database = {
         }
         Relationships: []
       }
+      monitoring_dashboards: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          ordem: number
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          ordem?: number
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          ordem?: number
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      monitoring_widgets: {
+        Row: {
+          config: Json
+          created_at: string
+          dashboard_id: string
+          id: string
+          layout: Json
+          owner_id: string
+          tags: Json
+          tipo: string
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          dashboard_id: string
+          id?: string
+          layout?: Json
+          owner_id: string
+          tags?: Json
+          tipo: string
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          dashboard_id?: string
+          id?: string
+          layout?: Json
+          owner_id?: string
+          tags?: Json
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "monitoring_widgets_dashboard_id_fkey"
+            columns: ["dashboard_id"]
+            isOneToOne: false
+            referencedRelation: "monitoring_dashboards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       movimentacoes_estoque: {
         Row: {
           created_at: string

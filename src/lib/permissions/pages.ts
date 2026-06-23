@@ -9,6 +9,8 @@ export const MANAGED_PAGES: PageDef[] = [
   { key: "producao", label: "Produção", pathPrefix: "/producao" },
   { key: "estoque", label: "Estoque", pathPrefix: "/estoque" },
   { key: "tags", label: "Tags ao Vivo", pathPrefix: "/tags" },
+  { key: "monitoramento", label: "Monitoramento", pathPrefix: "/monitoramento" },
+
   { key: "tabelas", label: "Tabelas", pathPrefix: "/tabelas" },
   { key: "automacoes", label: "Automações", pathPrefix: "/automacoes" },
   { key: "alertas", label: "Alertas", pathPrefix: "/alertas" },

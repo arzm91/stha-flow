@@ -12,7 +12,9 @@ import {
   Bell,
   Table as TableIcon,
   CalendarClock,
+  LineChart,
 } from "lucide-react";
+
 import sthaLogo from "@/assets/stha_logo.png.asset.json";
 import sthaLogoMini from "@/assets/stha_logo_mini.png.asset.json";
 import {
@@ -33,6 +35,8 @@ const items = [
   { title: "Produção", url: "/producao", icon: Factory, pageKey: "producao" },
   { title: "Estoque", url: "/estoque", icon: Boxes, pageKey: "estoque" },
   { title: "Tags ao Vivo", url: "/tags", icon: Radio, pageKey: "tags" },
+  { title: "Monitoramento", url: "/monitoramento", icon: LineChart, prefix: "/monitoramento", pageKey: "monitoramento" },
+
   { title: "Tabelas", url: "/tabelas", icon: TableIcon, prefix: "/tabelas", pageKey: "tabelas" },
   { title: "Automações", url: "/automacoes", icon: Workflow, prefix: "/automacoes", pageKey: "automacoes" },
   { title: "Alertas", url: "/alertas", icon: Bell, prefix: "/alertas", pageKey: "alertas" },
