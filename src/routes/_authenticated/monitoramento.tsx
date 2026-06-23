@@ -300,7 +300,8 @@ function MonitoramentoPage() {
         <div className="text-sm text-muted-foreground">Carregando painéis...</div>
       ) : !dashboards.data || dashboards.data.length === 0 ? (
         <EmptyState
-          icon={LayoutGrid}
+          icon={<LayoutGrid className="h-6 w-6" />}
+
           title="Nenhum painel ainda"
           description="Crie seu primeiro painel para começar a montar gráficos e widgets das tags recebidas."
           action={<Button onClick={() => setNewDashOpen(true)}><Plus className="mr-2 h-4 w-4" />Criar painel</Button>}
