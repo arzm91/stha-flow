@@ -48,6 +48,7 @@ import {
   Trash2,
   Check,
   AlertCircle,
+  Copy,
 } from "lucide-react";
 import { formatRelative } from "@/lib/format";
 import { syncAllTagEndpoints, syncTagEndpointById } from "@/lib/tagEndpointSync";
@@ -67,6 +68,7 @@ type Endpoint = {
   ultimo_status: string | null;
   ultimo_erro: string | null;
   tags_recebidas: number;
+  push_token: string;
 };
 
 function EndpointsPage() {
@@ -80,7 +82,7 @@ function EndpointsPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tag_endpoints" as never)
-        .select("id,nome,url,headers,intervalo_segundos,ativo,ultima_execucao,ultimo_status,ultimo_erro,tags_recebidas")
+        .select("id,nome,url,headers,intervalo_segundos,ativo,ultima_execucao,ultimo_status,ultimo_erro,tags_recebidas,push_token")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data ?? []) as Endpoint[];
@@ -138,6 +140,13 @@ function EndpointsPage() {
     },
     onError: (e: any) => toast.error(e.message),
   });
+
+  async function copyWebhookUrl(ep: Endpoint) {
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "";
+    const webhookUrl = `${baseUrl}/api/public/tags/push?token=${ep.push_token}`;
+    await navigator.clipboard.writeText(webhookUrl);
+    toast.success("URL do webhook copiada");
+  }
 
   return (
     <div>
@@ -240,6 +249,7 @@ function EndpointsPage() {
                 <TableRow>
                   <TableHead>Nome</TableHead>
                   <TableHead>URL</TableHead>
+                    <TableHead>Webhook</TableHead>
                   <TableHead className="text-right">Intervalo</TableHead>
                   <TableHead>Última execução</TableHead>
                   <TableHead>Status</TableHead>
@@ -253,6 +263,17 @@ function EndpointsPage() {
                     <TableCell className="font-medium">{ep.nome}</TableCell>
                     <TableCell className="max-w-[280px] truncate font-mono text-xs">
                       {ep.url}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs"
+                        onClick={() => copyWebhookUrl(ep)}
+                        title="Copiar URL HTTPS para POST do Node-RED"
+                      >
+                        <Copy className="mr-1 h-3.5 w-3.5" /> Copiar URL
+                      </Button>
                     </TableCell>
                     <TableCell className="text-right text-xs">{ep.intervalo_segundos}s</TableCell>
                     <TableCell className="text-xs text-muted-foreground">
