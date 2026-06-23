@@ -49,10 +49,10 @@ async function runActions(
         });
         const text = await res.text();
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
-        results.push({ action: actionType, ok: true, data: { status: res.status, body: text.slice(0, 500) } });
+        results.push({ action: actionType, ok: true, info: `HTTP ${res.status}` });
       } else if (actionType === "enviar_alerta") {
         // Email integration is a follow-up; for now just records intent.
-        results.push({ action: actionType, ok: true, data: { recorded: true, titulo: cfg.titulo } });
+        results.push({ action: actionType, ok: true, info: String(cfg.titulo ?? "") });
       } else if (actionType === "criar_ordem") {
         const { error, data } = await supabase.from("ordens_producao").insert({
           owner_id: ownerId,
