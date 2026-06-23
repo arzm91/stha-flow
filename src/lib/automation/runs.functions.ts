@@ -51,8 +51,19 @@ async function runActions(
         if (!res.ok) throw new Error(`HTTP ${res.status}: ${text.slice(0, 200)}`);
         results.push({ action: actionType, ok: true, info: `HTTP ${res.status}` });
       } else if (actionType === "enviar_alerta") {
-        // Email integration is a follow-up; for now just records intent.
-        results.push({ action: actionType, ok: true, info: String(cfg.titulo ?? "") });
+        const titulo = String(cfg.titulo ?? "Alerta da automação");
+        const mensagem = String(cfg.mensagem ?? titulo);
+        const severidade = String(cfg.severidade ?? "warn");
+        const { error } = await supabase.from("alertas_disparos").insert({
+          owner_id: ownerId,
+          alerta_id: null,
+          alerta_nome: titulo,
+          severidade,
+          mensagem,
+          contexto: triggerContext as unknown as Record<string, unknown>,
+        });
+        if (error) throw new Error(error.message);
+        results.push({ action: actionType, ok: true, info: titulo });
       } else if (actionType === "criar_ordem") {
         const { error, data } = await supabase.from("ordens_producao").insert({
           owner_id: ownerId,
