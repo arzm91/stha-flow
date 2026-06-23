@@ -406,7 +406,7 @@ function EndpointForm({
   const qc = useQueryClient();
   const [nome, setNome] = useState("");
   const [url, setUrl] = useState("");
-  const [intervalo, setIntervalo] = useState("60");
+  const [intervalo, setIntervalo] = useState("2");
   const [headersText, setHeadersText] = useState("");
   const [ativo, setAtivo] = useState(true);
   const [testResult, setTestResult] = useState<
@@ -419,7 +419,7 @@ function EndpointForm({
     if (open) {
       setNome(editing?.nome ?? "");
       setUrl(editing?.url ?? "");
-      setIntervalo(String(editing?.intervalo_segundos ?? 60));
+      setIntervalo(String(editing?.intervalo_segundos ?? 2));
       setHeadersText(editing?.headers ? JSON.stringify(editing.headers, null, 2) : "");
       setAtivo(editing?.ativo ?? true);
       setTestResult(null);
