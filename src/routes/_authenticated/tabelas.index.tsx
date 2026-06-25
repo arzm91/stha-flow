@@ -23,7 +23,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, Table as TableIcon } from "lucide-react";
+import { Plus, Trash2, Table as TableIcon, Pencil } from "lucide-react";
 import type { SheetColumn, ColumnType } from "@/lib/tabelas/types";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 
@@ -31,11 +31,20 @@ export const Route = createFileRoute("/_authenticated/tabelas/")({
   component: TabelasIndex,
 });
 
+type SheetRow = {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  columns: SheetColumn[];
+  updated_at: string;
+};
+
 function TabelasIndex() {
   const qc = useQueryClient();
   const { canEdit } = usePagePermissions();
   const editable = canEdit("tabelas");
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<SheetRow | null>(null);
 
   const { data: sheets = [], isLoading } = useQuery({
     queryKey: ["custom_sheets"],
@@ -45,7 +54,7 @@ function TabelasIndex() {
         .select("id, nome, descricao, columns, updated_at")
         .order("updated_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as unknown as SheetRow[];
     },
   });
 
@@ -74,7 +83,7 @@ function TabelasIndex() {
                   <Plus className="mr-2 h-4 w-4" /> Nova tabela
                 </Button>
               </DialogTrigger>
-              <CreateSheetDialog onCreated={() => setOpen(false)} />
+              <SheetFormDialog mode="create" onDone={() => setOpen(false)} />
             </Dialog>
           )
         }
@@ -101,16 +110,26 @@ function TabelasIndex() {
                     </CardTitle>
                   </Link>
                   {editable && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => {
-                        if (confirm(`Excluir "${s.nome}" e todas as linhas?`))
-                          deleteMut.mutate(s.id);
-                      }}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setEditing(s)}
+                        title="Editar tabela"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          if (confirm(`Excluir "${s.nome}" e todas as linhas?`))
+                            deleteMut.mutate(s.id);
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   )}
                 </div>
               </CardHeader>
@@ -130,124 +149,170 @@ function TabelasIndex() {
           ))}
         </div>
       )}
+
+      {editing && (
+        <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
+          <SheetFormDialog
+            mode="edit"
+            initial={editing}
+            onDone={() => setEditing(null)}
+          />
+        </Dialog>
+      )}
     </div>
   );
 }
 
-function CreateSheetDialog({ onCreated }: { onCreated: () => void }) {
+function SheetFormDialog({
+  mode,
+  initial,
+  onDone,
+}: {
+  mode: "create" | "edit";
+  initial?: SheetRow;
+  onDone: () => void;
+}) {
   const qc = useQueryClient();
-  const [nome, setNome] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [columns, setColumns] = useState<SheetColumn[]>([
-    { key: "col1", label: "Coluna 1", type: "text" },
-  ]);
+  const [nome, setNome] = useState(initial?.nome ?? "");
+  const [descricao, setDescricao] = useState(initial?.descricao ?? "");
+  const [columns, setColumns] = useState<SheetColumn[]>(
+    initial?.columns ?? [{ key: "col1", label: "Coluna 1", type: "text" }],
+  );
 
   const addCol = () =>
     setColumns((c) => [
       ...c,
-      { key: `col${c.length + 1}`, label: `Coluna ${c.length + 1}`, type: "text" },
+      {
+        key: `col${Date.now()}`,
+        label: `Coluna ${c.length + 1}`,
+        type: "text",
+      },
     ]);
   const updateCol = (i: number, patch: Partial<SheetColumn>) =>
     setColumns((c) => c.map((col, idx) => (idx === i ? { ...col, ...patch } : col)));
   const removeCol = (i: number) =>
     setColumns((c) => c.filter((_, idx) => idx !== i));
 
-  const createMut = useMutation({
+  const saveMut = useMutation({
     mutationFn: async () => {
-      const cleanedColumns = columns
+      const cleaned = columns
         .filter((c) => c.label.trim())
         .map((c, i) => ({
           key: c.key || `col${i + 1}`,
           label: c.label.trim(),
           type: c.type,
         }));
-      if (cleanedColumns.length === 0) throw new Error("Adicione ao menos uma coluna");
+      if (cleaned.length === 0) throw new Error("Adicione ao menos uma coluna");
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Não autenticado");
-      const { error } = await supabase.from("custom_sheets").insert({
-        nome: nome.trim(),
-        descricao: descricao.trim() || null,
-        columns: cleanedColumns,
-        owner_id: u.user.id,
-      });
-      if (error) throw error;
+      if (mode === "create") {
+        const { error } = await supabase.from("custom_sheets").insert({
+          nome: nome.trim(),
+          descricao: descricao.trim() || null,
+          columns: cleaned as never,
+          owner_id: u.user.id,
+        });
+        if (error) throw error;
+      } else if (initial) {
+        const { error } = await supabase
+          .from("custom_sheets")
+          .update({
+            nome: nome.trim(),
+            descricao: descricao.trim() || null,
+            columns: cleaned as never,
+          })
+          .eq("id", initial.id);
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
-      toast.success("Tabela criada");
+      toast.success(mode === "create" ? "Tabela criada" : "Tabela atualizada");
       qc.invalidateQueries({ queryKey: ["custom_sheets"] });
-      onCreated();
+      if (initial) qc.invalidateQueries({ queryKey: ["custom_sheet", initial.id] });
+      onDone();
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   return (
-    <DialogContent className="max-w-xl">
-      <DialogHeader>
-        <DialogTitle>Nova tabela</DialogTitle>
+    <DialogContent className="max-w-xl max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogHeader className="px-6 pt-6 pb-2 shrink-0">
+        <DialogTitle>{mode === "create" ? "Nova tabela" : "Editar tabela"}</DialogTitle>
       </DialogHeader>
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          createMut.mutate();
+          saveMut.mutate();
         }}
-        className="space-y-4"
+        className="flex flex-col flex-1 min-h-0"
       >
-        <div className="space-y-1.5">
-          <Label>Nome da tabela</Label>
-          <Input
-            value={nome}
-            onChange={(e) => setNome(e.target.value)}
-            placeholder="Ex.: Análise de óleo - bombas"
-            required
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label>Descrição (opcional)</Label>
-          <Input value={descricao} onChange={(e) => setDescricao(e.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label>Colunas (cabeçalho)</Label>
-            <Button type="button" variant="outline" size="sm" onClick={addCol}>
-              <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar coluna
-            </Button>
+        <div className="flex-1 overflow-y-auto px-6 py-3 space-y-4">
+          <div className="space-y-1.5">
+            <Label>Nome da tabela</Label>
+            <Input
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Ex.: Análise de óleo - bombas"
+              required
+            />
           </div>
-          {columns.map((col, i) => (
-            <div key={i} className="grid grid-cols-[1fr_140px_auto] gap-2 items-center">
-              <Input
-                value={col.label}
-                onChange={(e) => updateCol(i, { label: e.target.value })}
-                placeholder="Nome da coluna"
-              />
-              <Select
-                value={col.type}
-                onValueChange={(v) => updateCol(i, { type: v as ColumnType })}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="text">Texto</SelectItem>
-                  <SelectItem value="number">Número</SelectItem>
-                  <SelectItem value="date">Data</SelectItem>
-                  <SelectItem value="boolean">Sim/Não</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={() => removeCol(i)}
-                disabled={columns.length === 1}
-              >
-                <Trash2 className="h-4 w-4" />
+          <div className="space-y-1.5">
+            <Label>Descrição (opcional)</Label>
+            <Input value={descricao} onChange={(e) => setDescricao(e.target.value)} />
+          </div>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Colunas (cabeçalho)</Label>
+              <Button type="button" variant="outline" size="sm" onClick={addCol}>
+                <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar coluna
               </Button>
             </div>
-          ))}
+            {columns.map((col, i) => (
+              <div
+                key={col.key + i}
+                className="grid grid-cols-[1fr_130px_auto] gap-2 items-center"
+              >
+                <Input
+                  value={col.label}
+                  onChange={(e) => updateCol(i, { label: e.target.value })}
+                  placeholder="Nome da coluna"
+                />
+                <Select
+                  value={col.type}
+                  onValueChange={(v) => updateCol(i, { type: v as ColumnType })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="text">Texto</SelectItem>
+                    <SelectItem value="number">Número</SelectItem>
+                    <SelectItem value="date">Data</SelectItem>
+                    <SelectItem value="boolean">Sim/Não</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => removeCol(i)}
+                  disabled={columns.length === 1}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            {mode === "edit" && (
+              <p className="text-xs text-muted-foreground">
+                Alterar/remover colunas não apaga dados antigos das linhas — apenas
+                deixa de exibi-los.
+              </p>
+            )}
+          </div>
         </div>
-        <DialogFooter>
-          <Button type="submit" disabled={createMut.isPending}>
-            Criar tabela
+        <DialogFooter className="px-6 py-4 border-t shrink-0">
+          <Button type="submit" disabled={saveMut.isPending}>
+            {mode === "create" ? "Criar tabela" : "Salvar alterações"}
           </Button>
         </DialogFooter>
       </form>
