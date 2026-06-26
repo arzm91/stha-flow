@@ -15,6 +15,7 @@ import { ArrowLeft, CheckCircle2, Gauge, FlaskConical, MessageSquare, Activity, 
 import { toast } from "sonner";
 import { formatDate, formatNumber, durationFromNow, durationBetween } from "@/lib/format";
 import { PfdViewer } from "@/components/PfdViewer";
+import { gerarRelatorioProducaoPdf } from "@/lib/producao-pdf";
 
 export const Route = createFileRoute("/_authenticated/producao/$id")({
   component: OPPage,
