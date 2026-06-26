@@ -13,6 +13,7 @@ import {
 import { Pencil, Plus, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
+import { requireAdminPassword } from "@/components/admin-password/AdminPasswordGate";
 
 export type FieldDef = {
   key: string;
@@ -131,7 +132,7 @@ export function CrudTable({
                 <DialogTitle>{editing ? "Editar" : "Novo registro"}</DialogTitle>
                 <DialogDescription>Preencha os campos abaixo.</DialogDescription>
               </DialogHeader>
-              <form onSubmit={(e) => { e.preventDefault(); save.mutate(form); }} className="space-y-3">
+              <form onSubmit={async (e) => { e.preventDefault(); if (editing && !(await requireAdminPassword(`editar este registro de ${title.toLowerCase()}`))) return; save.mutate(form); }} className="space-y-3">
                 {fields.map((f) => (
                   <div className="space-y-1.5" key={f.key}>
                     <Label htmlFor={f.key}>{f.label}{f.required ? " *" : ""}</Label>
@@ -201,7 +202,7 @@ export function CrudTable({
                     <div className="flex justify-end gap-1">
                       {extraActions ? extraActions(r) : null}
                       <Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil className="h-4 w-4" /></Button>
-                      <Button variant="ghost" size="icon" onClick={() => { if (confirm("Confirma a exclusão?")) remove.mutate(r.id); }}><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="ghost" size="icon" onClick={async () => { if (!confirm("Confirma a exclusão?")) return; if (!(await requireAdminPassword(`excluir este registro de ${title.toLowerCase()}`))) return; remove.mutate(r.id); }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
