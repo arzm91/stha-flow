@@ -18,7 +18,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/EmptyState";
-import { Factory, Play, Eye } from "lucide-react";
+import { Factory, Play, Eye, LayoutGrid } from "lucide-react";
 import { toast } from "sonner";
 import { durationFromNow } from "@/lib/format";
 
