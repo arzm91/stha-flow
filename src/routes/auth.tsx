@@ -30,6 +30,8 @@ function AuthPage() {
   const [empresa, setEmpresa] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [accessCode, setAccessCode] = useState("");
+  const [showAccessDeniedDialog, setShowAccessDeniedDialog] = useState(false);
 
   // recover
   const [recoverEmail, setRecoverEmail] = useState("");
