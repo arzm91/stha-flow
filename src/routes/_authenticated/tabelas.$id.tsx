@@ -100,6 +100,94 @@ function TabelaDetail() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const importMut = useMutation({
+    mutationFn: async (file: File) => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Não autenticado");
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf, { type: "array", cellDates: true });
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      if (!ws) throw new Error("Planilha vazia");
+      const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: "" });
+      if (json.length === 0) throw new Error("Nenhuma linha encontrada");
+      const cols = (sheet?.columns as SheetColumn[] | undefined) ?? [];
+      const byLabel = new Map(cols.map((c) => [c.label.toLowerCase().trim(), c]));
+      const byKey = new Map(cols.map((c) => [c.key.toLowerCase().trim(), c]));
+      const payloads = json.map((row) => {
+        const data: Record<string, unknown> = {};
+        for (const [rawKey, rawVal] of Object.entries(row)) {
+          const k = String(rawKey).toLowerCase().trim();
+          const col = byLabel.get(k) ?? byKey.get(k);
+          if (!col) continue;
+          if (rawVal === "" || rawVal === null || rawVal === undefined) {
+            data[col.key] = null;
+            continue;
+          }
+          if (col.type === "number") {
+            const n = Number(rawVal);
+            data[col.key] = isNaN(n) ? null : n;
+          } else if (col.type === "boolean") {
+            const s = String(rawVal).toLowerCase().trim();
+            data[col.key] = s === "true" || s === "sim" || s === "1" || s === "yes";
+          } else if (col.type === "date") {
+            if (rawVal instanceof Date) {
+              const y = rawVal.getFullYear();
+              const m = String(rawVal.getMonth() + 1).padStart(2, "0");
+              const d = String(rawVal.getDate()).padStart(2, "0");
+              data[col.key] = `${y}-${m}-${d}`;
+            } else {
+              const s = String(rawVal).trim();
+              const br = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+              data[col.key] = br ? `${br[3]}-${br[2]}-${br[1]}` : s;
+            }
+          } else {
+            data[col.key] = String(rawVal);
+          }
+        }
+        return {
+          sheet_id: id,
+          data: data as never,
+          owner_id: u.user!.id,
+          created_by: u.user!.id,
+        };
+      });
+      const { error } = await supabase.from("custom_sheet_rows").insert(payloads as never);
+      if (error) throw error;
+      return payloads.length;
+    },
+    onSuccess: (count) => {
+      toast.success(`${count} registro(s) importado(s)`);
+      qc.invalidateQueries({ queryKey: ["custom_sheet_rows", id] });
+    },
+    onError: (e: Error) => toast.error(`Falha ao importar: ${e.message}`),
+  });
+
+  const exportExcel = () => {
+    const cols = (sheet?.columns as SheetColumn[] | undefined) ?? [];
+    const data = filteredRows.map((r) => {
+      const d = (r.data ?? {}) as Record<string, unknown>;
+      const out: Record<string, unknown> = {};
+      for (const c of cols) {
+        const v = d[c.key];
+        if (c.type === "date" && typeof v === "string") {
+          const dt = parseDateSafe(v);
+          out[c.label] = dt ? dt.toLocaleDateString("pt-BR") : v;
+        } else if (c.type === "boolean") {
+          out[c.label] = v ? "Sim" : "Não";
+        } else {
+          out[c.label] = v ?? "";
+        }
+      }
+      return out;
+    });
+    const ws = XLSX.utils.json_to_sheet(data, { header: cols.map((c) => c.label) });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Dados");
+    const safe = (sheet?.nome ?? "tabela").replace(/[^a-zA-Z0-9-_]+/g, "_");
+    XLSX.writeFile(wb, `${safe}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  };
+
+
   const columns = (sheet?.columns as SheetColumn[] | undefined) ?? [];
   const dateColumns = columns.filter((c) => c.type === "date");
   const numericColumns = columns.filter((c) => c.type === "number");
