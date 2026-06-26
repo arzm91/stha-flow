@@ -327,3 +327,104 @@ function NovaOPDialog({
     </Dialog>
   );
 }
+
+function FinalizarRapidoButton({ op }: { op: any }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [qtd, setQtd] = useState<number | "">("");
+  const [obs, setObs] = useState("");
+  const [tanqueId, setTanqueId] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const tanques = useQuery({
+    queryKey: ["tanques-prod-finalizar"],
+    enabled: open,
+    queryFn: async () => {
+      const { data } = await supabase.from("tanques").select("id,codigo,nome").eq("ativo", true).order("codigo");
+      return data ?? [];
+    },
+  });
+
+  useEffect(() => { if (open) { setQtd(""); setObs(""); setTanqueId(""); } }, [open]);
+
+  const handle = async () => {
+    if (qtd === "" || Number(qtd) <= 0) return toast.error("Informe a quantidade produzida");
+    setLoading(true);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Não autenticado");
+      const fimEm = new Date().toISOString();
+      const { error: e1 } = await supabase.from("ordens_producao").update({
+        status: "finalizada",
+        qtd_produzida: Number(qtd),
+        obs_finais: obs || null,
+        tanque_destino_id: tanqueId || null,
+        fim_em: fimEm,
+      }).eq("id", op.id);
+      if (e1) throw e1;
+      const { error: e2 } = await supabase.from("equipamentos").update({ status: "disponivel" }).eq("id", op.equipamento_id);
+      if (e2) throw e2;
+      if (tanqueId) {
+        const { error: e3 } = await supabase.from("movimentacoes_estoque").insert({
+          owner_id: u.user.id,
+          produto_id: (op as any).produto?.id ?? (op as any).produto_id,
+          tanque_id: tanqueId,
+          tipo: "entrada",
+          quantidade: Number(qtd),
+          origem: `Produção OP ${op.numero}`,
+          ordem_id: op.id,
+          ocorrido_em: fimEm,
+        });
+        if (e3) throw e3;
+      }
+      toast.success("Produção finalizada");
+      try {
+        await gerarRelatorioProducaoPdf(op.id);
+        toast.success("Relatório raio-X gerado");
+      } catch (pdfErr) {
+        toast.error("Falha ao gerar PDF: " + (pdfErr as Error).message);
+      }
+      setOpen(false);
+      qc.invalidateQueries();
+    } catch (err) {
+      toast.error((err as Error).message);
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="outline"><CheckCircle2 className="mr-1 h-4 w-4" />Finalizar</Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Finalizar OP {op.numero}</DialogTitle>
+          <DialogDescription>O equipamento voltará para "Disponível" após a finalização.</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label>Quantidade produzida</Label>
+            <Input type="number" step="any" value={qtd} onChange={(e) => setQtd(e.target.value === "" ? "" : Number(e.target.value))} />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Tanque de destino (opcional)</Label>
+            <select value={tanqueId} onChange={(e) => setTanqueId(e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm">
+              <option value="">— nenhum —</option>
+              {(tanques.data ?? []).map((t: any) => <option key={t.id} value={t.id}>{t.codigo} — {t.nome}</option>)}
+            </select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Observações finais</Label>
+            <textarea value={obs} onChange={(e) => setObs(e.target.value)}
+              className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+          <Button onClick={handle} disabled={loading}>{loading ? "Finalizando..." : "Confirmar finalização"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
