@@ -6,8 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import sthaLogo from "@/assets/stha_logo.png.asset.json";
+
+const SIGNUP_ACCESS_CODE = "bra@131";
 
 export const Route = createFileRoute("/auth")({
   ssr: false,
@@ -27,6 +30,8 @@ function AuthPage() {
   const [empresa, setEmpresa] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [accessCode, setAccessCode] = useState("");
+  const [showAccessDeniedDialog, setShowAccessDeniedDialog] = useState(false);
 
   // recover
   const [recoverEmail, setRecoverEmail] = useState("");
@@ -49,6 +54,10 @@ function AuthPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (accessCode.trim() !== SIGNUP_ACCESS_CODE) {
+      setShowAccessDeniedDialog(true);
+      return;
+    }
     if (!nome.trim()) return toast.error("Informe seu nome");
     setLoading(true);
     const { error } = await supabase.auth.signUp({
@@ -131,6 +140,20 @@ function AuthPage() {
                 <TabsContent value="signup">
                   <form onSubmit={handleSignup} className="space-y-4 pt-4">
                     <div className="space-y-2">
+                      <Label htmlFor="access-code">Senha de acesso ao cadastro</Label>
+                      <Input
+                        id="access-code"
+                        type="password"
+                        required
+                        value={accessCode}
+                        onChange={(e) => setAccessCode(e.target.value)}
+                        placeholder="Senha fornecida pelo administrador"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Fornecida apenas a clientes do plano. Não possui? Solicite uma demonstração ao administrador.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="nome">Nome</Label>
                       <Input id="nome" required value={nome} onChange={(e) => setNome(e.target.value)} />
                     </div>
@@ -169,6 +192,30 @@ function AuthPage() {
           </Card>
         </div>
       </div>
+
+      <Dialog open={showAccessDeniedDialog} onOpenChange={setShowAccessDeniedDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Acesso ao cadastro restrito</DialogTitle>
+            <DialogDescription className="space-y-3 pt-2">
+              <span className="block">
+                A senha de acesso ao cadastro está incorreta ou não foi informada.
+              </span>
+              <span className="block">
+                O cadastro no STHA é liberado apenas para clientes que aderiram ao plano de pagamento do sistema.
+              </span>
+              <span className="block">
+                Para solicitar uma <strong>demonstração</strong> ou receber a senha de acesso, entre em contato com o administrador do sistema.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setShowAccessDeniedDialog(false)} className="w-full">
+              Entendi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
