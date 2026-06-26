@@ -437,6 +437,112 @@ export type Database = {
         }
         Relationships: []
       }
+      manutencao_atividades: {
+        Row: {
+          created_at: string
+          descricao: string
+          id: string
+          observacao: string | null
+          ordem_id: string
+          ordem_seq: number
+          owner_id: string
+          realizada: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao: string
+          id?: string
+          observacao?: string | null
+          ordem_id: string
+          ordem_seq?: number
+          owner_id: string
+          realizada?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string
+          id?: string
+          observacao?: string | null
+          ordem_id?: string
+          ordem_seq?: number
+          owner_id?: string
+          realizada?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manutencao_atividades_ordem_id_fkey"
+            columns: ["ordem_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_manutencao"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      manutencao_preventivas: {
+        Row: {
+          ativo: boolean
+          checklist: Json
+          created_at: string
+          descricao: string | null
+          equipamento_id: string
+          id: string
+          intervalo_dias: number | null
+          intervalo_op_count: number | null
+          nome: string
+          owner_id: string
+          proxima_execucao: string | null
+          responsavel_padrao: string | null
+          tipo_recorrencia: string
+          ultima_execucao: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          checklist?: Json
+          created_at?: string
+          descricao?: string | null
+          equipamento_id: string
+          id?: string
+          intervalo_dias?: number | null
+          intervalo_op_count?: number | null
+          nome: string
+          owner_id: string
+          proxima_execucao?: string | null
+          responsavel_padrao?: string | null
+          tipo_recorrencia?: string
+          ultima_execucao?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          checklist?: Json
+          created_at?: string
+          descricao?: string | null
+          equipamento_id?: string
+          id?: string
+          intervalo_dias?: number | null
+          intervalo_op_count?: number | null
+          nome?: string
+          owner_id?: string
+          proxima_execucao?: string | null
+          responsavel_padrao?: string | null
+          tipo_recorrencia?: string
+          ultima_execucao?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "manutencao_preventivas_equipamento_id_fkey"
+            columns: ["equipamento_id"]
+            isOneToOne: false
+            referencedRelation: "equipamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       monitoring_dashboards: {
         Row: {
           created_at: string
@@ -694,6 +800,83 @@ export type Database = {
             columns: ["processo_id"]
             isOneToOne: false
             referencedRelation: "produto_processos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ordens_manutencao: {
+        Row: {
+          agendada_para: string | null
+          created_at: string
+          custo: number | null
+          data_abertura: string
+          data_conclusao: string | null
+          data_inicio: string | null
+          descricao_problema: string | null
+          descricao_servico: string | null
+          equipamento_id: string
+          id: string
+          numero: string
+          observacoes: string | null
+          owner_id: string
+          pecas_utilizadas: string | null
+          preventiva_id: string | null
+          prioridade: string
+          responsavel: string | null
+          status: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          agendada_para?: string | null
+          created_at?: string
+          custo?: number | null
+          data_abertura?: string
+          data_conclusao?: string | null
+          data_inicio?: string | null
+          descricao_problema?: string | null
+          descricao_servico?: string | null
+          equipamento_id: string
+          id?: string
+          numero: string
+          observacoes?: string | null
+          owner_id: string
+          pecas_utilizadas?: string | null
+          preventiva_id?: string | null
+          prioridade?: string
+          responsavel?: string | null
+          status?: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          agendada_para?: string | null
+          created_at?: string
+          custo?: number | null
+          data_abertura?: string
+          data_conclusao?: string | null
+          data_inicio?: string | null
+          descricao_problema?: string | null
+          descricao_servico?: string | null
+          equipamento_id?: string
+          id?: string
+          numero?: string
+          observacoes?: string | null
+          owner_id?: string
+          pecas_utilizadas?: string | null
+          preventiva_id?: string | null
+          prioridade?: string
+          responsavel?: string | null
+          status?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordens_manutencao_equipamento_id_fkey"
+            columns: ["equipamento_id"]
+            isOneToOne: false
+            referencedRelation: "equipamentos"
             referencedColumns: ["id"]
           },
         ]
