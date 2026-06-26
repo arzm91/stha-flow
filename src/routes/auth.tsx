@@ -54,6 +54,10 @@ function AuthPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (accessCode.trim() !== SIGNUP_ACCESS_CODE) {
+      setShowAccessDeniedDialog(true);
+      return;
+    }
     if (!nome.trim()) return toast.error("Informe seu nome");
     setLoading(true);
     const { error } = await supabase.auth.signUp({
