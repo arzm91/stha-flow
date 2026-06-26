@@ -373,8 +373,6 @@ function ProducaoDashboardPage() {
             gridConfig={{ cols: COLS, rowHeight: ROW_H, margin: [12, 12] }}
             dragConfig={{ handle: ".widget-drag" }}
             onLayoutChange={onLayoutChange as (l: Layout) => void}
-            isDraggable={editMode}
-            isResizable={editMode}
           >
             {widgets.map((w) => (
               <div key={w.id}>
