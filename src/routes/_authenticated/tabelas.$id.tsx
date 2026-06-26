@@ -236,6 +236,32 @@ function TabelaDetail() {
                 <LineChartIcon className="mr-2 h-4 w-4" /> Gráfico
               </Button>
             )}
+            <Button variant="outline" onClick={exportExcel}>
+              <Download className="mr-2 h-4 w-4" /> Exportar Excel
+            </Button>
+            {editable && (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".xlsx,.xls,.csv"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) importMut.mutate(f);
+                    e.target.value = "";
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={importMut.isPending}
+                >
+                  <Upload className="mr-2 h-4 w-4" />
+                  {importMut.isPending ? "Importando..." : "Importar Excel"}
+                </Button>
+              </>
+            )}
             {editable && (
               <Dialog open={open} onOpenChange={setOpen}>
                 <DialogTrigger asChild>
