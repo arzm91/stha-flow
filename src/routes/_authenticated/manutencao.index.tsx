@@ -710,6 +710,14 @@ function OSDialog({
                 <Button type="button" variant="outline" onClick={() => gerarOSManutencaoPdf(editing!.id).catch((e) => toast.error(e.message))}>
                   <Printer className="mr-2 h-4 w-4" />Imprimir
                 </Button>
+                {editing!.status !== "concluida" && editing!.status !== "cancelada" && (
+                  <Button type="button" variant="default" onClick={async () => {
+                    await finalizarOS(editing!, qc);
+                    onOpenChange(false);
+                  }}>
+                    <CheckCircle2 className="mr-2 h-4 w-4" />Finalizar OS
+                  </Button>
+                )}
                 <Button type="button" variant="destructive" onClick={() => remove.mutate()}>
                   <Trash2 className="mr-2 h-4 w-4" />Excluir
                 </Button>
