@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CrudTable, type FieldDef } from "@/components/CrudTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { History } from "lucide-react";
+import { History, Workflow } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/cadastros/equipamentos")({
   component: EquipamentosPage,
@@ -82,9 +82,14 @@ function EquipamentosPage() {
         { key: "ativo", label: "Ativo", render: (r) => (r.ativo ? "Sim" : "Não") },
       ]}
       extraActions={(r) => (
-        <Button asChild variant="ghost" size="icon" title="Histórico">
-          <Link to="/cadastros/equipamentos/$id" params={{ id: r.id }}><History className="h-4 w-4" /></Link>
-        </Button>
+        <>
+          <Button asChild variant="ghost" size="icon" title="Diagrama PFD">
+            <Link to="/cadastros/equipamentos/$id/pfd" params={{ id: r.id }}><Workflow className="h-4 w-4" /></Link>
+          </Button>
+          <Button asChild variant="ghost" size="icon" title="Histórico">
+            <Link to="/cadastros/equipamentos/$id" params={{ id: r.id }}><History className="h-4 w-4" /></Link>
+          </Button>
+        </>
       )}
     />
   );
