@@ -146,6 +146,7 @@ function StatusBadge({ status }: { status: string }) {
     disponivel: { label: "Disponível", cls: "bg-success/20 text-success border-success/30" },
     ocupado: { label: "Ocupado", cls: "bg-primary/20 text-primary border-primary/30" },
     parado: { label: "Parado", cls: "bg-warning/20 text-warning border-warning/30" },
+    manutencao: { label: "Manutenção", cls: "bg-destructive/20 text-destructive border-destructive/30" },
   };
   const v = map[status] ?? { label: status, cls: "" };
   return <Badge variant="outline" className={v.cls}>{v.label}</Badge>;
