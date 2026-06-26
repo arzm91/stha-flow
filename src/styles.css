@@ -169,3 +169,6 @@
   border-bottom: 2px solid hsl(var(--muted-foreground) / 0.5);
 }
 
+.pd-no-resize .react-grid-item > .react-resizable-handle { display: none; }
+
+
