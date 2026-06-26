@@ -18,7 +18,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/EmptyState";
-import { Factory, Play, Eye, LayoutGrid } from "lucide-react";
+import { Factory, Play, Eye, LayoutGrid, CheckCircle2 } from "lucide-react";
+import { gerarRelatorioProducaoPdf } from "@/lib/producao-pdf";
 import { toast } from "sonner";
 import { durationFromNow } from "@/lib/format";
 
