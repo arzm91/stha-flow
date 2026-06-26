@@ -1,13 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowLeft, FlaskConical, Trash2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate, formatNumber } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/estoque/tanques/$id")({
   component: TanqueDetail,
@@ -15,6 +21,7 @@ export const Route = createFileRoute("/_authenticated/estoque/tanques/$id")({
 
 function TanqueDetail() {
   const { id } = Route.useParams();
+  const qc = useQueryClient();
   const tanque = useQuery({
     queryKey: ["tanque", id],
     queryFn: async () => (await supabase.from("tanques").select("*, produto:produto_id(nome,codigo)").eq("id", id).maybeSingle()).data,
@@ -25,11 +32,53 @@ function TanqueDetail() {
       .select("*, produto:produto_id(nome,codigo)")
       .eq("tanque_id", id).order("ocorrido_em", { ascending: false })).data ?? [],
   });
+  const analises = useQuery({
+    queryKey: ["tanque-analises", id],
+    queryFn: async () => (await supabase.from("tanque_analises")
+      .select("*, analise:analise_id(nome,unidade,valor_min,valor_max)")
+      .eq("tanque_id", id).order("registrado_em", { ascending: false })).data ?? [],
+  });
+  const cadastros = useQuery({
+    queryKey: ["analises-cadastro"],
+    queryFn: async () => (await supabase.from("analises_cadastro").select("id,nome,unidade,valor_min,valor_max").order("nome")).data ?? [],
+  });
 
   const saldo = (mov.data ?? []).reduce(
     (s, m) => s + (m.tipo === "entrada" ? Number(m.quantidade) : -Number(m.quantidade)),
     0,
   );
+
+  const [open, setOpen] = useState(false);
+  const [analiseId, setAnaliseId] = useState("");
+  const [resultado, setResultado] = useState<number | "">("");
+  const [observacao, setObservacao] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const submitAnalise = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!analiseId || resultado === "") return toast.error("Selecione a análise e informe o resultado");
+    setSaving(true);
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Não autenticado");
+      const { error } = await supabase.from("tanque_analises").insert({
+        owner_id: u.user.id, tanque_id: id, analise_id: analiseId,
+        resultado: Number(resultado), observacao: observacao || null,
+      } as never);
+      if (error) throw error;
+      toast.success("Análise registrada");
+      setOpen(false); setAnaliseId(""); setResultado(""); setObservacao("");
+      qc.invalidateQueries({ queryKey: ["tanque-analises", id] });
+    } catch (err) { toast.error((err as Error).message); }
+    finally { setSaving(false); }
+  };
+
+  const remover = async (rid: string) => {
+    if (!confirm("Remover esta análise?")) return;
+    const { error } = await supabase.from("tanque_analises").delete().eq("id", rid);
+    if (error) return toast.error(error.message);
+    qc.invalidateQueries({ queryKey: ["tanque-analises", id] });
+  };
 
   return (
     <div>
@@ -55,6 +104,88 @@ function TanqueDetail() {
             <div className="text-xs text-muted-foreground">Produto vinculado</div>
             <div className="text-base">{(tanque.data?.produto as any)?.nome ?? "—"}</div>
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="mb-4">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base flex items-center gap-2"><FlaskConical className="h-4 w-4" />Análises de qualidade do produto armazenado</CardTitle>
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogTrigger asChild><Button size="sm">Nova análise</Button></DialogTrigger>
+            <DialogContent>
+              <DialogHeader><DialogTitle>Registrar análise de qualidade</DialogTitle></DialogHeader>
+              <form onSubmit={submitAnalise} className="space-y-4">
+                <div className="space-y-1.5">
+                  <Label>Análise</Label>
+                  <select value={analiseId} onChange={(e) => setAnaliseId(e.target.value)} required
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm">
+                    <option value="">— selecione —</option>
+                    {(cadastros.data ?? []).map((c) => (
+                      <option key={c.id} value={c.id}>{c.nome}{c.unidade ? ` (${c.unidade})` : ""}</option>
+                    ))}
+                  </select>
+                  {cadastros.data && cadastros.data.length === 0 && (
+                    <p className="text-xs text-muted-foreground">Cadastre análises em Cadastros &gt; Análises antes de registrar.</p>
+                  )}
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Resultado</Label>
+                  <Input type="number" step="any" value={resultado} onChange={(e) => setResultado(e.target.value === "" ? "" : Number(e.target.value))} required />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Observação</Label>
+                  <Textarea value={observacao} onChange={(e) => setObservacao(e.target.value)} />
+                </div>
+                <DialogFooter>
+                  <Button type="submit" disabled={saving}>Salvar</Button>
+                </DialogFooter>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </CardHeader>
+        <CardContent>
+          {(analises.data ?? []).length === 0 ? (
+            <p className="text-sm text-muted-foreground">Sem análises registradas. Adicione análises de qualidade para incluí-las nos relatórios de saída e expedição.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Data</TableHead>
+                  <TableHead>Análise</TableHead>
+                  <TableHead>Resultado</TableHead>
+                  <TableHead>Faixa</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Observação</TableHead>
+                  <TableHead></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {analises.data!.map((a: any) => {
+                  const ref = a.analise as { nome: string; unidade: string | null; valor_min: number | null; valor_max: number | null } | null;
+                  const v = Number(a.resultado);
+                  const min = ref?.valor_min != null ? Number(ref.valor_min) : null;
+                  const max = ref?.valor_max != null ? Number(ref.valor_max) : null;
+                  const fora = (min != null && v < min) || (max != null && v > max);
+                  const hasRange = min != null || max != null;
+                  return (
+                    <TableRow key={a.id}>
+                      <TableCell>{formatDate(a.registrado_em)}</TableCell>
+                      <TableCell>{ref?.nome ?? "—"}</TableCell>
+                      <TableCell className="font-mono">{formatNumber(v)}{ref?.unidade ? ` ${ref.unidade}` : ""}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{hasRange ? `${min ?? "—"} ↔ ${max ?? "—"}` : "—"}</TableCell>
+                      <TableCell>{hasRange ? (fora
+                        ? <Badge className="bg-destructive/20 text-destructive border-destructive/30" variant="outline">Fora</Badge>
+                        : <Badge className="bg-success/20 text-success border-success/30" variant="outline">Ok</Badge>) : "—"}</TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{a.observacao ?? "—"}</TableCell>
+                      <TableCell>
+                        <Button variant="ghost" size="icon" onClick={() => remover(a.id)}><Trash2 className="h-4 w-4" /></Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
 
