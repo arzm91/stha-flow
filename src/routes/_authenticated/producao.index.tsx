@@ -340,7 +340,7 @@ function FinalizarRapidoButton({ op }: { op: any }) {
     queryKey: ["tanques-prod-finalizar"],
     enabled: open,
     queryFn: async () => {
-      const { data } = await supabase.from("tanques").select("id,codigo,nome").eq("ativo", true).order("codigo");
+      const { data } = await supabase.from("tanques").select("id,codigo,nome").order("codigo");
       return data ?? [];
     },
   });
