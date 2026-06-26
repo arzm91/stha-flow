@@ -655,6 +655,12 @@ function FinalizarDialog({
         if (e3) throw e3;
       }
       toast.success("Produção finalizada");
+      try {
+        await gerarRelatorioProducaoPdf(op.id);
+        toast.success("Relatório raio-X gerado");
+      } catch (pdfErr) {
+        toast.error("Falha ao gerar PDF: " + (pdfErr as Error).message);
+      }
       setOpen(false);
       onDone();
     } catch (err) {
