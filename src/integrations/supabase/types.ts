@@ -1176,6 +1176,57 @@ export type Database = {
         }
         Relationships: []
       }
+      tanque_analises: {
+        Row: {
+          analise_id: string
+          created_at: string
+          id: string
+          observacao: string | null
+          owner_id: string
+          registrado_em: string
+          resultado: number
+          tanque_id: string
+          updated_at: string
+        }
+        Insert: {
+          analise_id: string
+          created_at?: string
+          id?: string
+          observacao?: string | null
+          owner_id: string
+          registrado_em?: string
+          resultado: number
+          tanque_id: string
+          updated_at?: string
+        }
+        Update: {
+          analise_id?: string
+          created_at?: string
+          id?: string
+          observacao?: string | null
+          owner_id?: string
+          registrado_em?: string
+          resultado?: number
+          tanque_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tanque_analises_analise_id_fkey"
+            columns: ["analise_id"]
+            isOneToOne: false
+            referencedRelation: "analises_cadastro"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tanque_analises_tanque_id_fkey"
+            columns: ["tanque_id"]
+            isOneToOne: false
+            referencedRelation: "tanques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tanques: {
         Row: {
           capacidade: number | null
