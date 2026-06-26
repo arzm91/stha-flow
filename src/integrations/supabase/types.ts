@@ -1019,9 +1019,11 @@ export type Database = {
           created_by: string
           descricao: string | null
           id: string
+          imagens: string[]
           ocorrido_em: string
           owner_id: string
-          titulo: string
+          responsavel: string | null
+          titulo: string | null
           updated_at: string
         }
         Insert: {
@@ -1030,9 +1032,11 @@ export type Database = {
           created_by: string
           descricao?: string | null
           id?: string
+          imagens?: string[]
           ocorrido_em?: string
           owner_id: string
-          titulo: string
+          responsavel?: string | null
+          titulo?: string | null
           updated_at?: string
         }
         Update: {
@@ -1041,9 +1045,11 @@ export type Database = {
           created_by?: string
           descricao?: string | null
           id?: string
+          imagens?: string[]
           ocorrido_em?: string
           owner_id?: string
-          titulo?: string
+          responsavel?: string | null
+          titulo?: string | null
           updated_at?: string
         }
         Relationships: []
