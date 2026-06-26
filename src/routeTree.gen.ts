@@ -19,6 +19,7 @@ import { Route as AuthenticatedTabelasRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedProducaoRouteImport } from './routes/_authenticated/producao'
 import { Route as AuthenticatedMonitoramentoRouteImport } from './routes/_authenticated/monitoramento'
+import { Route as AuthenticatedManutencaoRouteImport } from './routes/_authenticated/manutencao'
 import { Route as AuthenticatedIndicadoresRouteImport } from './routes/_authenticated/indicadores'
 import { Route as AuthenticatedEstoqueRouteImport } from './routes/_authenticated/estoque'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -105,6 +106,11 @@ const AuthenticatedMonitoramentoRoute =
     path: '/monitoramento',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedManutencaoRoute = AuthenticatedManutencaoRouteImport.update({
+  id: '/manutencao',
+  path: '/manutencao',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedIndicadoresRoute =
   AuthenticatedIndicadoresRouteImport.update({
     id: '/indicadores',
@@ -317,6 +323,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/estoque': typeof AuthenticatedEstoqueRouteWithChildren
   '/indicadores': typeof AuthenticatedIndicadoresRoute
+  '/manutencao': typeof AuthenticatedManutencaoRoute
   '/monitoramento': typeof AuthenticatedMonitoramentoRoute
   '/producao': typeof AuthenticatedProducaoRouteWithChildren
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
@@ -360,6 +367,7 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/indicadores': typeof AuthenticatedIndicadoresRoute
+  '/manutencao': typeof AuthenticatedManutencaoRoute
   '/monitoramento': typeof AuthenticatedMonitoramentoRoute
   '/turnos': typeof AuthenticatedTurnosRoute
   '/automacoes/$id': typeof AuthenticatedAutomacoesIdRoute
@@ -404,6 +412,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/estoque': typeof AuthenticatedEstoqueRouteWithChildren
   '/_authenticated/indicadores': typeof AuthenticatedIndicadoresRoute
+  '/_authenticated/manutencao': typeof AuthenticatedManutencaoRoute
   '/_authenticated/monitoramento': typeof AuthenticatedMonitoramentoRoute
   '/_authenticated/producao': typeof AuthenticatedProducaoRouteWithChildren
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
@@ -452,6 +461,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/estoque'
     | '/indicadores'
+    | '/manutencao'
     | '/monitoramento'
     | '/producao'
     | '/relatorios'
@@ -495,6 +505,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/dashboard'
     | '/indicadores'
+    | '/manutencao'
     | '/monitoramento'
     | '/turnos'
     | '/automacoes/$id'
@@ -538,6 +549,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/estoque'
     | '/_authenticated/indicadores'
+    | '/_authenticated/manutencao'
     | '/_authenticated/monitoramento'
     | '/_authenticated/producao'
     | '/_authenticated/relatorios'
@@ -653,6 +665,13 @@ declare module '@tanstack/react-router' {
       path: '/monitoramento'
       fullPath: '/monitoramento'
       preLoaderRoute: typeof AuthenticatedMonitoramentoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/manutencao': {
+      id: '/_authenticated/manutencao'
+      path: '/manutencao'
+      fullPath: '/manutencao'
+      preLoaderRoute: typeof AuthenticatedManutencaoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/indicadores': {
@@ -1064,6 +1083,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEstoqueRoute: typeof AuthenticatedEstoqueRouteWithChildren
   AuthenticatedIndicadoresRoute: typeof AuthenticatedIndicadoresRoute
+  AuthenticatedManutencaoRoute: typeof AuthenticatedManutencaoRoute
   AuthenticatedMonitoramentoRoute: typeof AuthenticatedMonitoramentoRoute
   AuthenticatedProducaoRoute: typeof AuthenticatedProducaoRouteWithChildren
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
@@ -1080,6 +1100,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEstoqueRoute: AuthenticatedEstoqueRouteWithChildren,
   AuthenticatedIndicadoresRoute: AuthenticatedIndicadoresRoute,
+  AuthenticatedManutencaoRoute: AuthenticatedManutencaoRoute,
   AuthenticatedMonitoramentoRoute: AuthenticatedMonitoramentoRoute,
   AuthenticatedProducaoRoute: AuthenticatedProducaoRouteWithChildren,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
