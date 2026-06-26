@@ -67,9 +67,14 @@ function ProducaoPage() {
         title="Produção"
         description="Equipamentos disponíveis e produções em andamento."
         actions={
-          <Button onClick={() => openNova(undefined)}>
-            <Play className="mr-2 h-4 w-4" />Nova ordem
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link to="/producao/dashboard"><LayoutGrid className="mr-2 h-4 w-4" />Dashboard</Link>
+            </Button>
+            <Button onClick={() => openNova(undefined)}>
+              <Play className="mr-2 h-4 w-4" />Nova ordem
+            </Button>
+          </div>
         }
       />
 
