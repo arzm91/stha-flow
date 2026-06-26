@@ -13,6 +13,7 @@ import {
   Table as TableIcon,
   CalendarClock,
   LineChart,
+  Wrench,
 } from "lucide-react";
 
 import sthaLogo from "@/assets/stha_logo.png.asset.json";
