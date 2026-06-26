@@ -140,6 +140,8 @@ function TurnosPage() {
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
+      const { guardAdmin } = await import("@/lib/security/guard-admin");
+      await guardAdmin("excluir este evento de turno");
       const { error } = await supabase.from("relatorio_turno_eventos").delete().eq("id", id);
       if (error) throw error;
     },
@@ -147,7 +149,10 @@ function TurnosPage() {
       toast.success("Evento removido");
       qc.invalidateQueries({ queryKey: ["turnos_eventos"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: async (e: Error) => {
+      const { isAdminCancelled } = await import("@/lib/security/guard-admin");
+      if (!isAdminCancelled(e)) toast.error(e.message);
+    },
   });
 
   const grupos = useMemo(() => {

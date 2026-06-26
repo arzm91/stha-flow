@@ -152,6 +152,10 @@ function ProdutosPage() {
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Não autenticado");
+      if (editing) {
+        const { guardAdmin } = await import("@/lib/security/guard-admin");
+        await guardAdmin(`editar o produto "${editing.nome}"`);
+      }
       const ownerId = u.user.id;
       const payload = {
         ...form,
@@ -211,11 +215,16 @@ function ProdutosPage() {
       setForm(emptyProduto);
       setProcessos([]);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: async (e: Error) => {
+      const { isAdminCancelled } = await import("@/lib/security/guard-admin");
+      if (!isAdminCancelled(e)) toast.error(e.message);
+    },
   });
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
+      const { guardAdmin } = await import("@/lib/security/guard-admin");
+      await guardAdmin("excluir este produto");
       const { error } = await supabase.from("produtos").delete().eq("id", id);
       if (error) throw error;
     },
@@ -224,7 +233,10 @@ function ProdutosPage() {
       qc.invalidateQueries({ queryKey: ["produtos"] });
       qc.invalidateQueries({ queryKey: ["produtos-processos-count"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: async (e: Error) => {
+      const { isAdminCancelled } = await import("@/lib/security/guard-admin");
+      if (!isAdminCancelled(e)) toast.error(e.message);
+    },
   });
 
   // process/activity editors

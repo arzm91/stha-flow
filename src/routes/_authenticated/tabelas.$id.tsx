@@ -90,6 +90,8 @@ function TabelaDetail() {
 
   const deleteRow = useMutation({
     mutationFn: async (rowId: string) => {
+      const { guardAdmin } = await import("@/lib/security/guard-admin");
+      await guardAdmin("excluir esta linha da tabela");
       const { error } = await supabase.from("custom_sheet_rows").delete().eq("id", rowId);
       if (error) throw error;
     },
@@ -97,7 +99,10 @@ function TabelaDetail() {
       toast.success("Linha excluída");
       qc.invalidateQueries({ queryKey: ["custom_sheet_rows", id] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: async (e: Error) => {
+      const { isAdminCancelled } = await import("@/lib/security/guard-admin");
+      if (!isAdminCancelled(e)) toast.error(e.message);
+    },
   });
 
   const importMut = useMutation({
@@ -484,6 +489,8 @@ function RowDialog({
         }
       }
       if (isEdit && initial) {
+        const { guardAdmin } = await import("@/lib/security/guard-admin");
+        await guardAdmin("editar esta linha da tabela");
         const { error } = await supabase
           .from("custom_sheet_rows")
           .update({ data: payload as never })

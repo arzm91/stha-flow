@@ -60,12 +60,19 @@ export function UserManagementCard() {
   });
 
   const deleteMut = useMutation({
-    mutationFn: (user_id: string) => deleteFn({ data: { user_id } }),
+    mutationFn: async (user_id: string) => {
+      const { guardAdmin } = await import("@/lib/security/guard-admin");
+      await guardAdmin("excluir este usuário");
+      return deleteFn({ data: { user_id } });
+    },
     onSuccess: () => {
       toast.success("Usuário excluído");
       qc.invalidateQueries({ queryKey: ["managed-users"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: async (e: Error) => {
+      const { isAdminCancelled } = await import("@/lib/security/guard-admin");
+      if (!isAdminCancelled(e)) toast.error(e.message);
+    },
   });
 
   return (
@@ -138,6 +145,8 @@ export function UserManagementCard() {
           onClose={() => setEditingUser(null)}
           onSave={async (permissions) => {
             try {
+              const { requireAdminPassword } = await import("@/components/admin-password/AdminPasswordGate");
+              if (!(await requireAdminPassword(`alterar permissões de ${editingUser.email}`))) return;
               await setPermFn({ data: { user_id: editingUser.id, permissions } });
               toast.success("Permissões atualizadas");
               setEditingUser(null);

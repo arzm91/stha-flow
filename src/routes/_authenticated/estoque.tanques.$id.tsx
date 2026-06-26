@@ -75,6 +75,8 @@ function TanqueDetail() {
 
   const remover = async (rid: string) => {
     if (!confirm("Remover esta análise?")) return;
+    const { requireAdminPassword } = await import("@/components/admin-password/AdminPasswordGate");
+    if (!(await requireAdminPassword("excluir esta análise do tanque"))) return;
     const { error } = await supabase.from("tanque_analises").delete().eq("id", rid);
     if (error) return toast.error(error.message);
     qc.invalidateQueries({ queryKey: ["tanque-analises", id] });
