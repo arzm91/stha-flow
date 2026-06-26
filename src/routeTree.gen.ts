@@ -19,6 +19,7 @@ import { Route as AuthenticatedTabelasRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedProducaoRouteImport } from './routes/_authenticated/producao'
 import { Route as AuthenticatedMonitoramentoRouteImport } from './routes/_authenticated/monitoramento'
+import { Route as AuthenticatedManutencaoRouteImport } from './routes/_authenticated/manutencao'
 import { Route as AuthenticatedIndicadoresRouteImport } from './routes/_authenticated/indicadores'
 import { Route as AuthenticatedEstoqueRouteImport } from './routes/_authenticated/estoque'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -30,6 +31,7 @@ import { Route as AuthenticatedTagsIndexRouteImport } from './routes/_authentica
 import { Route as AuthenticatedTabelasIndexRouteImport } from './routes/_authenticated/tabelas.index'
 import { Route as AuthenticatedRelatoriosIndexRouteImport } from './routes/_authenticated/relatorios.index'
 import { Route as AuthenticatedProducaoIndexRouteImport } from './routes/_authenticated/producao.index'
+import { Route as AuthenticatedManutencaoIndexRouteImport } from './routes/_authenticated/manutencao.index'
 import { Route as AuthenticatedEstoqueIndexRouteImport } from './routes/_authenticated/estoque.index'
 import { Route as AuthenticatedAutomacoesIndexRouteImport } from './routes/_authenticated/automacoes.index'
 import { Route as AuthenticatedAlertasIndexRouteImport } from './routes/_authenticated/alertas.index'
@@ -105,6 +107,11 @@ const AuthenticatedMonitoramentoRoute =
     path: '/monitoramento',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
+const AuthenticatedManutencaoRoute = AuthenticatedManutencaoRouteImport.update({
+  id: '/manutencao',
+  path: '/manutencao',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedIndicadoresRoute =
   AuthenticatedIndicadoresRouteImport.update({
     id: '/indicadores',
@@ -164,6 +171,12 @@ const AuthenticatedProducaoIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => AuthenticatedProducaoRoute,
+  } as any)
+const AuthenticatedManutencaoIndexRoute =
+  AuthenticatedManutencaoIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthenticatedManutencaoRoute,
   } as any)
 const AuthenticatedEstoqueIndexRoute =
   AuthenticatedEstoqueIndexRouteImport.update({
@@ -317,6 +330,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/estoque': typeof AuthenticatedEstoqueRouteWithChildren
   '/indicadores': typeof AuthenticatedIndicadoresRoute
+  '/manutencao': typeof AuthenticatedManutencaoRouteWithChildren
   '/monitoramento': typeof AuthenticatedMonitoramentoRoute
   '/producao': typeof AuthenticatedProducaoRouteWithChildren
   '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
@@ -341,6 +355,7 @@ export interface FileRoutesByFullPath {
   '/alertas/': typeof AuthenticatedAlertasIndexRoute
   '/automacoes/': typeof AuthenticatedAutomacoesIndexRoute
   '/estoque/': typeof AuthenticatedEstoqueIndexRoute
+  '/manutencao/': typeof AuthenticatedManutencaoIndexRoute
   '/producao/': typeof AuthenticatedProducaoIndexRoute
   '/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/tabelas/': typeof AuthenticatedTabelasIndexRoute
@@ -380,6 +395,7 @@ export interface FileRoutesByTo {
   '/alertas': typeof AuthenticatedAlertasIndexRoute
   '/automacoes': typeof AuthenticatedAutomacoesIndexRoute
   '/estoque': typeof AuthenticatedEstoqueIndexRoute
+  '/manutencao': typeof AuthenticatedManutencaoIndexRoute
   '/producao': typeof AuthenticatedProducaoIndexRoute
   '/relatorios': typeof AuthenticatedRelatoriosIndexRoute
   '/tabelas': typeof AuthenticatedTabelasIndexRoute
@@ -404,6 +420,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/estoque': typeof AuthenticatedEstoqueRouteWithChildren
   '/_authenticated/indicadores': typeof AuthenticatedIndicadoresRoute
+  '/_authenticated/manutencao': typeof AuthenticatedManutencaoRouteWithChildren
   '/_authenticated/monitoramento': typeof AuthenticatedMonitoramentoRoute
   '/_authenticated/producao': typeof AuthenticatedProducaoRouteWithChildren
   '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
@@ -428,6 +445,7 @@ export interface FileRoutesById {
   '/_authenticated/alertas/': typeof AuthenticatedAlertasIndexRoute
   '/_authenticated/automacoes/': typeof AuthenticatedAutomacoesIndexRoute
   '/_authenticated/estoque/': typeof AuthenticatedEstoqueIndexRoute
+  '/_authenticated/manutencao/': typeof AuthenticatedManutencaoIndexRoute
   '/_authenticated/producao/': typeof AuthenticatedProducaoIndexRoute
   '/_authenticated/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/_authenticated/tabelas/': typeof AuthenticatedTabelasIndexRoute
@@ -452,6 +470,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/estoque'
     | '/indicadores'
+    | '/manutencao'
     | '/monitoramento'
     | '/producao'
     | '/relatorios'
@@ -476,6 +495,7 @@ export interface FileRouteTypes {
     | '/alertas/'
     | '/automacoes/'
     | '/estoque/'
+    | '/manutencao/'
     | '/producao/'
     | '/relatorios/'
     | '/tabelas/'
@@ -515,6 +535,7 @@ export interface FileRouteTypes {
     | '/alertas'
     | '/automacoes'
     | '/estoque'
+    | '/manutencao'
     | '/producao'
     | '/relatorios'
     | '/tabelas'
@@ -538,6 +559,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/estoque'
     | '/_authenticated/indicadores'
+    | '/_authenticated/manutencao'
     | '/_authenticated/monitoramento'
     | '/_authenticated/producao'
     | '/_authenticated/relatorios'
@@ -562,6 +584,7 @@ export interface FileRouteTypes {
     | '/_authenticated/alertas/'
     | '/_authenticated/automacoes/'
     | '/_authenticated/estoque/'
+    | '/_authenticated/manutencao/'
     | '/_authenticated/producao/'
     | '/_authenticated/relatorios/'
     | '/_authenticated/tabelas/'
@@ -655,6 +678,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedMonitoramentoRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/manutencao': {
+      id: '/_authenticated/manutencao'
+      path: '/manutencao'
+      fullPath: '/manutencao'
+      preLoaderRoute: typeof AuthenticatedManutencaoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/indicadores': {
       id: '/_authenticated/indicadores'
       path: '/indicadores'
@@ -731,6 +761,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/producao/'
       preLoaderRoute: typeof AuthenticatedProducaoIndexRouteImport
       parentRoute: typeof AuthenticatedProducaoRoute
+    }
+    '/_authenticated/manutencao/': {
+      id: '/_authenticated/manutencao/'
+      path: '/'
+      fullPath: '/manutencao/'
+      preLoaderRoute: typeof AuthenticatedManutencaoIndexRouteImport
+      parentRoute: typeof AuthenticatedManutencaoRoute
     }
     '/_authenticated/estoque/': {
       id: '/_authenticated/estoque/'
@@ -987,6 +1024,20 @@ const AuthenticatedEstoqueRouteChildren: AuthenticatedEstoqueRouteChildren = {
 const AuthenticatedEstoqueRouteWithChildren =
   AuthenticatedEstoqueRoute._addFileChildren(AuthenticatedEstoqueRouteChildren)
 
+interface AuthenticatedManutencaoRouteChildren {
+  AuthenticatedManutencaoIndexRoute: typeof AuthenticatedManutencaoIndexRoute
+}
+
+const AuthenticatedManutencaoRouteChildren: AuthenticatedManutencaoRouteChildren =
+  {
+    AuthenticatedManutencaoIndexRoute: AuthenticatedManutencaoIndexRoute,
+  }
+
+const AuthenticatedManutencaoRouteWithChildren =
+  AuthenticatedManutencaoRoute._addFileChildren(
+    AuthenticatedManutencaoRouteChildren,
+  )
+
 interface AuthenticatedProducaoRouteChildren {
   AuthenticatedProducaoIdRoute: typeof AuthenticatedProducaoIdRoute
   AuthenticatedProducaoDashboardRoute: typeof AuthenticatedProducaoDashboardRoute
@@ -1064,6 +1115,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedEstoqueRoute: typeof AuthenticatedEstoqueRouteWithChildren
   AuthenticatedIndicadoresRoute: typeof AuthenticatedIndicadoresRoute
+  AuthenticatedManutencaoRoute: typeof AuthenticatedManutencaoRouteWithChildren
   AuthenticatedMonitoramentoRoute: typeof AuthenticatedMonitoramentoRoute
   AuthenticatedProducaoRoute: typeof AuthenticatedProducaoRouteWithChildren
   AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
@@ -1080,6 +1132,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedEstoqueRoute: AuthenticatedEstoqueRouteWithChildren,
   AuthenticatedIndicadoresRoute: AuthenticatedIndicadoresRoute,
+  AuthenticatedManutencaoRoute: AuthenticatedManutencaoRouteWithChildren,
   AuthenticatedMonitoramentoRoute: AuthenticatedMonitoramentoRoute,
   AuthenticatedProducaoRoute: AuthenticatedProducaoRouteWithChildren,
   AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,

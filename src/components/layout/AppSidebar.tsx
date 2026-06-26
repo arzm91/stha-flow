@@ -13,6 +13,7 @@ import {
   Table as TableIcon,
   CalendarClock,
   LineChart,
+  Wrench,
 } from "lucide-react";
 
 import sthaLogo from "@/assets/stha_logo.png.asset.json";
@@ -42,6 +43,7 @@ const items = [
   { title: "Alertas", url: "/alertas", icon: Bell, prefix: "/alertas", pageKey: "alertas" },
   { title: "Cadastros", url: "/cadastros", icon: ClipboardList, prefix: "/cadastros", pageKey: "cadastros" },
   { title: "Turnos", url: "/turnos", icon: CalendarClock, pageKey: "turnos" },
+  { title: "Manutenção", url: "/manutencao", icon: Wrench, prefix: "/manutencao", pageKey: "manutencao" },
   { title: "Relatórios", url: "/relatorios/producao", icon: FileBarChart, prefix: "/relatorios", pageKey: "relatorios" },
   { title: "Indicadores", url: "/indicadores", icon: Activity, pageKey: "indicadores" },
   { title: "Configurações", url: "/configuracoes", icon: Settings, adminOnly: true },

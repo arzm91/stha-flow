@@ -108,7 +108,9 @@ function ProducaoPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-3 text-sm text-muted-foreground">Disponível para nova OP.</div>
+                    <div className="mt-3 text-sm text-muted-foreground">
+                      {e.status === "manutencao" ? "Em manutenção (indisponível)." : "Disponível para nova OP."}
+                    </div>
                   )}
                   <div className="mt-4 flex justify-end gap-2">
                     {op ? (
@@ -116,7 +118,7 @@ function ProducaoPage() {
                         <Link to="/producao/$id" params={{ id: op.id }}><Eye className="mr-1 h-4 w-4" />Acompanhar</Link>
                       </Button>
                     ) : (
-                      <Button size="sm" variant="secondary" onClick={() => openNova(e.id)}>
+                      <Button size="sm" variant="secondary" onClick={() => openNova(e.id)} disabled={e.status === "manutencao"}>
                         <Play className="mr-1 h-4 w-4" />Iniciar produção
                       </Button>
                     )}
@@ -146,6 +148,7 @@ function StatusBadge({ status }: { status: string }) {
     disponivel: { label: "Disponível", cls: "bg-success/20 text-success border-success/30" },
     ocupado: { label: "Ocupado", cls: "bg-primary/20 text-primary border-primary/30" },
     parado: { label: "Parado", cls: "bg-warning/20 text-warning border-warning/30" },
+    manutencao: { label: "Manutenção", cls: "bg-destructive/20 text-destructive border-destructive/30" },
   };
   const v = map[status] ?? { label: status, cls: "" };
   return <Badge variant="outline" className={v.cls}>{v.label}</Badge>;
@@ -290,9 +293,9 @@ function NovaOPDialog({
               >
                 <option value="">— selecione —</option>
                 {equipamentos.map((eq) => (
-                  <option key={eq.id} value={eq.id} disabled={eq.status === "ocupado" && eq.id !== equipPreset}>
+                  <option key={eq.id} value={eq.id} disabled={(eq.status === "ocupado" && eq.id !== equipPreset) || eq.status === "manutencao"}>
                     {eq.codigo} — {eq.nome}
-                    {eq.status === "ocupado" ? " (ocupado)" : ""}
+                    {eq.status === "ocupado" ? " (ocupado)" : eq.status === "manutencao" ? " (em manutenção)" : ""}
                   </option>
                 ))}
               </select>
