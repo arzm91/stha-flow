@@ -59,7 +59,7 @@ export const verifyOwnerAdminPassword = createServerFn({ method: "POST" })
         },
       },
     );
-    const { data: signIn, error: signErr } = await temp.signInWithPassword({
+    const { data: signIn, error: signErr } = await temp.auth.signInWithPassword({
       email,
       password: data.password,
     });
