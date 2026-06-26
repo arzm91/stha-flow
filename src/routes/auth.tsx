@@ -192,6 +192,30 @@ function AuthPage() {
           </Card>
         </div>
       </div>
+
+      <Dialog open={showAccessDeniedDialog} onOpenChange={setShowAccessDeniedDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Acesso ao cadastro restrito</DialogTitle>
+            <DialogDescription className="space-y-3 pt-2">
+              <span className="block">
+                A senha de acesso ao cadastro está incorreta ou não foi informada.
+              </span>
+              <span className="block">
+                O cadastro no STHA é liberado apenas para clientes que aderiram ao plano de pagamento do sistema.
+              </span>
+              <span className="block">
+                Para solicitar uma <strong>demonstração</strong> ou receber a senha de acesso, entre em contato com o administrador do sistema.
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setShowAccessDeniedDialog(false)} className="w-full">
+              Entendi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
