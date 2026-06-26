@@ -108,7 +108,9 @@ function ProducaoPage() {
                       </div>
                     </div>
                   ) : (
-                    <div className="mt-3 text-sm text-muted-foreground">Disponível para nova OP.</div>
+                    <div className="mt-3 text-sm text-muted-foreground">
+                      {e.status === "manutencao" ? "Em manutenção (indisponível)." : "Disponível para nova OP."}
+                    </div>
                   )}
                   <div className="mt-4 flex justify-end gap-2">
                     {op ? (
@@ -116,7 +118,7 @@ function ProducaoPage() {
                         <Link to="/producao/$id" params={{ id: op.id }}><Eye className="mr-1 h-4 w-4" />Acompanhar</Link>
                       </Button>
                     ) : (
-                      <Button size="sm" variant="secondary" onClick={() => openNova(e.id)}>
+                      <Button size="sm" variant="secondary" onClick={() => openNova(e.id)} disabled={e.status === "manutencao"}>
                         <Play className="mr-1 h-4 w-4" />Iniciar produção
                       </Button>
                     )}
