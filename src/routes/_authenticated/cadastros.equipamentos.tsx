@@ -82,9 +82,14 @@ function EquipamentosPage() {
         { key: "ativo", label: "Ativo", render: (r) => (r.ativo ? "Sim" : "Não") },
       ]}
       extraActions={(r) => (
-        <Button asChild variant="ghost" size="icon" title="Histórico">
-          <Link to="/cadastros/equipamentos/$id" params={{ id: r.id }}><History className="h-4 w-4" /></Link>
-        </Button>
+        <>
+          <Button asChild variant="ghost" size="icon" title="Diagrama PFD">
+            <Link to="/cadastros/equipamentos/$id/pfd" params={{ id: r.id }}><Workflow className="h-4 w-4" /></Link>
+          </Button>
+          <Button asChild variant="ghost" size="icon" title="Histórico">
+            <Link to="/cadastros/equipamentos/$id" params={{ id: r.id }}><History className="h-4 w-4" /></Link>
+          </Button>
+        </>
       )}
     />
   );
