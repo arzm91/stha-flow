@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { ArrowLeft, CheckCircle2, Gauge, FlaskConical, MessageSquare, Activity, AlertTriangle, Play, Square, ListChecks, Clock, History } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate, formatNumber, durationFromNow, durationBetween } from "@/lib/format";
+import { PfdViewer } from "@/components/PfdViewer";
 
 export const Route = createFileRoute("/_authenticated/producao/$id")({
   component: OPPage,
@@ -116,6 +117,10 @@ function OPPage() {
         <Info label="Operador" value={operador.data?.nome ?? "—"} />
         <Info label="Equipamento" value={(op.data.equipamento as any)?.nome ?? "—"} />
       </div>
+
+      {op.data.equipamento_id ? <PfdViewer equipamentoId={op.data.equipamento_id as string} /> : null}
+
+
 
       {(op.data.obs_iniciais || op.data.obs_finais) ? (
         <Card className="mb-4">
