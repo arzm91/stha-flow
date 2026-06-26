@@ -215,9 +215,14 @@ function ManutencaoPage() {
                       )}
                       <div className="mt-4 flex justify-end gap-2">
                         {osAtiva ? (
-                          <Button size="sm" onClick={() => { setOsEditing(osAtiva); setOsOpen(true); }}>
-                            Ver OS
-                          </Button>
+                          <>
+                            <Button size="sm" variant="outline" onClick={() => { setOsEditing(osAtiva); setOsOpen(true); }}>
+                              Ver OS
+                            </Button>
+                            <Button size="sm" onClick={() => finalizarOS(osAtiva, qc)}>
+                              <CheckCircle2 className="mr-1 h-4 w-4" />Finalizar
+                            </Button>
+                          </>
                         ) : (
                           <Button size="sm" variant="secondary" onClick={() => openOsForEquip(e.id)}>
                             <Wrench className="mr-1 h-4 w-4" />Abrir OS
