@@ -215,9 +215,14 @@ function ManutencaoPage() {
                       )}
                       <div className="mt-4 flex justify-end gap-2">
                         {osAtiva ? (
-                          <Button size="sm" onClick={() => { setOsEditing(osAtiva); setOsOpen(true); }}>
-                            Ver OS
-                          </Button>
+                          <>
+                            <Button size="sm" variant="outline" onClick={() => { setOsEditing(osAtiva); setOsOpen(true); }}>
+                              Ver OS
+                            </Button>
+                            <Button size="sm" onClick={() => finalizarOS(osAtiva, qc)}>
+                              <CheckCircle2 className="mr-1 h-4 w-4" />Finalizar
+                            </Button>
+                          </>
                         ) : (
                           <Button size="sm" variant="secondary" onClick={() => openOsForEquip(e.id)}>
                             <Wrench className="mr-1 h-4 w-4" />Abrir OS
@@ -424,6 +429,34 @@ async function gerarOrdemPreventiva(p: Preventiva, qc: ReturnType<typeof useQuer
     }
     toast.success(`OS ${numero} criada`);
     qc.invalidateQueries({ queryKey: ["mnt-ordens"] });
+  } catch (e) {
+    toast.error((e as Error).message);
+  }
+}
+
+async function finalizarOS(os: OS, qc: ReturnType<typeof useQueryClient>) {
+  try {
+    if (os.status === "concluida" || os.status === "cancelada") {
+      toast.info("OS já finalizada");
+      return;
+    }
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from("ordens_manutencao")
+      .update({
+        status: "concluida",
+        data_inicio: os.data_inicio ?? now,
+        data_conclusao: now,
+      })
+      .eq("id", os.id);
+    if (error) throw error;
+    if (os.tipo === "corretiva") {
+      await supabase.from("equipamentos").update({ status: "disponivel" }).eq("id", os.equipamento_id);
+    }
+    toast.success(`OS ${os.numero} finalizada — equipamento disponível`);
+    qc.invalidateQueries({ queryKey: ["mnt-ordens"] });
+    qc.invalidateQueries({ queryKey: ["mnt-equipamentos"] });
+    qc.invalidateQueries({ queryKey: ["equipamentos"] });
   } catch (e) {
     toast.error((e as Error).message);
   }
@@ -677,6 +710,14 @@ function OSDialog({
                 <Button type="button" variant="outline" onClick={() => gerarOSManutencaoPdf(editing!.id).catch((e) => toast.error(e.message))}>
                   <Printer className="mr-2 h-4 w-4" />Imprimir
                 </Button>
+                {editing!.status !== "concluida" && editing!.status !== "cancelada" && (
+                  <Button type="button" variant="default" onClick={async () => {
+                    await finalizarOS(editing!, qc);
+                    onOpenChange(false);
+                  }}>
+                    <CheckCircle2 className="mr-2 h-4 w-4" />Finalizar OS
+                  </Button>
+                )}
                 <Button type="button" variant="destructive" onClick={() => remove.mutate()}>
                   <Trash2 className="mr-2 h-4 w-4" />Excluir
                 </Button>
