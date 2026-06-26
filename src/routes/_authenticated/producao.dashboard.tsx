@@ -367,11 +367,11 @@ function ProducaoDashboardPage() {
           </CardContent></Card>
         ) : (
           <GridLayout
-            className="layout"
+            className={editMode ? "layout" : "layout pd-no-resize"}
             layout={layoutItems as unknown as Layout}
             width={width}
             gridConfig={{ cols: COLS, rowHeight: ROW_H, margin: [12, 12] }}
-            dragConfig={{ handle: ".widget-drag" }}
+            dragConfig={{ handle: editMode ? ".widget-drag" : ".__no_drag__" }}
             onLayoutChange={onLayoutChange as (l: Layout) => void}
           >
             {widgets.map((w) => (
