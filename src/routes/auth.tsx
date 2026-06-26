@@ -140,6 +140,20 @@ function AuthPage() {
                 <TabsContent value="signup">
                   <form onSubmit={handleSignup} className="space-y-4 pt-4">
                     <div className="space-y-2">
+                      <Label htmlFor="access-code">Senha de acesso ao cadastro</Label>
+                      <Input
+                        id="access-code"
+                        type="password"
+                        required
+                        value={accessCode}
+                        onChange={(e) => setAccessCode(e.target.value)}
+                        placeholder="Senha fornecida pelo administrador"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Fornecida apenas a clientes do plano. Não possui? Solicite uma demonstração ao administrador.
+                      </p>
+                    </div>
+                    <div className="space-y-2">
                       <Label htmlFor="nome">Nome</Label>
                       <Input id="nome" required value={nome} onChange={(e) => setNome(e.target.value)} />
                     </div>
