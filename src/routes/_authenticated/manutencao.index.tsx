@@ -426,6 +426,12 @@ async function gerarOrdemPreventiva(p: Preventiva, qc: ReturnType<typeof useQuer
           ordem_seq: i,
         })),
       );
+    }
+    toast.success(`OS ${numero} criada`);
+    qc.invalidateQueries({ queryKey: ["mnt-ordens"] });
+  } catch (e) {
+    toast.error((e as Error).message);
+  }
 }
 
 async function finalizarOS(os: OS, qc: ReturnType<typeof useQueryClient>) {
@@ -451,12 +457,6 @@ async function finalizarOS(os: OS, qc: ReturnType<typeof useQueryClient>) {
     qc.invalidateQueries({ queryKey: ["mnt-ordens"] });
     qc.invalidateQueries({ queryKey: ["mnt-equipamentos"] });
     qc.invalidateQueries({ queryKey: ["equipamentos"] });
-  } catch (e) {
-    toast.error((e as Error).message);
-  }
-}
-    toast.success(`OS ${numero} criada`);
-    qc.invalidateQueries({ queryKey: ["mnt-ordens"] });
   } catch (e) {
     toast.error((e as Error).message);
   }
