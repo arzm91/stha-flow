@@ -60,6 +60,7 @@ function TabelaDetail() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [filterCol, setFilterCol] = useState<string>("__created_at__");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: sheet } = useQuery({
     queryKey: ["custom_sheet", id],
