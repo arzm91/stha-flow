@@ -15,6 +15,7 @@ import { ArrowLeft, CheckCircle2, Gauge, FlaskConical, MessageSquare, Activity, 
 import { toast } from "sonner";
 import { formatDate, formatNumber, durationFromNow, durationBetween } from "@/lib/format";
 import { PfdViewer } from "@/components/PfdViewer";
+import { gerarRelatorioProducaoPdf } from "@/lib/producao-pdf";
 
 export const Route = createFileRoute("/_authenticated/producao/$id")({
   component: OPPage,
@@ -654,6 +655,12 @@ function FinalizarDialog({
         if (e3) throw e3;
       }
       toast.success("Produção finalizada");
+      try {
+        await gerarRelatorioProducaoPdf(op.id);
+        toast.success("Relatório raio-X gerado");
+      } catch (pdfErr) {
+        toast.error("Falha ao gerar PDF: " + (pdfErr as Error).message);
+      }
       setOpen(false);
       onDone();
     } catch (err) {
