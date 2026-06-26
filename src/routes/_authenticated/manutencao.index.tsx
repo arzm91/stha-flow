@@ -426,7 +426,35 @@ async function gerarOrdemPreventiva(p: Preventiva, qc: ReturnType<typeof useQuer
           ordem_seq: i,
         })),
       );
+}
+
+async function finalizarOS(os: OS, qc: ReturnType<typeof useQueryClient>) {
+  try {
+    if (os.status === "concluida" || os.status === "cancelada") {
+      toast.info("OS já finalizada");
+      return;
     }
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from("ordens_manutencao")
+      .update({
+        status: "concluida",
+        data_inicio: os.data_inicio ?? now,
+        data_conclusao: now,
+      })
+      .eq("id", os.id);
+    if (error) throw error;
+    if (os.tipo === "corretiva") {
+      await supabase.from("equipamentos").update({ status: "disponivel" }).eq("id", os.equipamento_id);
+    }
+    toast.success(`OS ${os.numero} finalizada — equipamento disponível`);
+    qc.invalidateQueries({ queryKey: ["mnt-ordens"] });
+    qc.invalidateQueries({ queryKey: ["mnt-equipamentos"] });
+    qc.invalidateQueries({ queryKey: ["equipamentos"] });
+  } catch (e) {
+    toast.error((e as Error).message);
+  }
+}
     toast.success(`OS ${numero} criada`);
     qc.invalidateQueries({ queryKey: ["mnt-ordens"] });
   } catch (e) {
