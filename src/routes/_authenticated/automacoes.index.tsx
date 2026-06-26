@@ -58,6 +58,8 @@ function AutomacoesIndex() {
   }
 
   async function toggleAtivo(flow: Flow) {
+    const { requireAdminPassword } = await import("@/components/admin-password/AdminPasswordGate");
+    if (!(await requireAdminPassword(`alterar o fluxo "${flow.nome}"`))) return;
     const { error } = await supabase
       .from("automation_flows")
       .update({ ativo: !flow.ativo })
@@ -71,6 +73,8 @@ function AutomacoesIndex() {
 
   async function removeFlow(flow: Flow) {
     if (!confirm(`Excluir fluxo "${flow.nome}"?`)) return;
+    const { requireAdminPassword } = await import("@/components/admin-password/AdminPasswordGate");
+    if (!(await requireAdminPassword(`excluir o fluxo "${flow.nome}"`))) return;
     const { error } = await supabase.from("automation_flows").delete().eq("id", flow.id);
     if (error) {
       toast.error(error.message);

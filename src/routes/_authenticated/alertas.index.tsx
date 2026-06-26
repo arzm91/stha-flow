@@ -173,6 +173,10 @@ function AlertasPage() {
       cooldown_minutes: form.cooldown_minutes ?? 5,
     };
 
+    if (editing) {
+      const { requireAdminPassword } = await import("@/components/admin-password/AdminPasswordGate");
+      if (!(await requireAdminPassword(`editar o alerta "${editing.nome}"`))) return;
+    }
     const q = editing
       ? supabase.from("alertas").update(payload).eq("id", editing.id)
       : supabase.from("alertas").insert(payload);
@@ -187,11 +191,15 @@ function AlertasPage() {
 
   async function remove(a: Alerta) {
     if (!confirm(`Excluir alerta "${a.nome}"?`)) return;
+    const { requireAdminPassword } = await import("@/components/admin-password/AdminPasswordGate");
+    if (!(await requireAdminPassword(`excluir o alerta "${a.nome}"`))) return;
     const { error } = await supabase.from("alertas").delete().eq("id", a.id);
     if (error) toast.error(error.message);
   }
 
   async function toggleAtivo(a: Alerta) {
+    const { requireAdminPassword } = await import("@/components/admin-password/AdminPasswordGate");
+    if (!(await requireAdminPassword(`alterar o alerta "${a.nome}"`))) return;
     const { error } = await supabase
       .from("alertas")
       .update({ ativo: !a.ativo })
