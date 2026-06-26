@@ -349,7 +349,7 @@ function PfdEditor() {
     [],
   );
   const onConnect = useCallback((conn: Connection) => {
-    setEdges((eds) => addEdge<FlowEdgeData>({
+    setEdges((eds) => addEdge({
       ...conn,
       id: crypto.randomUUID(),
       type: "default",

@@ -52,6 +52,7 @@ import { Route as ApiPublicTagsPollRouteImport } from './routes/api/public/tags.
 import { Route as AuthenticatedProducaoHistoricoEquipIdRouteImport } from './routes/_authenticated/producao.historico.$equipId'
 import { Route as AuthenticatedEstoqueTanquesIdRouteImport } from './routes/_authenticated/estoque.tanques.$id'
 import { Route as AuthenticatedCadastrosEquipamentosIdRouteImport } from './routes/_authenticated/cadastros.equipamentos.$id'
+import { Route as AuthenticatedCadastrosEquipamentosIdPfdRouteImport } from './routes/_authenticated/cadastros.equipamentos.$id.pfd'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -291,6 +292,12 @@ const AuthenticatedCadastrosEquipamentosIdRoute =
     path: '/$id',
     getParentRoute: () => AuthenticatedCadastrosEquipamentosRoute,
   } as any)
+const AuthenticatedCadastrosEquipamentosIdPfdRoute =
+  AuthenticatedCadastrosEquipamentosIdPfdRouteImport.update({
+    id: '/pfd',
+    path: '/pfd',
+    getParentRoute: () => AuthenticatedCadastrosEquipamentosIdRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -330,11 +337,12 @@ export interface FileRoutesByFullPath {
   '/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/tabelas/': typeof AuthenticatedTabelasIndexRoute
   '/tags/': typeof AuthenticatedTagsIndexRoute
-  '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
+  '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRouteWithChildren
   '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
   '/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
+  '/cadastros/equipamentos/$id/pfd': typeof AuthenticatedCadastrosEquipamentosIdPfdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -367,11 +375,12 @@ export interface FileRoutesByTo {
   '/relatorios': typeof AuthenticatedRelatoriosIndexRoute
   '/tabelas': typeof AuthenticatedTabelasIndexRoute
   '/tags': typeof AuthenticatedTagsIndexRoute
-  '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
+  '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRouteWithChildren
   '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
   '/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
+  '/cadastros/equipamentos/$id/pfd': typeof AuthenticatedCadastrosEquipamentosIdPfdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -413,11 +422,12 @@ export interface FileRoutesById {
   '/_authenticated/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/_authenticated/tabelas/': typeof AuthenticatedTabelasIndexRoute
   '/_authenticated/tags/': typeof AuthenticatedTagsIndexRoute
-  '/_authenticated/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
+  '/_authenticated/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRouteWithChildren
   '/_authenticated/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
   '/_authenticated/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
+  '/_authenticated/cadastros/equipamentos/$id/pfd': typeof AuthenticatedCadastrosEquipamentosIdPfdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -464,6 +474,7 @@ export interface FileRouteTypes {
     | '/producao/historico/$equipId'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
+    | '/cadastros/equipamentos/$id/pfd'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -501,6 +512,7 @@ export interface FileRouteTypes {
     | '/producao/historico/$equipId'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
+    | '/cadastros/equipamentos/$id/pfd'
   id:
     | '__root__'
     | '/'
@@ -546,6 +558,7 @@ export interface FileRouteTypes {
     | '/_authenticated/producao/historico/$equipId'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
+    | '/_authenticated/cadastros/equipamentos/$id/pfd'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -860,6 +873,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCadastrosEquipamentosIdRouteImport
       parentRoute: typeof AuthenticatedCadastrosEquipamentosRoute
     }
+    '/_authenticated/cadastros/equipamentos/$id/pfd': {
+      id: '/_authenticated/cadastros/equipamentos/$id/pfd'
+      path: '/pfd'
+      fullPath: '/cadastros/equipamentos/$id/pfd'
+      preLoaderRoute: typeof AuthenticatedCadastrosEquipamentosIdPfdRouteImport
+      parentRoute: typeof AuthenticatedCadastrosEquipamentosIdRoute
+    }
   }
 }
 
@@ -890,14 +910,29 @@ const AuthenticatedAutomacoesRouteWithChildren =
     AuthenticatedAutomacoesRouteChildren,
   )
 
+interface AuthenticatedCadastrosEquipamentosIdRouteChildren {
+  AuthenticatedCadastrosEquipamentosIdPfdRoute: typeof AuthenticatedCadastrosEquipamentosIdPfdRoute
+}
+
+const AuthenticatedCadastrosEquipamentosIdRouteChildren: AuthenticatedCadastrosEquipamentosIdRouteChildren =
+  {
+    AuthenticatedCadastrosEquipamentosIdPfdRoute:
+      AuthenticatedCadastrosEquipamentosIdPfdRoute,
+  }
+
+const AuthenticatedCadastrosEquipamentosIdRouteWithChildren =
+  AuthenticatedCadastrosEquipamentosIdRoute._addFileChildren(
+    AuthenticatedCadastrosEquipamentosIdRouteChildren,
+  )
+
 interface AuthenticatedCadastrosEquipamentosRouteChildren {
-  AuthenticatedCadastrosEquipamentosIdRoute: typeof AuthenticatedCadastrosEquipamentosIdRoute
+  AuthenticatedCadastrosEquipamentosIdRoute: typeof AuthenticatedCadastrosEquipamentosIdRouteWithChildren
 }
 
 const AuthenticatedCadastrosEquipamentosRouteChildren: AuthenticatedCadastrosEquipamentosRouteChildren =
   {
     AuthenticatedCadastrosEquipamentosIdRoute:
-      AuthenticatedCadastrosEquipamentosIdRoute,
+      AuthenticatedCadastrosEquipamentosIdRouteWithChildren,
   }
 
 const AuthenticatedCadastrosEquipamentosRouteWithChildren =
