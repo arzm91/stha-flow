@@ -39,7 +39,7 @@ import { ArrowLeft, Save, Trash2, Check, ChevronsUpDown } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-export const Route = createFileRoute("/_authenticated/cadastros/equipamentos/$id/pfd")({
+export const Route = createFileRoute("/_authenticated/cadastros/equipamentos-pfd/$id")({
   component: PfdEditor,
 });
 
