@@ -411,7 +411,7 @@ function PfdEditor() {
       setSelectedEdgeId(null);
     }
   }
-  function updateNodeData(nodeId: string, patch: Partial<EquipNodeData> & Partial<TagNodeData>) {
+  function updateNodeData(nodeId: string, patch: Partial<EquipNodeData> | Partial<TagNodeData>) {
     setNodes((ns) => ns.map((n) => n.id === nodeId
       ? { ...n, data: { ...n.data, ...patch } as AnyData }
       : n,
