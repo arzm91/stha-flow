@@ -293,9 +293,9 @@ function NovaOPDialog({
               >
                 <option value="">— selecione —</option>
                 {equipamentos.map((eq) => (
-                  <option key={eq.id} value={eq.id} disabled={eq.status === "ocupado" && eq.id !== equipPreset}>
+                  <option key={eq.id} value={eq.id} disabled={(eq.status === "ocupado" && eq.id !== equipPreset) || eq.status === "manutencao"}>
                     {eq.codigo} — {eq.nome}
-                    {eq.status === "ocupado" ? " (ocupado)" : ""}
+                    {eq.status === "ocupado" ? " (ocupado)" : eq.status === "manutencao" ? " (em manutenção)" : ""}
                   </option>
                 ))}
               </select>
