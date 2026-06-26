@@ -399,6 +399,7 @@ export type Database = {
           localizacao: string | null
           nome: string
           owner_id: string
+          pfd_graph: Json
           status: string
           tag_nomes: string[]
           tipo: string | null
@@ -413,6 +414,7 @@ export type Database = {
           localizacao?: string | null
           nome: string
           owner_id: string
+          pfd_graph?: Json
           status?: string
           tag_nomes?: string[]
           tipo?: string | null
@@ -427,6 +429,7 @@ export type Database = {
           localizacao?: string | null
           nome?: string
           owner_id?: string
+          pfd_graph?: Json
           status?: string
           tag_nomes?: string[]
           tipo?: string | null
