@@ -115,9 +115,12 @@ function ProducaoPage() {
                   )}
                   <div className="mt-4 flex justify-end gap-2">
                     {op ? (
-                      <Button asChild size="sm">
-                        <Link to="/producao/$id" params={{ id: op.id }}><Eye className="mr-1 h-4 w-4" />Acompanhar</Link>
-                      </Button>
+                      <>
+                        <Button asChild size="sm">
+                          <Link to="/producao/$id" params={{ id: op.id }}><Eye className="mr-1 h-4 w-4" />Acompanhar</Link>
+                        </Button>
+                        <FinalizarRapidoButton op={op} />
+                      </>
                     ) : (
                       <Button size="sm" variant="secondary" onClick={() => openNova(e.id)} disabled={e.status === "manutencao"}>
                         <Play className="mr-1 h-4 w-4" />Iniciar produção
