@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CrudTable, type FieldDef } from "@/components/CrudTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { History } from "lucide-react";
+import { History, Workflow } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/cadastros/equipamentos")({
   component: EquipamentosPage,
