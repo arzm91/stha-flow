@@ -100,56 +100,65 @@ const SYMBOL_LABEL: Record<SymbolKind, string> = {
 };
 
 // ---------- Símbolos ISA (SVG) ----------
-function SymbolSvg({ kind, ativo }: { kind: SymbolKind; ativo: boolean }) {
-  const stroke = ativo ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))";
-  const fill = ativo ? "hsl(var(--card))" : "hsl(var(--muted))";
+function SymbolSvg({ kind, ativo, color }: { kind: SymbolKind; ativo: boolean; color?: string | null }) {
+  const stroke = color
+    ? color
+    : ativo ? "hsl(var(--foreground))" : "hsl(var(--muted-foreground))";
+  const fill = color
+    ? `color-mix(in srgb, ${color} 18%, hsl(var(--card)))`
+    : ativo ? "hsl(var(--card))" : "hsl(var(--muted))";
   const sw = 2;
   const common = { stroke, strokeWidth: sw, fill };
+  const svgProps = {
+    viewBox: "0 0 80 80" as const,
+    className: "h-full w-full",
+    preserveAspectRatio: "xMidYMid meet" as const,
+  };
 
   switch (kind) {
     case "tanque":
       return (
-        <svg viewBox="0 0 80 80" className="h-16 w-16">
+        <svg {...svgProps}>
           <rect x="14" y="14" width="52" height="52" rx="6" {...common} />
           <line x1="14" y1="28" x2="66" y2="28" stroke={stroke} strokeWidth={1} />
         </svg>
       );
     case "vaso":
       return (
-        <svg viewBox="0 0 80 80" className="h-16 w-16">
+        <svg {...svgProps}>
           <path d="M20 22 Q40 6 60 22 L60 58 Q40 74 20 58 Z" {...common} />
         </svg>
       );
     case "bomba":
       return (
-        <svg viewBox="0 0 80 80" className="h-16 w-16">
+        <svg {...svgProps}>
           <circle cx="40" cy="40" r="22" {...common} />
           <path d="M40 18 L62 40 L40 40 Z" fill={stroke} />
         </svg>
       );
     case "compressor":
       return (
-        <svg viewBox="0 0 80 80" className="h-16 w-16">
+        <svg {...svgProps}>
           <circle cx="40" cy="40" r="22" {...common} />
           <path d="M22 22 L58 58 M22 58 L58 22" stroke={stroke} strokeWidth={sw} fill="none" />
         </svg>
       );
     case "trocador":
       return (
-        <svg viewBox="0 0 80 80" className="h-16 w-16">
+        <svg {...svgProps}>
           <circle cx="40" cy="40" r="24" {...common} />
           <path d="M20 30 Q30 40 20 50 M30 30 Q40 40 30 50 M40 30 Q50 40 40 50 M50 30 Q60 40 50 50" stroke={stroke} strokeWidth={sw} fill="none" />
         </svg>
       );
     case "valvula":
       return (
-        <svg viewBox="0 0 80 80" className="h-16 w-16">
+        <svg {...svgProps}>
           <path d="M14 22 L40 40 L14 58 Z M66 22 L40 40 L66 58 Z" {...common} />
         </svg>
       );
     case "reator":
       return (
-        <svg viewBox="0 0 80 80" className="h-16 w-16">
+        <svg {...svgProps}>
           <rect x="20" y="18" width="40" height="44" rx="20" {...common} />
           <line x1="40" y1="14" x2="40" y2="38" stroke={stroke} strokeWidth={sw} />
           <path d="M34 38 L46 38 L40 48 Z" fill={stroke} />
@@ -157,7 +166,7 @@ function SymbolSvg({ kind, ativo }: { kind: SymbolKind; ativo: boolean }) {
       );
     case "coluna":
       return (
-        <svg viewBox="0 0 80 80" className="h-16 w-16">
+        <svg {...svgProps}>
           <rect x="30" y="8" width="20" height="64" rx="10" {...common} />
           <line x1="30" y1="22" x2="50" y2="22" stroke={stroke} />
           <line x1="30" y1="34" x2="50" y2="34" stroke={stroke} />
@@ -167,13 +176,13 @@ function SymbolSvg({ kind, ativo }: { kind: SymbolKind; ativo: boolean }) {
       );
     case "filtro":
       return (
-        <svg viewBox="0 0 80 80" className="h-16 w-16">
+        <svg {...svgProps}>
           <path d="M16 18 L64 18 L48 40 L48 64 L32 64 L32 40 Z" {...common} />
         </svg>
       );
     case "misturador":
       return (
-        <svg viewBox="0 0 80 80" className="h-16 w-16">
+        <svg {...svgProps}>
           <rect x="16" y="18" width="48" height="44" rx="4" {...common} />
           <line x1="40" y1="10" x2="40" y2="34" stroke={stroke} strokeWidth={sw} />
           <path d="M28 34 L52 34 M30 42 L50 42" stroke={stroke} strokeWidth={sw} />
@@ -182,21 +191,48 @@ function SymbolSvg({ kind, ativo }: { kind: SymbolKind; ativo: boolean }) {
   }
 }
 
+// Bidirectional handles on all four sides (connectionMode="loose" lets
+// source-type handles also receive connections, so a single handle per side
+// supports any direction).
+function FourSideHandles() {
+  const base = "!h-2 !w-2 !bg-primary";
+  return (
+    <>
+      <Handle id="left" type="source" position={Position.Left} className={base} />
+      <Handle id="right" type="source" position={Position.Right} className={base} />
+      <Handle id="top" type="source" position={Position.Top} className={base} />
+      <Handle id="bottom" type="source" position={Position.Bottom} className={base} />
+    </>
+  );
+}
+
 // ---------- Nodes ----------
 function EquipNode({ data, selected }: NodeProps) {
   const d = data as unknown as EquipNodeData;
+  const w = d.width ?? 110;
+  const h = d.height ?? 110;
   return (
-    <div className={cn(
-      "flex flex-col items-center rounded-md border-2 bg-card/80 px-2 py-1 shadow-sm backdrop-blur",
-      selected ? "border-primary" : "border-border",
-      !d.ativo && "opacity-60",
-    )}>
-      <Handle type="target" position={Position.Left} className="!h-2 !w-2 !bg-primary" />
-      <Handle type="source" position={Position.Right} className="!h-2 !w-2 !bg-primary" />
-      <Handle type="target" position={Position.Top} className="!h-2 !w-2 !bg-primary" />
-      <Handle type="source" position={Position.Bottom} className="!h-2 !w-2 !bg-primary" />
-      <SymbolSvg kind={d.symbol} ativo={d.ativo} />
-      <div className="mt-1 max-w-[120px] truncate text-center text-xs font-medium">
+    <div
+      className={cn(
+        "flex h-full w-full flex-col items-center rounded-md border-2 bg-card/80 px-2 py-1 shadow-sm backdrop-blur",
+        selected ? "border-primary" : "border-border",
+        !d.ativo && "opacity-60",
+      )}
+      style={{ width: w, height: h }}
+    >
+      <NodeResizer
+        isVisible={selected}
+        minWidth={70}
+        minHeight={70}
+        lineClassName="!border-primary"
+        handleClassName="!h-2 !w-2 !bg-primary !border-primary"
+        keepAspectRatio
+      />
+      <FourSideHandles />
+      <div className="min-h-0 flex-1">
+        <SymbolSvg kind={d.symbol} ativo={d.ativo} color={d.color} />
+      </div>
+      <div className="mt-1 max-w-full truncate text-center text-xs font-medium">
         {d.label || SYMBOL_LABEL[d.symbol]}
       </div>
       {!d.ativo && (
@@ -222,7 +258,6 @@ const TagsLiveCtx = {
 
 function TagNode({ data, selected }: NodeProps) {
   const d = data as unknown as TagNodeData;
-  // Force rerender on tag updates via subscribing to a small counter.
   const [, setTick] = useState(0);
   useEffect(() => {
     const i = setInterval(() => setTick((t) => t + 1), 1000);
@@ -254,13 +289,26 @@ function TagNode({ data, selected }: NodeProps) {
     ? live.valor_num.toLocaleString("pt-BR", { maximumFractionDigits: 3 })
     : live?.valor ?? "—";
 
+  const w = d.width ?? 130;
+  const h = d.height ?? 56;
+
   return (
-    <div className={cn(
-      "min-w-[110px] rounded-md border-2 px-2 py-1 text-[11px] shadow-sm",
-      statusCls,
-      selected && "ring-2 ring-primary/50",
-    )}>
-      <Handle type="target" position={Position.Left} className="!h-2 !w-2 !bg-primary" />
+    <div
+      className={cn(
+        "flex h-full w-full flex-col justify-center rounded-md border-2 px-2 py-1 text-[11px] shadow-sm",
+        statusCls,
+        selected && "ring-2 ring-primary/50",
+      )}
+      style={{ width: w, height: h }}
+    >
+      <NodeResizer
+        isVisible={selected}
+        minWidth={90}
+        minHeight={40}
+        lineClassName="!border-primary"
+        handleClassName="!h-2 !w-2 !bg-primary !border-primary"
+      />
+      <FourSideHandles />
       <div className="truncate font-mono text-[10px] text-muted-foreground">
         {d.label || d.tagNome || "(sem tag)"}
       </div>
