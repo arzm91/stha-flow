@@ -112,13 +112,18 @@ function TurnosPage() {
       const ts = new Date(ocorridoEm);
       if (isNaN(ts.getTime())) throw new Error("Data/hora inválida");
 
+      // Resolve effective owner (tenant) for storage path scoping
+      const { data: ownerData, error: ownerErr } = await supabase.rpc("effective_owner", { _user: u.user.id });
+      if (ownerErr) throw ownerErr;
+      const ownerId = (ownerData as string | null) ?? u.user.id;
+
       // Upload de imagens
       setUploading(true);
       const paths: string[] = [];
       try {
         for (const file of imagens) {
           const ext = file.name.includes(".") ? file.name.split(".").pop() : "bin";
-          const path = `${u.user.id}/${crypto.randomUUID()}.${ext}`;
+          const path = `${ownerId}/${crypto.randomUUID()}.${ext}`;
           const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, {
             contentType: file.type || undefined,
             upsert: false,
