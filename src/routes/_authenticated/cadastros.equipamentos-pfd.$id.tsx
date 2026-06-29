@@ -286,9 +286,6 @@ function TagNode({ data, selected }: NodeProps) {
     ? live.valor_num.toLocaleString("pt-BR", { maximumFractionDigits: 3 })
     : live?.valor ?? "—";
 
-  const w = d.width ?? 130;
-  const h = d.height ?? 56;
-
   return (
     <div
       className={cn(
@@ -296,14 +293,13 @@ function TagNode({ data, selected }: NodeProps) {
         statusCls,
         selected && "ring-2 ring-primary/50",
       )}
-      style={{ width: w, height: h }}
     >
       <NodeResizer
         isVisible={selected}
         minWidth={90}
         minHeight={40}
         lineClassName="!border-primary"
-        handleClassName="!h-2 !w-2 !bg-primary !border-primary"
+        handleClassName="!h-3 !w-3 !bg-primary !border-primary"
       />
       <FourSideHandles />
       <div className="truncate font-mono text-[10px] text-muted-foreground">
