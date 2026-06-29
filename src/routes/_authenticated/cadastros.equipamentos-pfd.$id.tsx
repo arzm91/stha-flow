@@ -581,8 +581,9 @@ function PfdEditor() {
               + Caixa de tag
             </Button>
             <p className="mt-2 text-[10px] leading-snug text-muted-foreground">
-              Conecte os símbolos arrastando das bolinhas das bordas. Clique em uma linha
-              para definir tipo, cor e nome do fluxo.
+              Conecte arrastando de qualquer bolinha das bordas — qualquer lado para qualquer lado.
+              Selecione um símbolo ou caixa de tag para redimensionar pelas alças. Clique em uma
+              linha para definir tipo, cor e nome do fluxo.
             </p>
           </div>
         </div>
