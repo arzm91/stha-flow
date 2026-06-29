@@ -403,7 +403,24 @@ function PfdEditor() {
   }, [id, navigate]);
 
   const onNodesChange = useCallback(
-    (changes: NodeChange[]) => setNodes((nds) => applyNodeChanges(changes, nds) as Node<AnyData>[]),
+    (changes: NodeChange[]) => setNodes((nds) => {
+      const next = applyNodeChanges(changes, nds) as Node<AnyData>[];
+      // Persist NodeResizer dimensions into data so they survive save/reload.
+      let touched = false;
+      const synced = next.map((n) => {
+        const styleW = (n.style?.width as number | undefined) ?? undefined;
+        const styleH = (n.style?.height as number | undefined) ?? undefined;
+        if (
+          styleW && styleH &&
+          ((n.data as AnyData)?.width !== styleW || (n.data as AnyData)?.height !== styleH)
+        ) {
+          touched = true;
+          return { ...n, data: { ...n.data, width: styleW, height: styleH } as AnyData };
+        }
+        return n;
+      });
+      return touched ? synced : next;
+    }),
     [],
   );
   const onEdgesChange = useCallback(
