@@ -124,8 +124,12 @@
 
 @layer base {
   html, body {
+    color-scheme: light;
+  }
+  html.dark, html.dark body {
     color-scheme: dark;
   }
+
   * {
     border-color: var(--color-border);
   }
