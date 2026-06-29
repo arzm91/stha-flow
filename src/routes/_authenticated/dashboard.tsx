@@ -71,13 +71,16 @@ function DashboardPage() {
       if (!u.user) throw new Error("Não autenticado");
       if (w.id) {
         const { error } = await supabase.from("dashboard_widgets").update({
-          titulo: w.titulo, tipo: w.tipo, fonte: w.fonte, config: w.config, layout: w.layout,
+          titulo: w.titulo, tipo: w.tipo, fonte: w.fonte,
+          config: w.config as never, layout: w.layout as never,
         }).eq("id", w.id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("dashboard_widgets").insert({
           user_id: u.user.id,
-          titulo: w.titulo!, tipo: w.tipo!, fonte: w.fonte!, config: w.config ?? {}, layout: w.layout ?? { x: 0, y: 999, w: 3, h: 2 },
+          titulo: w.titulo!, tipo: w.tipo!, fonte: w.fonte!,
+          config: (w.config ?? {}) as never,
+          layout: (w.layout ?? { x: 0, y: 999, w: 3, h: 2 }) as never,
         });
         if (error) throw error;
       }
@@ -103,7 +106,7 @@ function DashboardPage() {
   const updateLayouts = useMutation({
     mutationFn: async (items: { id: string; layout: Widget["layout"] }[]) => {
       await Promise.all(items.map((it) =>
-        supabase.from("dashboard_widgets").update({ layout: it.layout }).eq("id", it.id),
+        supabase.from("dashboard_widgets").update({ layout: it.layout as never }).eq("id", it.id),
       ));
     },
   });
@@ -216,7 +219,7 @@ function DashboardGrid({
         layout={layout as unknown as Layout}
         width={width}
         gridConfig={{ cols: COLS, rowHeight: ROW_H, margin: [12, 12] }}
-        dragConfig={{ handle: ".widget-drag", disabled: locked }}
+        dragConfig={{ handle: ".widget-drag" }}
         onLayoutChange={onLayoutChange as (l: Layout) => void}
       >
         {widgets.map((w) => (
