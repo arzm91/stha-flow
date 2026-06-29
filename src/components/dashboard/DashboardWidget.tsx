@@ -526,6 +526,124 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
       return { kind: "gauge", value: v - min, max: max - min, unit: data?.unidade ?? "", tag: nome };
     }
 
+
+    // ---- Tanque ----
+    case "tank.preview": {
+      const tankId = String(config.tank_id ?? "");
+      if (!tankId) return { kind: "kpi", value: "—", hint: "Configure o tanque" };
+      const { data: t } = await supabase.from("tanques")
+        .select("id,codigo,nome,tipo,capacidade,unidade,tag_nivel_nome,tag_nivel_modo,cor")
+        .eq("id", tankId).maybeSingle();
+      if (!t) return { kind: "kpi", value: "—", hint: "Tanque não encontrado" };
+      const [{ data: movs }, tagRes] = await Promise.all([
+        supabase.from("movimentacoes_estoque").select("tipo,quantidade").eq("tanque_id", tankId),
+        t.tag_nivel_nome
+          ? supabase.from("tags_live").select("nome,valor,valor_num,unidade").eq("nome", t.tag_nivel_nome).maybeSingle()
+          : Promise.resolve({ data: null } as { data: null }),
+      ]);
+      const saldo = (movs ?? []).reduce((s, r) => s + (r.tipo === "entrada" ? 1 : -1) * Number(r.quantidade), 0);
+      return { kind: "tank", loc: t as StorageLocation, saldo, tag: (tagRes.data ?? null) as WidgetData extends { kind: "tank"; tag: infer T } ? T : never };
+    }
+
+    // ---- Prévia de produção por equipamento ----
+    case "producao.equipamento": {
+      const equipId = String(config.equipamento_id ?? "");
+      if (!equipId) return { kind: "kpi", value: "—", hint: "Configure o equipamento" };
+      const [{ data: eq }, { data: o }] = await Promise.all([
+        supabase.from("equipamentos").select("nome").eq("id", equipId).maybeSingle(),
+        supabase.from("ordens_producao")
+          .select("id,numero,status,qtd_planejada,qtd_produzida,inicio_em,produto_id")
+          .eq("equipamento_id", equipId).in("status", ["em_andamento", "pausada"])
+          .order("inicio_em", { ascending: false }).limit(1).maybeSingle(),
+      ]);
+      const equipamento_nome = eq?.nome ?? "Equipamento";
+      if (!o) return { kind: "producao-prev", equipamento_nome, ordem: null };
+      const { data: prod } = await supabase.from("produtos").select("nome").eq("id", o.produto_id).maybeSingle();
+      return {
+        kind: "producao-prev",
+        equipamento_nome,
+        ordem: {
+          id: o.id, numero: o.numero, status: o.status,
+          produto_nome: prod?.nome ?? "—",
+          qtd_planejada: Number(o.qtd_planejada ?? 0),
+          qtd_produzida: Number(o.qtd_produzida ?? 0),
+          inicio_em: o.inicio_em,
+        },
+      };
+    }
+
+    // ---- Raio-X manutenção ----
+    case "xray.manutencao": {
+      const nowIso = new Date().toISOString();
+      const since30 = new Date(Date.now() - 30 * 86400000).toISOString();
+      const [a, b, c, d, prox] = await Promise.all([
+        supabase.from("ordens_manutencao").select("*", { count: "exact", head: true }).eq("status", "aberta"),
+        supabase.from("ordens_manutencao").select("*", { count: "exact", head: true }).eq("status", "em_andamento"),
+        supabase.from("ordens_manutencao").select("*", { count: "exact", head: true })
+          .lt("agendada_para", nowIso).in("status", ["aberta", "em_andamento"]),
+        supabase.from("ordens_manutencao").select("*", { count: "exact", head: true })
+          .eq("status", "concluida").gte("updated_at", since30),
+        supabase.from("ordens_manutencao").select("numero,prioridade,agendada_para")
+          .in("status", ["aberta", "em_andamento"]).order("agendada_para", { ascending: true }).limit(5),
+      ]);
+      return {
+        kind: "xray-manut",
+        abertas: a.count ?? 0, em_andamento: b.count ?? 0, atrasadas: c.count ?? 0, concluidas_30d: d.count ?? 0,
+        proximas: (prox.data ?? []).map((r) => ({
+          numero: r.numero ?? "OS",
+          prioridade: r.prioridade ?? "—",
+          data: r.agendada_para ? new Date(r.agendada_para).toLocaleDateString("pt-BR") : "—",
+        })),
+      };
+    }
+
+    // ---- Raio-X qualidade ----
+    case "xray.qualidade": {
+      const since = daysAgo(6).toISOString();
+      const [{ data: regs }, { data: refs }] = await Promise.all([
+        supabase.from("analises_registradas").select("id,resultado,analise_id,created_at").gte("created_at", since).order("created_at", { ascending: false }),
+        supabase.from("analises_cadastro").select("id,nome,valor_min,valor_max,unidade"),
+      ]);
+      const refMap = new Map((refs ?? []).map((r) => [r.id, r]));
+      let conformes = 0, naoconformes = 0;
+      const ultimas_nc: { titulo: string; valor: string }[] = [];
+      for (const a of regs ?? []) {
+        const ref = refMap.get(a.analise_id);
+        const v = Number(a.resultado);
+        const out = ref && ((ref.valor_min != null && v < Number(ref.valor_min)) || (ref.valor_max != null && v > Number(ref.valor_max)));
+        if (out) {
+          naoconformes++;
+          if (ultimas_nc.length < 5) ultimas_nc.push({ titulo: ref?.nome ?? "Análise", valor: `${formatNumber(v, 2)}${ref?.unidade ? " " + ref.unidade : ""}` });
+        } else conformes++;
+      }
+      return { kind: "xray-qual", conformes, naoconformes, ultimas_nc };
+    }
+
+    // ---- Tabela personalizada ----
+    case "list.tabela": {
+      const sheetId = String(config.sheet_id ?? "");
+      if (!sheetId) return { kind: "list", items: [] };
+      const [{ data: sheet }, { data: rows }] = await Promise.all([
+        supabase.from("custom_sheets").select("nome,columns").eq("id", sheetId).maybeSingle(),
+        supabase.from("custom_sheet_rows").select("data,created_at").eq("sheet_id", sheetId).order("created_at", { ascending: false }).limit(10),
+      ]);
+      const cols = ((sheet?.columns ?? []) as Array<{ key: string; label?: string }>) ?? [];
+      const titleKey = cols[0]?.key;
+      const subKey = cols[1]?.key;
+      const valKey = cols[2]?.key;
+      return {
+        kind: "list",
+        items: (rows ?? []).map((r) => {
+          const d = (r.data ?? {}) as Record<string, unknown>;
+          return {
+            title: titleKey ? String(d[titleKey] ?? "—") : new Date(r.created_at).toLocaleString("pt-BR"),
+            subtitle: subKey ? String(d[subKey] ?? "") : undefined,
+            value: valKey ? String(d[valKey] ?? "") : undefined,
+          };
+        }),
+      };
+    }
+
     default:
       return { kind: "kpi", value: "—", hint: "Não implementado" };
   }
