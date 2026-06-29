@@ -78,6 +78,10 @@ function AlertasPage() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [disparos, setDisparos] = useState<Disparo[]>([]);
   const [tagOptions, setTagOptions] = useState<string[]>([]);
+  const [parametros, setParametros] = useState<Parametro[]>([]);
+  const [analises, setAnalises] = useState<Analise[]>([]);
+  const [processos, setProcessos] = useState<Processo[]>([]);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("todos");
 
   // form state
