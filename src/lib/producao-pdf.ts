@@ -19,7 +19,7 @@ function lastY(doc: jsPDF): number {
 
 export async function gerarRelatorioProducaoPdf(ordemId: string) {
   // Buscar todos os dados em paralelo
-  const [opRes, paramsRes, anlRes, obsRes, etapasRes, movsRes] = await Promise.all([
+  const [opRes, paramsRes, anlRes, obsRes, etapasRes, movsRes, tagHistRes] = await Promise.all([
     supabase.from("ordens_producao")
       .select("*, produto:produto_id(nome,codigo,unidade), equipamento:equipamento_id(nome,codigo), tanque:tanque_destino_id(nome,codigo)")
       .eq("id", ordemId).maybeSingle(),
@@ -35,6 +35,9 @@ export async function gerarRelatorioProducaoPdf(ordemId: string) {
       .select("*").eq("ordem_id", ordemId).order("iniciado_em", { ascending: true }),
     supabase.from("movimentacoes_estoque")
       .select("*, tanque:tanque_id(codigo,nome)").eq("ordem_id", ordemId).order("ocorrido_em", { ascending: true }),
+    supabase.from("producao_tag_historico")
+      .select("tag_nome,valor_num,unidade,registrado_em")
+      .eq("ordem_id", ordemId).order("registrado_em", { ascending: true }),
   ]);
 
   const op: any = opRes.data;
