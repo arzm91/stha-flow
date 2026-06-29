@@ -29,6 +29,13 @@ function TanquesPage() {
       return data ?? [];
     },
   });
+  const tags = useQuery({
+    queryKey: ["tags-live-nomes"],
+    queryFn: async () => {
+      const { data } = await supabase.from("tags_live").select("nome,unidade,grupo").order("nome");
+      return data ?? [];
+    },
+  });
 
   return (
     <CrudTable
@@ -45,7 +52,13 @@ function TanquesPage() {
         { key: "unidade", label: "Unidade", placeholder: "L, kg, un..." },
         { key: "produto_id", label: "Produto armazenado", type: "select",
           options: (produtos.data ?? []).map((p) => ({ value: p.id, label: `${p.codigo} — ${p.nome}` })) },
-        { key: "tag_nivel_nome", label: "Tag de nível (opcional)", placeholder: "Ex.: TANK01_LEVEL", help: "Tag recebida em Tags para comparativo visual. Não afeta o saldo." },
+        { key: "tag_nivel_nome", label: "Tag de nível (opcional)", type: "select",
+          options: (tags.data ?? []).map((t) => ({
+            value: t.nome,
+            label: `${t.nome}${t.unidade ? ` (${t.unidade})` : ""}`,
+            hint: t.grupo ?? undefined,
+          })),
+          help: "Selecione uma tag recebida pelo endpoint. Usada apenas para comparativo visual, não afeta o saldo." },
         { key: "tag_nivel_modo", label: "Como interpretar a tag", type: "select", options: MODO_TAG_OPTIONS },
         { key: "cor", label: "Cor do ícone (opcional)", placeholder: "#3b82f6" },
       ]}

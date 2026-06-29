@@ -7,7 +7,7 @@ const tabs = [
   { to: "/cadastros/produtos", label: "Produtos", icon: Package },
   { to: "/cadastros/parametros", label: "Parâmetros", icon: Gauge },
   { to: "/cadastros/analises", label: "Análises", icon: FlaskConical },
-  { to: "/cadastros/tanques", label: "Tanques", icon: Database },
+  { to: "/cadastros/tanques", label: "Locais", icon: Database },
 ] as const;
 
 export const Route = createFileRoute("/_authenticated/cadastros")({
