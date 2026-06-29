@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-// Endpoint chamado pela tela e por automações. Ele delega a busca real para a
-// função de backend dedicada, que não sofre a restrição HTTP 403 do ambiente do app publicado.
+// Endpoint chamado por pg_cron (ou manualmente) para buscar tags
+// de fontes externas cadastradas em `tag_endpoints` e gravar em `tags_live`.
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -22,36 +22,228 @@ function hasValidApiKey(request: Request) {
   return Boolean(provided && expected && provided === expected);
 }
 
+type EndpointRow = {
+  id: string;
+  nome: string;
+  url: string;
+  metodo: string;
+  headers: Record<string, string> | null;
+  body: string | null;
+  intervalo_segundos: number;
+  ativo: boolean;
+  ultima_execucao: string | null;
+};
+
+type IncomingTag = {
+  nome?: string;
+  name?: string;
+  tag?: string;
+  valor?: unknown;
+  value?: unknown;
+  unidade?: string;
+  unit?: string;
+  grupo?: string;
+  group?: string;
+  qualidade?: string;
+  quality?: string;
+};
+
+type EndpointFetchResult = {
+  ok: boolean;
+  status: number;
+  text: string;
+};
+
+async function fetchWithNodeHttp(ep: EndpointRow): Promise<EndpointFetchResult> {
+  const target = new URL(ep.url);
+  const transport = target.protocol === "https:" ? await import("node:https") : await import("node:http");
+
+  return new Promise((resolve, reject) => {
+    const req = transport.request(
+      target,
+      {
+        method: ep.metodo || "GET",
+        headers: { Accept: "application/json", ...(ep.headers ?? {}) },
+        timeout: 10_000,
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+        res.on("data", (chunk) => chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)));
+        res.on("end", () => {
+          const status = res.statusCode ?? 0;
+          resolve({ ok: status >= 200 && status < 300, status, text: Buffer.concat(chunks).toString("utf8") });
+        });
+      },
+    );
+
+    req.on("timeout", () => req.destroy(new Error("Timeout (10s)")));
+    req.on("error", reject);
+    if (ep.metodo && ep.metodo !== "GET" && ep.body) req.write(ep.body);
+    req.end();
+  });
+}
+
+async function fetchEndpoint(ep: EndpointRow): Promise<EndpointFetchResult> {
+  if (ep.url.toLowerCase().startsWith("http://")) {
+    try {
+      return await fetchWithNodeHttp(ep);
+    } catch {
+      // Fall back to fetch below so we still capture the platform error message.
+    }
+  }
+
+  const res = await fetch(ep.url, {
+    method: ep.metodo || "GET",
+    headers: { Accept: "application/json", ...(ep.headers ?? {}) },
+    body: ep.metodo && ep.metodo !== "GET" && ep.body ? ep.body : undefined,
+    signal: AbortSignal.timeout(10_000),
+  });
+  const text = await res.text();
+
+  if (res.status === 403) {
+    return fetchWithNodeHttp(ep);
+  }
+
+  return { ok: res.ok, status: res.status, text };
+}
+
+function normalize(input: unknown): IncomingTag[] {
+  if (!input) return [];
+  if (Array.isArray(input)) return input as IncomingTag[];
+  if (typeof input === "object") {
+    const obj = input as Record<string, unknown>;
+    if (Array.isArray(obj.tags)) return obj.tags as IncomingTag[];
+    if (Array.isArray(obj.data)) return obj.data as IncomingTag[];
+    if (Array.isArray(obj.items)) return obj.items as IncomingTag[];
+    // Mapa { tagName: value }
+    const out: IncomingTag[] = [];
+    for (const [k, v] of Object.entries(obj)) {
+      if (v && typeof v === "object" && !Array.isArray(v)) {
+        out.push({ nome: k, ...(v as IncomingTag) });
+      } else {
+        out.push({ nome: k, valor: v as unknown });
+      }
+    }
+    return out;
+  }
+  return [];
+}
+
+async function processOne(ep: EndpointRow, supabaseAdmin: any) {
+  const now = new Date().toISOString();
+  try {
+    const res = await fetchEndpoint(ep);
+    if (!res.ok) {
+      await supabaseAdmin.from("tag_endpoints").update({
+        ultima_execucao: now,
+        ultimo_status: `HTTP ${res.status}`,
+        ultimo_erro: res.text.slice(0, 500),
+      }).eq("id", ep.id);
+      return { id: ep.id, ok: false, status: res.status };
+    }
+    const data = JSON.parse(res.text);
+    const { data: ingested, error } = await supabaseAdmin.rpc("ingest_endpoint_payload" as any, {
+      p_endpoint_id: ep.id,
+      p_endpoint_name: ep.nome,
+      p_payload: data as any,
+    } as any);
+    if (error) throw new Error(error.message);
+    const count = Number(ingested ?? 0);
+
+    await supabaseAdmin.from("tag_endpoints").update({
+      ultima_execucao: now,
+      ultimo_status: `OK ${count} tags`,
+      ultimo_erro: null,
+      tags_recebidas: count,
+    }).eq("id", ep.id);
+
+    return { id: ep.id, ok: true, count };
+  } catch (e: any) {
+    await supabaseAdmin.from("tag_endpoints").update({
+      ultima_execucao: now,
+      ultimo_status: "ERRO",
+      ultimo_erro: String(e?.message ?? e).slice(0, 500),
+    }).eq("id", ep.id);
+    return { id: ep.id, ok: false, error: String(e?.message ?? e) };
+  }
+}
+
+async function handleTest(request: Request) {
+  if (!hasValidApiKey(request)) return json({ ok: false, message: "Não autorizado" }, 401);
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ ok: false, message: "JSON inválido" }, 400);
+  }
+  const targetUrl = String(body?.url ?? "").trim();
+  const headers = (body?.headers && typeof body.headers === "object") ? body.headers : {};
+  if (!/^https?:\/\//i.test(targetUrl)) {
+    return json({ ok: false, message: "URL deve começar com http:// ou https://" }, 400);
+  }
+  try {
+    const res = await fetchEndpoint({
+      id: "test",
+      nome: "Teste",
+      url: targetUrl,
+      metodo: "GET",
+      headers,
+      body: null,
+      intervalo_segundos: 2,
+      ativo: true,
+      ultima_execucao: null,
+    });
+    if (!res.ok) {
+      return json({ ok: false, message: `HTTP ${res.status}`, sample: res.text.slice(0, 300) });
+    }
+    let data: any;
+    try { data = JSON.parse(res.text); } catch {
+      return json({ ok: false, message: "Resposta não é JSON válido", sample: res.text.slice(0, 400) });
+    }
+    const tags = normalize(data);
+    return json({
+      ok: true,
+      count: tags.length,
+      sample: JSON.stringify(data, null, 2).slice(0, 400),
+    });
+  } catch (e: any) {
+    return json({
+      ok: false,
+      message: e?.name === "TimeoutError" ? "Timeout (10s)" : String(e?.message ?? e),
+    });
+  }
+}
+
 async function handle(request: Request) {
   if (!hasValidApiKey(request)) return json({ ok: false, message: "Não autorizado" }, 401);
   const url = new URL(request.url);
+  if (url.searchParams.get("test") === "1") return handleTest(request);
+  const idParam = url.searchParams.get("id");
+  const force = url.searchParams.get("force") === "1";
 
-  const backendUrl = process.env.SUPABASE_URL;
-  const apiKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY;
-  const internalSecret = process.env.TAGS_POLL_SECRET;
-  if (!backendUrl || !apiKey || !internalSecret) {
-    return json({ ok: false, message: "Backend não configurado para sincronização" }, 500);
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  let query = supabaseAdmin.from("tag_endpoints").select("*").eq("ativo", true);
+  if (idParam) query = supabaseAdmin.from("tag_endpoints").select("*").eq("id", idParam);
+
+  const { data, error } = await query;
+  if (error) return json({ error: error.message }, 500);
+
+  const candidatos = (data ?? []) as EndpointRow[];
+  const agora = Date.now();
+  const dueList = idParam || force
+    ? candidatos
+    : candidatos.filter((ep) => {
+        if (!ep.ultima_execucao) return true;
+        const diff = (agora - new Date(ep.ultima_execucao).getTime()) / 1000;
+        return diff >= (ep.intervalo_segundos ?? 60);
+      });
+
+  const results = [];
+  for (const ep of dueList) {
+    results.push(await processOne(ep, supabaseAdmin));
   }
-
-  const functionUrl = `${backendUrl.replace(/\/$/, "")}/functions/v1/tags-poll${url.search}`;
-  const res = await fetch(functionUrl, {
-    method: request.method === "GET" ? "GET" : "POST",
-    headers: {
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      apikey: apiKey,
-      "x-tags-poll-secret": internalSecret,
-    },
-    body: request.method === "GET" ? undefined : await request.text().catch(() => "{}"),
-    signal: AbortSignal.timeout(25_000),
-  });
-
-  const text = await res.text();
-  try {
-    return json(JSON.parse(text), res.status);
-  } catch {
-    return json({ ok: false, message: text || `HTTP ${res.status}` }, res.status);
-  }
+  return json({ ok: true, processed: results.length, results });
 }
 
 export const Route = createFileRoute("/api/public/tags/poll")({
