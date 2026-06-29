@@ -183,6 +183,22 @@ function AlertasPage() {
       toast.error("Informe os minutos sem atualização");
       return;
     }
+    if (form.tipo === "parametro_min_max" && !form.parametro_id) {
+      toast.error("Selecione um parâmetro");
+      return;
+    }
+    if (form.tipo === "analise_min_max" && !form.analise_id) {
+      toast.error("Selecione uma análise");
+      return;
+    }
+    if (form.tipo === "processo_evento" && (!form.processo_id || !form.evento_processo)) {
+      toast.error("Selecione o processo e o evento");
+      return;
+    }
+    if (form.tipo === "processo_evento" && form.evento_processo === "demorou" && !form.tempo_limite_minutos) {
+      toast.error("Informe o tempo limite em minutos");
+      return;
+    }
 
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
@@ -195,6 +211,11 @@ function AlertasPage() {
       min_val: form.min_val ?? null,
       max_val: form.max_val ?? null,
       stale_minutes: form.stale_minutes ?? null,
+      parametro_id: form.parametro_id || null,
+      analise_id: form.analise_id || null,
+      processo_id: form.processo_id || null,
+      evento_processo: form.evento_processo || null,
+      tempo_limite_minutos: form.tempo_limite_minutos ?? null,
       severidade: (form.severidade ?? "warn") as Severidade,
       ativo: form.ativo ?? true,
       notificar_email: form.notificar_email ?? false,
