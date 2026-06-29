@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import GridLayout, { type Layout, type LayoutItem } from "react-grid-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
@@ -16,7 +15,10 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Plus, Pencil, X, LayoutGrid, Lock, Unlock } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { Plus, Pencil, Trash2, LayoutGrid, MoreHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { WIDGET_SOURCES, getSource, type WidgetSource } from "@/lib/dashboard/widget-catalog";
 import { DashboardWidget } from "@/components/dashboard/DashboardWidget";
@@ -35,15 +37,14 @@ type Widget = {
 };
 
 type TagRow = { nome: string; unidade: string | null };
-
-const COLS = 12;
-const ROW_H = 60;
+type TankRow = { id: string; codigo: string; nome: string };
+type EquipRow = { id: string; codigo: string; nome: string };
+type SheetRow = { id: string; nome: string };
 
 function DashboardPage() {
   const qc = useQueryClient();
   const [editing, setEditing] = useState<Widget | null>(null);
   const [newOpen, setNewOpen] = useState(false);
-  const [locked, setLocked] = useState(true);
 
   const widgets = useQuery({
     queryKey: ["dashboard_widgets"],
@@ -57,11 +58,21 @@ function DashboardPage() {
     },
   });
 
-  const tags = useQuery({
-    queryKey: ["tags-live-names"],
+  const lookups = useQuery({
+    queryKey: ["dashboard-lookups"],
     queryFn: async () => {
-      const { data } = await supabase.from("tags_live").select("nome,unidade").order("nome");
-      return (data ?? []) as TagRow[];
+      const [tags, tanks, equips, sheets] = await Promise.all([
+        supabase.from("tags_live").select("nome,unidade").order("nome"),
+        supabase.from("tanques").select("id,codigo,nome").order("nome"),
+        supabase.from("equipamentos").select("id,codigo,nome").order("nome"),
+        supabase.from("custom_sheets").select("id,nome").order("nome"),
+      ]);
+      return {
+        tags: (tags.data ?? []) as TagRow[],
+        tanks: (tanks.data ?? []) as TankRow[],
+        equipamentos: (equips.data ?? []) as EquipRow[],
+        sheets: (sheets.data ?? []) as SheetRow[],
+      };
     },
   });
 
@@ -80,7 +91,7 @@ function DashboardPage() {
           user_id: u.user.id,
           titulo: w.titulo!, tipo: w.tipo!, fonte: w.fonte!,
           config: (w.config ?? {}) as never,
-          layout: (w.layout ?? { x: 0, y: 999, w: 3, h: 2 }) as never,
+          layout: (w.layout ?? { x: 0, y: 0, w: 3, h: 2 }) as never,
         });
         if (error) throw error;
       }
@@ -103,49 +114,35 @@ function DashboardPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const updateLayouts = useMutation({
-    mutationFn: async (items: { id: string; layout: Widget["layout"] }[]) => {
-      await Promise.all(items.map((it) =>
-        supabase.from("dashboard_widgets").update({ layout: it.layout as never }).eq("id", it.id),
-      ));
-    },
-  });
-
-  const handleLayoutChange = (next: readonly LayoutItem[]) => {
-    if (!widgets.data || locked) return;
-    const changed: { id: string; layout: Widget["layout"] }[] = [];
-    for (const l of next) {
-      const w = widgets.data.find((x) => x.id === l.i);
-      if (!w) continue;
-      const cur = w.layout;
-      if (cur.x !== l.x || cur.y !== l.y || cur.w !== l.w || cur.h !== l.h) {
-        changed.push({ id: w.id, layout: { x: l.x, y: l.y, w: l.w, h: l.h } });
-      }
-    }
-    if (changed.length) updateLayouts.mutate(changed);
-  };
+  // Auto-organize: sort by priority defined in catalog (KPIs first, charts/tanks/produção, lists/x-rays last).
+  const organized = useMemo(() => {
+    if (!widgets.data) return [];
+    return [...widgets.data].sort((a, b) => {
+      const sa = getSource(a.fonte)?.priority ?? 99;
+      const sb = getSource(b.fonte)?.priority ?? 99;
+      if (sa !== sb) return sa - sb;
+      return a.titulo.localeCompare(b.titulo);
+    });
+  }, [widgets.data]);
 
   return (
     <div className="space-y-5">
       <PageHeader
         title="Dashboard"
-        description="Sua central de controle — adicione, mova e redimensione widgets de todo o sistema."
+        description="Central de controle — visão geral de produção, estoque, manutenção, qualidade e tags."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary" className="gap-1">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               ao vivo
             </Badge>
-            <Button size="sm" variant="outline" onClick={() => setLocked((v) => !v)}>
-              {locked ? <><Lock className="mr-2 h-4 w-4" />Layout travado</> : <><Unlock className="mr-2 h-4 w-4" />Layout editável</>}
-            </Button>
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
               <DialogTrigger asChild>
-                <Button size="sm"><Plus className="mr-2 h-4 w-4" />Novo widget</Button>
+                <Button size="sm"><Plus className="mr-2 h-4 w-4" />Adicionar widget</Button>
               </DialogTrigger>
               <WidgetDialog
                 key={newOpen ? "new" : "closed"}
-                tags={tags.data ?? []}
+                lookups={lookups.data}
                 onSave={(p) => save.mutate(p)}
                 loading={save.isPending}
               />
@@ -156,20 +153,18 @@ function DashboardPage() {
 
       {widgets.isLoading ? (
         <div className="text-sm text-muted-foreground">Carregando widgets...</div>
-      ) : !widgets.data || widgets.data.length === 0 ? (
+      ) : organized.length === 0 ? (
         <EmptyState
           icon={<LayoutGrid className="h-6 w-6" />}
           title="Seu dashboard está vazio"
-          description="Adicione widgets para acompanhar produção, estoque, alertas, manutenção e mais."
+          description="Adicione widgets para acompanhar produção, estoque, alertas, manutenção, qualidade e mais. O sistema organiza tudo automaticamente."
           action={<Button onClick={() => setNewOpen(true)}><Plus className="mr-2 h-4 w-4" />Adicionar primeiro widget</Button>}
         />
       ) : (
         <DashboardGrid
-          widgets={widgets.data}
-          locked={locked}
+          widgets={organized}
           onEdit={setEditing}
           onDelete={(id) => remove.mutate(id)}
-          onLayoutChange={handleLayoutChange}
         />
       )}
 
@@ -178,7 +173,7 @@ function DashboardPage() {
           <WidgetDialog
             key={editing.id}
             initial={editing}
-            tags={tags.data ?? []}
+            lookups={lookups.data}
             onSave={(p) => save.mutate({ ...p, id: editing.id, layout: editing.layout })}
             loading={save.isPending}
           />
@@ -188,109 +183,117 @@ function DashboardPage() {
   );
 }
 
+const COL_SPAN: Record<number, string> = {
+  3: "md:col-span-6 lg:col-span-3",
+  4: "md:col-span-6 lg:col-span-4",
+  6: "md:col-span-12 lg:col-span-6",
+  12: "col-span-12",
+};
+const ROW_MIN: Record<number, string> = {
+  1: "min-h-[130px]",
+  2: "min-h-[200px]",
+  3: "min-h-[280px]",
+  4: "min-h-[360px]",
+  5: "min-h-[420px]",
+};
+
 function DashboardGrid({
-  widgets, locked, onEdit, onDelete, onLayoutChange,
+  widgets, onEdit, onDelete,
 }: {
   widgets: Widget[];
-  locked: boolean;
   onEdit: (w: Widget) => void;
   onDelete: (id: string) => void;
-  onLayoutChange: (l: readonly LayoutItem[]) => void;
 }) {
-  const [width, setWidth] = useState(1200);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const ro = new ResizeObserver(() => setWidth(el.clientWidth));
-    ro.observe(el);
-    setWidth(el.clientWidth);
-    return () => ro.disconnect();
-  }, []);
-
-  const layout: LayoutItem[] = widgets.map((w) => ({
-    i: w.id, x: w.layout.x, y: w.layout.y, w: w.layout.w, h: w.layout.h, minW: 2, minH: 2,
-  }));
-
   return (
-    <div ref={ref} className={`w-full ${locked ? "pd-no-resize" : ""}`}>
-      <GridLayout
-        className="layout"
-        layout={layout as unknown as Layout}
-        width={width}
-        gridConfig={{ cols: COLS, rowHeight: ROW_H, margin: [12, 12] }}
-        dragConfig={{ handle: ".widget-drag" }}
-        onLayoutChange={onLayoutChange as (l: Layout) => void}
-      >
-        {widgets.map((w) => (
-          <div key={w.id}>
+    <div className="grid auto-rows-min grid-cols-12 gap-4">
+      {widgets.map((w) => {
+        const src = getSource(w.fonte);
+        const cs = COL_SPAN[src?.colSpan ?? 3] ?? COL_SPAN[3];
+        const rs = ROW_MIN[src?.rowSpan ?? 2] ?? ROW_MIN[2];
+        return (
+          <div key={w.id} className={`group relative col-span-12 ${cs} ${rs}`}>
             <Card className="h-full overflow-hidden flex flex-col">
-              <CardHeader className={`flex-row items-center justify-between space-y-0 py-2 px-3 border-b ${locked ? "" : "widget-drag cursor-move"}`}>
-                <CardTitle className="text-sm font-semibold truncate">{w.titulo}</CardTitle>
-                <div className="flex items-center gap-1 shrink-0">
-                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(w)}>
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => onDelete(w.id)}>
-                    <X className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
+              <CardHeader className="flex-row items-center justify-between space-y-0 py-2 px-3 border-b">
+                <CardTitle className="truncate text-sm font-semibold">{w.titulo}</CardTitle>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
+                      aria-label="Opções"
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onEdit(w)}>
+                      <Pencil className="mr-2 h-3.5 w-3.5" /> Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-destructive" onClick={() => onDelete(w.id)}>
+                      <Trash2 className="mr-2 h-3.5 w-3.5" /> Remover
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </CardHeader>
-              <CardContent className="flex-1 min-h-0 p-3">
+              <CardContent className="min-h-0 flex-1 p-3">
                 <DashboardWidget widget={w} />
               </CardContent>
             </Card>
           </div>
-        ))}
-      </GridLayout>
+        );
+      })}
     </div>
   );
 }
 
 // ---------- Widget Dialog ----------
 function WidgetDialog({
-  initial, tags, onSave, loading,
+  initial, lookups, onSave, loading,
 }: {
   initial?: Widget;
-  tags: TagRow[];
+  lookups: { tags: TagRow[]; tanks: TankRow[]; equipamentos: EquipRow[]; sheets: SheetRow[] } | undefined;
   onSave: (w: Partial<Widget>) => void;
   loading: boolean;
 }) {
   const [titulo, setTitulo] = useState(initial?.titulo ?? "");
   const [fonte, setFonte] = useState(initial?.fonte ?? "");
   const [tagNome, setTagNome] = useState<string>(String(initial?.config?.tag_nome ?? ""));
+  const [tankId, setTankId] = useState<string>(String(initial?.config?.tank_id ?? ""));
+  const [equipId, setEquipId] = useState<string>(String(initial?.config?.equipamento_id ?? ""));
+  const [sheetId, setSheetId] = useState<string>(String(initial?.config?.sheet_id ?? ""));
   const [min, setMin] = useState<string>(String(initial?.config?.min ?? "0"));
   const [max, setMax] = useState<string>(String(initial?.config?.max ?? "100"));
 
   const src = getSource(fonte);
 
-  // auto-fill title when picking source
   useEffect(() => {
     if (!initial && src && !titulo) setTitulo(src.label);
   }, [fonte]); // eslint-disable-line
 
   const grouped = useMemo(() => {
     const g: Record<string, WidgetSource[]> = {};
-    for (const s of WIDGET_SOURCES) {
-      (g[s.grupo] ??= []).push(s);
-    }
+    for (const s of WIDGET_SOURCES) (g[s.grupo] ??= []).push(s);
     return g;
   }, []);
 
   const submit = () => {
     if (!fonte || !src) { toast.error("Escolha uma fonte de dados"); return; }
     if (src.needsTag && !tagNome) { toast.error("Escolha uma tag"); return; }
+    if (src.needsTank && !tankId) { toast.error("Escolha um tanque"); return; }
+    if (src.needsEquipamento && !equipId) { toast.error("Escolha um equipamento"); return; }
+    if (src.needsSheet && !sheetId) { toast.error("Escolha uma tabela"); return; }
     const config: Record<string, unknown> = {};
     if (src.needsTag) config.tag_nome = tagNome;
+    if (src.needsTank) config.tank_id = tankId;
+    if (src.needsEquipamento) config.equipamento_id = equipId;
+    if (src.needsSheet) config.sheet_id = sheetId;
     if (fonte === "tag.gauge") {
       config.min = Number(min) || 0;
       config.max = Number(max) || 100;
     }
-    const layout = initial?.layout ?? {
-      x: 0, y: 999,
-      w: src.defaultSize?.w ?? 3,
-      h: src.defaultSize?.h ?? 2,
-    };
+    const layout = initial?.layout ?? { x: 0, y: 0, w: src.colSpan ?? 3, h: src.rowSpan ?? 2 };
     onSave({ titulo: titulo || src.label, tipo: src.tipo, fonte, config, layout });
   };
 
@@ -298,7 +301,7 @@ function WidgetDialog({
     <DialogContent className="max-w-lg">
       <DialogHeader>
         <DialogTitle>{initial ? "Editar widget" : "Novo widget"}</DialogTitle>
-        <DialogDescription>Escolha a fonte de dados e personalize o título.</DialogDescription>
+        <DialogDescription>Escolha a fonte de dados — o sistema organiza o layout automaticamente.</DialogDescription>
       </DialogHeader>
       <div className="space-y-4">
         <div>
@@ -330,12 +333,51 @@ function WidgetDialog({
             <Select value={tagNome} onValueChange={setTagNome}>
               <SelectTrigger><SelectValue placeholder="Escolha uma tag..." /></SelectTrigger>
               <SelectContent className="max-h-[300px]">
-                {tags.length === 0 ? (
+                {(lookups?.tags ?? []).length === 0 ? (
                   <div className="px-3 py-2 text-xs text-muted-foreground">Nenhuma tag recebida</div>
-                ) : tags.map((t) => (
+                ) : (lookups?.tags ?? []).map((t) => (
                   <SelectItem key={t.nome} value={t.nome}>
                     {t.nome}{t.unidade ? ` (${t.unidade})` : ""}
                   </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        {src?.needsTank && (
+          <div>
+            <Label>Tanque / Local</Label>
+            <Select value={tankId} onValueChange={setTankId}>
+              <SelectTrigger><SelectValue placeholder="Escolha um tanque..." /></SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {(lookups?.tanks ?? []).map((t) => (
+                  <SelectItem key={t.id} value={t.id}>{t.codigo} — {t.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        {src?.needsEquipamento && (
+          <div>
+            <Label>Equipamento</Label>
+            <Select value={equipId} onValueChange={setEquipId}>
+              <SelectTrigger><SelectValue placeholder="Escolha um equipamento..." /></SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {(lookups?.equipamentos ?? []).map((e) => (
+                  <SelectItem key={e.id} value={e.id}>{e.codigo} — {e.nome}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        {src?.needsSheet && (
+          <div>
+            <Label>Tabela</Label>
+            <Select value={sheetId} onValueChange={setSheetId}>
+              <SelectTrigger><SelectValue placeholder="Escolha uma tabela..." /></SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {(lookups?.sheets ?? []).map((s) => (
+                  <SelectItem key={s.id} value={s.id}>{s.nome}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
