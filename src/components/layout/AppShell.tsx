@@ -20,7 +20,9 @@ import { useQueryClient } from "@tanstack/react-query";
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { theme, toggle } = useTheme();
   const [profile, setProfile] = useState<{ nome: string; empresa: string | null; email: string | null } | null>(null);
+
 
   useEffect(() => {
     (async () => {
