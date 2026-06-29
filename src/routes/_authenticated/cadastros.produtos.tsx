@@ -115,21 +115,21 @@ function ProdutosPage() {
     // load existing processes + activities
     const { data: procs } = await supabase
       .from("produto_processos")
-      .select("id, nome, ordem")
+      .select("id, nome, ordem, tempo_limite_min")
       .eq("produto_id", r.id)
       .order("ordem", { ascending: true });
     const procIds = (procs ?? []).map((p) => p.id);
     const { data: ativs } = procIds.length
       ? await supabase
           .from("produto_atividades")
-          .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min")
+          .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min, tag_nome")
           .in("processo_id", procIds)
           .order("ordem", { ascending: true })
       : { data: [] };
     const byProc: Record<string, Atividade[]> = {};
     for (const a of (ativs ?? []) as Array<{
       id: string; processo_id: string; descricao: string; tipo: Atividade["tipo"];
-      quantidade: number | null; unidade: string | null; tempo_estimado_min: number | null;
+      quantidade: number | null; unidade: string | null; tempo_estimado_min: number | null; tag_nome: string | null;
     }>) {
       (byProc[a.processo_id] ??= []).push({
         id: a.id,
@@ -138,13 +138,15 @@ function ProdutosPage() {
         quantidade: a.quantidade == null ? "" : String(a.quantidade),
         unidade: a.unidade ?? "",
         tempo_estimado_min: a.tempo_estimado_min == null ? "" : String(a.tempo_estimado_min),
+        tag_nome: a.tag_nome ?? "",
       });
     }
     setProcessos(
-      (procs ?? []).map((p) => ({
+      ((procs ?? []) as Array<{ id: string; nome: string; ordem: number; tempo_limite_min: number | null }>).map((p) => ({
         id: p.id,
         nome: p.nome,
         expanded: true,
+        tempo_limite_min: p.tempo_limite_min == null ? "" : String(p.tempo_limite_min),
         atividades: byProc[p.id] ?? [],
       })),
     );
