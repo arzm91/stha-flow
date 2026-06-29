@@ -542,7 +542,7 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
           : Promise.resolve({ data: null } as { data: null }),
       ]);
       const saldo = (movs ?? []).reduce((s, r) => s + (r.tipo === "entrada" ? 1 : -1) * Number(r.quantidade), 0);
-      return { kind: "tank", loc: t as StorageLocation, saldo, tag: (tagRes.data ?? null) as WidgetData extends { kind: "tank"; tag: infer T } ? T : never };
+      return { kind: "tank", loc: t as StorageLocation, saldo, tag: (tagRes.data as { nome: string; valor: string | null; valor_num: number | null; unidade: string | null } | null) };
     }
 
     // ---- Prévia de produção por equipamento ----
