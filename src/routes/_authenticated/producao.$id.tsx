@@ -919,15 +919,24 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
                 <CardTitle className="text-base">
                   <span className="mr-2 font-mono text-xs text-muted-foreground">{p.ordem + 1}.</span>
                   {p.nome}
-                </CardTitle>
-                {procAberta ? (
-                  <Button size="sm" variant="outline" onClick={() => finalizar(procAberta.id, procAberta.iniciado_em)} disabled={disabled}>
-                    <Square className="mr-1 h-3.5 w-3.5" /> Finalizar processo
-                    <span className="ml-2 font-mono text-xs text-muted-foreground">
-                      {formatDuracao(Math.floor((now - new Date(procAberta.iniciado_em).getTime()) / 1000))}
+                  {p.tempo_limite_min != null ? (
+                    <span className="ml-2 text-[10px] font-normal text-muted-foreground">
+                      (limite {p.tempo_limite_min} min)
                     </span>
-                  </Button>
-                ) : (
+                  ) : null}
+                </CardTitle>
+                {procAberta ? (() => {
+                  const durSeg = Math.floor((now - new Date(procAberta.iniciado_em).getTime()) / 1000);
+                  const excedido = p.tempo_limite_min != null && durSeg > p.tempo_limite_min * 60;
+                  return (
+                    <Button size="sm" variant={excedido ? "destructive" : "outline"} onClick={() => tentarFinalizarProcesso(procAberta, p)} disabled={disabled}>
+                      <Square className="mr-1 h-3.5 w-3.5" /> Finalizar processo
+                      <span className={`ml-2 font-mono text-xs ${excedido ? "" : "text-muted-foreground"}`}>
+                        {formatDuracao(durSeg)}
+                      </span>
+                    </Button>
+                  );
+                })() : (
                   <Button size="sm" onClick={() => iniciar({ processoId: p.id, processoNome: p.nome, ordemProcesso: p.ordem })} disabled={disabled}>
                     <Play className="mr-1 h-3.5 w-3.5" /> Iniciar processo
                   </Button>
@@ -940,6 +949,7 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
                   const key = `${p.id}|${a.id}`;
                   const aberta = abertaPorChave.get(key);
                   const tipoInfo = TIPO_BADGE[a.tipo] ?? { label: a.tipo, cls: "" };
+                  const isTag = a.tipo === "tag_captura";
                   return (
                     <div key={a.id} className="flex items-center gap-2 rounded border border-border/60 p-2">
                       <span className="font-mono text-xs text-muted-foreground">{p.ordem + 1}.{a.ordem + 1}</span>
@@ -947,13 +957,20 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
                         <div className="flex items-center gap-2">
                           <span className="text-sm">{a.descricao}</span>
                           <Badge variant="outline" className={`text-[10px] ${tipoInfo.cls}`}>{tipoInfo.label}</Badge>
+                          {isTag && a.tag_nome ? (
+                            <Badge variant="outline" className="text-[10px]">tag: {a.tag_nome}</Badge>
+                          ) : null}
                         </div>
                         <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
-                          {a.quantidade != null ? <span>{a.quantidade}{a.unidade ? ` ${a.unidade}` : ""}</span> : null}
+                          {!isTag && a.quantidade != null ? <span>{a.quantidade}{a.unidade ? ` ${a.unidade}` : ""}</span> : null}
                           {a.tempo_estimado_min != null ? <span>~{a.tempo_estimado_min} min</span> : null}
                         </div>
                       </div>
-                      {aberta ? (
+                      {isTag ? (
+                        <Button size="sm" variant="outline" onClick={() => capturarTag(p, a)} disabled={disabled || !a.tag_nome}>
+                          <Activity className="mr-1 h-3.5 w-3.5" /> Registrar leitura
+                        </Button>
+                      ) : aberta ? (
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-xs text-primary">
                             {formatDuracao(Math.floor((now - new Date(aberta.iniciado_em).getTime()) / 1000))}
@@ -1005,11 +1022,56 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
                 ) : (
                   <div className="text-[10px] text-primary">em andamento</div>
                 )}
+                {e.observacao ? (
+                  <div className="mt-1 text-[11px] text-foreground/80">{e.observacao}</div>
+                ) : null}
+                {e.motivo_atraso ? (
+                  <div className="mt-1 rounded bg-destructive/10 px-1.5 py-1 text-[11px] text-destructive">
+                    <span className="font-semibold">Motivo do atraso:</span> {e.motivo_atraso}
+                  </div>
+                ) : null}
               </div>
             );
           })}
         </CardContent>
       </Card>
+
+      <Dialog open={!!motivoDialog} onOpenChange={(o) => { if (!o) setMotivoDialog(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tempo limite excedido</DialogTitle>
+          </DialogHeader>
+          {motivoDialog ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                O processo <span className="font-medium text-foreground">{motivoDialog.processoNome}</span> levou{" "}
+                <span className="font-mono">{formatDuracao(motivoDialog.duracaoSeg)}</span>, acima do limite de{" "}
+                <span className="font-mono">{motivoDialog.limiteMin} min</span>. Informe o motivo para registrar no relatório:
+              </p>
+              <textarea
+                value={motivoTexto}
+                onChange={(e) => setMotivoTexto(e.target.value)}
+                autoFocus
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Ex.: aguardando matéria-prima, falha de equipamento, troca de turno..."
+              />
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMotivoDialog(null)}>Cancelar</Button>
+            <Button
+              onClick={async () => {
+                if (!motivoDialog) return;
+                if (!motivoTexto.trim()) return toast.error("Informe o motivo do atraso.");
+                await finalizar(motivoDialog.etapaId, motivoDialog.iniciadoEm, motivoTexto.trim());
+                setMotivoDialog(null);
+              }}
+            >
+              Registrar e finalizar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
