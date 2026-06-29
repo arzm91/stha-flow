@@ -1,10 +1,12 @@
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
+import { Button } from "@/components/ui/button";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from "recharts";
 import { LineChart as LineChartIcon } from "lucide-react";
 import { formatNumber } from "@/lib/format";
+import { cn } from "@/lib/utils";
 
 type Row = {
   id: string;
@@ -13,6 +15,11 @@ type Row = {
   unidade: string | null;
   registrado_em: string;
 };
+
+const PALETTE = [
+  "#f59e0b", "#3b82f6", "#10b981", "#ef4444", "#8b5cf6",
+  "#ec4899", "#14b8a6", "#eab308", "#6366f1", "#f97316",
+];
 
 export function TagsMonitoramento({
   ordemId,
@@ -37,26 +44,73 @@ export function TagsMonitoramento({
     refetchInterval: ativa ? 5_000 : false,
   });
 
-  const grupos = useMemo(() => {
-    const byTag = new Map<string, Row[]>();
+  const { tagsDisponiveis, unidades } = useMemo(() => {
+    const map = new Map<string, string | null>();
     for (const r of hist.data ?? []) {
-      if (!byTag.has(r.tag_nome)) byTag.set(r.tag_nome, []);
-      byTag.get(r.tag_nome)!.push(r);
+      if (!map.has(r.tag_nome)) map.set(r.tag_nome, r.unidade);
+      else if (!map.get(r.tag_nome) && r.unidade) map.set(r.tag_nome, r.unidade);
     }
-    // ordem estável seguindo tagNomes do equipamento + extras
-    const lista: { nome: string; rows: Row[] }[] = [];
-    const seen = new Set<string>();
-    for (const n of tagNomes ?? []) {
-      if (byTag.has(n)) {
-        lista.push({ nome: n, rows: byTag.get(n)! });
-        seen.add(n);
-      }
-    }
-    for (const [n, rows] of byTag) {
-      if (!seen.has(n)) lista.push({ nome: n, rows });
-    }
-    return lista;
+    // garante todas as tags do equipamento, mesmo sem pontos ainda
+    for (const n of tagNomes ?? []) if (!map.has(n)) map.set(n, null);
+    return {
+      tagsDisponiveis: Array.from(map.keys()),
+      unidades: map,
+    };
   }, [hist.data, tagNomes]);
+
+  const [selecionadas, setSelecionadas] = useState<string[]>([]);
+
+  // seleciona automaticamente até 3 tags na primeira carga
+  useEffect(() => {
+    if (selecionadas.length === 0 && tagsDisponiveis.length > 0) {
+      setSelecionadas(tagsDisponiveis.slice(0, Math.min(3, tagsDisponiveis.length)));
+    }
+  }, [tagsDisponiveis, selecionadas.length]);
+
+  const corPorTag = useMemo(() => {
+    const m = new Map<string, string>();
+    tagsDisponiveis.forEach((n, i) => m.set(n, PALETTE[i % PALETTE.length]));
+    return m;
+  }, [tagsDisponiveis]);
+
+  // Constrói dataset combinado: cada timestamp vira uma linha com colunas por tag
+  const chartData = useMemo(() => {
+    if (!hist.data || selecionadas.length === 0) return [];
+    const byTs = new Map<number, Record<string, number | string>>();
+    for (const r of hist.data) {
+      if (!selecionadas.includes(r.tag_nome)) continue;
+      if (r.valor_num == null) continue;
+      const t = new Date(r.registrado_em).getTime();
+      if (!byTs.has(t)) byTs.set(t, { t });
+      byTs.get(t)![r.tag_nome] = Number(r.valor_num);
+    }
+    return Array.from(byTs.values()).sort((a, b) => (a.t as number) - (b.t as number));
+  }, [hist.data, selecionadas]);
+
+  // Estatísticas por tag selecionada
+  const stats = useMemo(() => {
+    const m = new Map<string, { min: number; max: number; avg: number; last: number; n: number }>();
+    for (const nome of selecionadas) {
+      const vals = (hist.data ?? [])
+        .filter((r) => r.tag_nome === nome && r.valor_num != null)
+        .map((r) => Number(r.valor_num));
+      if (vals.length === 0) continue;
+      m.set(nome, {
+        n: vals.length,
+        min: Math.min(...vals),
+        max: Math.max(...vals),
+        avg: vals.reduce((a, b) => a + b, 0) / vals.length,
+        last: vals[vals.length - 1],
+      });
+    }
+    return m;
+  }, [hist.data, selecionadas]);
+
+  const toggle = (nome: string) => {
+    setSelecionadas((cur) =>
+      cur.includes(nome) ? cur.filter((n) => n !== nome) : [...cur, nome],
+    );
+  };
 
   if (!tagNomes || tagNomes.length === 0) return null;
 
@@ -71,87 +125,131 @@ export function TagsMonitoramento({
           {ativa ? "Gravando histórico (a cada ~10s)" : "Histórico desta produção"}
         </span>
       </CardHeader>
-      <CardContent>
-        {hist.isLoading ? (
-          <p className="text-sm text-muted-foreground">Carregando histórico...</p>
-        ) : grupos.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nenhum ponto registrado ainda. Os valores numéricos das tags do equipamento serão gravados
-            automaticamente enquanto a produção estiver em andamento.
-          </p>
-        ) : (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {grupos.map(({ nome, rows }) => {
-              const data = rows
-                .filter((r) => r.valor_num != null)
-                .map((r) => ({
-                  t: new Date(r.registrado_em).getTime(),
-                  v: Number(r.valor_num),
-                }));
-              const unidade = rows.find((r) => r.unidade)?.unidade ?? "";
-              const vals = data.map((d) => d.v);
-              const min = vals.length ? Math.min(...vals) : null;
-              const max = vals.length ? Math.max(...vals) : null;
-              const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-              const last = data[data.length - 1]?.v ?? null;
+      <CardContent className="space-y-3">
+        {/* Seletor de tags */}
+        <div className="flex flex-wrap gap-2">
+          {tagsDisponiveis.length === 0 ? (
+            <span className="text-xs text-muted-foreground">
+              Nenhuma tag disponível para esta ordem.
+            </span>
+          ) : (
+            tagsDisponiveis.map((nome) => {
+              const ativo = selecionadas.includes(nome);
+              const cor = corPorTag.get(nome)!;
+              const u = unidades.get(nome);
               return (
-                <div key={nome} className="rounded-md border border-border bg-muted/20 p-2">
-                  <div className="mb-1 flex items-baseline justify-between gap-2">
-                    <div className="truncate font-mono text-xs text-muted-foreground" title={nome}>
+                <Button
+                  key={nome}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toggle(nome)}
+                  className={cn(
+                    "h-7 gap-2 font-mono text-xs",
+                    ativo ? "border-2" : "opacity-60 hover:opacity-100",
+                  )}
+                  style={ativo ? { borderColor: cor, color: cor } : undefined}
+                >
+                  <span className="inline-block h-2 w-2 rounded-full" style={{ background: cor }} />
+                  {nome}
+                  {u ? <span className="text-muted-foreground">({u})</span> : null}
+                </Button>
+              );
+            })
+          )}
+        </div>
+
+        {/* Gráfico único combinado */}
+        <div className="h-80 w-full">
+          {selecionadas.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+              Selecione ao menos uma tag para visualizar.
+            </div>
+          ) : chartData.length === 0 ? (
+            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+              {hist.isLoading ? "Carregando histórico..." : "Aguardando pontos do histórico..."}
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="t"
+                  type="number"
+                  domain={["dataMin", "dataMax"]}
+                  scale="time"
+                  tickFormatter={(t) =>
+                    new Date(t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+                  }
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                  stroke="var(--border)"
+                />
+                <YAxis
+                  tick={{ fontSize: 11, fill: "var(--muted-foreground)" }}
+                  stroke="var(--border)"
+                  width={48}
+                />
+                <Tooltip
+                  contentStyle={{
+                    background: "var(--background)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 6,
+                    fontSize: 12,
+                    color: "var(--foreground)",
+                  }}
+                  labelFormatter={(t) => new Date(Number(t)).toLocaleString("pt-BR")}
+                  formatter={(v: number, nome: string) => {
+                    const u = unidades.get(nome);
+                    return [`${formatNumber(v)}${u ? " " + u : ""}`, nome];
+                  }}
+                />
+                <Legend wrapperStyle={{ fontSize: 11 }} />
+                {selecionadas.map((nome) => (
+                  <Line
+                    key={nome}
+                    type="monotone"
+                    dataKey={nome}
+                    name={nome}
+                    stroke={corPorTag.get(nome)}
+                    strokeWidth={2}
+                    dot={false}
+                    isAnimationActive={false}
+                    connectNulls
+                  />
+                ))}
+              </LineChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* Estatísticas resumidas */}
+        {stats.size > 0 ? (
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from(stats.entries()).map(([nome, s]) => {
+              const cor = corPorTag.get(nome)!;
+              const u = unidades.get(nome);
+              return (
+                <div key={nome} className="rounded-md border border-border bg-muted/20 p-2 text-xs">
+                  <div className="mb-1 flex items-center justify-between gap-2">
+                    <span className="flex items-center gap-1.5 truncate font-mono">
+                      <span className="inline-block h-2 w-2 rounded-full" style={{ background: cor }} />
                       {nome}
-                    </div>
-                    <div className="font-mono text-sm font-semibold tabular-nums">
-                      {last != null ? formatNumber(last) : "—"}
-                      {unidade ? <span className="ml-1 text-xs text-muted-foreground">{unidade}</span> : null}
-                    </div>
+                    </span>
+                    <span className="font-mono font-semibold tabular-nums">
+                      {formatNumber(s.last)}{u ? <span className="ml-1 text-muted-foreground">{u}</span> : null}
+                    </span>
                   </div>
-                  <div className="h-32 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-                        <XAxis
-                          dataKey="t"
-                          type="number"
-                          domain={["dataMin", "dataMax"]}
-                          tickFormatter={(t) =>
-                            new Date(t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-                          }
-                          tick={{ fontSize: 10 }}
-                          stroke="hsl(var(--muted-foreground))"
-                        />
-                        <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" width={36} />
-                        <Tooltip
-                          contentStyle={{
-                            background: "hsl(var(--background))",
-                            border: "1px solid hsl(var(--border))",
-                            fontSize: 12,
-                          }}
-                          labelFormatter={(t) => new Date(Number(t)).toLocaleString("pt-BR")}
-                          formatter={(v: number) => [`${formatNumber(v)}${unidade ? " " + unidade : ""}`, nome]}
-                        />
-                        {avg != null ? (
-                          <ReferenceLine y={avg} stroke="hsl(var(--muted-foreground))" strokeDasharray="3 3" />
-                        ) : null}
-                        <Line
-                          type="monotone"
-                          dataKey="v"
-                          stroke="hsl(var(--primary))"
-                          strokeWidth={1.5}
-                          dot={false}
-                          isAnimationActive={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                  <div className="mt-1 grid grid-cols-3 gap-1 text-[10px] text-muted-foreground">
-                    <span>min: <span className="font-mono text-foreground">{min != null ? formatNumber(min) : "—"}</span></span>
-                    <span>méd: <span className="font-mono text-foreground">{avg != null ? formatNumber(avg) : "—"}</span></span>
-                    <span>máx: <span className="font-mono text-foreground">{max != null ? formatNumber(max) : "—"}</span></span>
+                  <div className="grid grid-cols-4 gap-1 text-[10px] text-muted-foreground">
+                    <span>n: <span className="font-mono text-foreground">{s.n}</span></span>
+                    <span>mín: <span className="font-mono text-foreground">{formatNumber(s.min)}</span></span>
+                    <span>méd: <span className="font-mono text-foreground">{formatNumber(s.avg)}</span></span>
+                    <span>máx: <span className="font-mono text-foreground">{formatNumber(s.max)}</span></span>
                   </div>
                 </div>
               );
             })}
           </div>
-        )}
+        ) : null}
       </CardContent>
     </Card>
   );
