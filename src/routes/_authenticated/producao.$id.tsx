@@ -730,6 +730,7 @@ const TIPO_BADGE: Record<string, { label: string; cls: string }> = {
   materia_prima: { label: "Matéria-prima", cls: "bg-amber-500/15 text-amber-700 border-amber-500/30" },
   medicao: { label: "Medição", cls: "bg-blue-500/15 text-blue-700 border-blue-500/30" },
   acao: { label: "Ação", cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30" },
+  tag_captura: { label: "Captação de tag", cls: "bg-purple-500/15 text-purple-700 border-purple-500/30" },
 };
 
 function formatDuracao(seg: number) {
@@ -754,7 +755,7 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
     queryFn: async () => {
       const { data: ps, error } = await supabase
         .from("produto_processos")
-        .select("id, nome, ordem")
+        .select("id, nome, ordem, tempo_limite_min")
         .eq("produto_id", produtoId)
         .order("ordem", { ascending: true });
       if (error) throw error;
@@ -762,7 +763,7 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
       const { data: ats } = ids.length
         ? await supabase
             .from("produto_atividades")
-            .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min")
+            .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min, tag_nome")
             .in("processo_id", ids)
             .order("ordem", { ascending: true })
         : { data: [] };
@@ -815,16 +816,80 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
     }
   };
 
-  const finalizar = async (etapaId: string, iniciadoEm: string) => {
+  const finalizar = async (etapaId: string, iniciadoEm: string, motivo?: string) => {
     try {
       const fim = new Date();
       const dur = Math.max(0, Math.floor((fim.getTime() - new Date(iniciadoEm).getTime()) / 1000));
       const { error } = await supabase
         .from("ordem_etapas")
-        .update({ finalizado_em: fim.toISOString(), duracao_seg: dur })
+        .update({
+          finalizado_em: fim.toISOString(),
+          duracao_seg: dur,
+          ...(motivo ? { motivo_atraso: motivo } : {}),
+        })
         .eq("id", etapaId);
       if (error) throw error;
       toast.success(`Etapa finalizada (${formatDuracao(dur)})`);
+      qc.invalidateQueries({ queryKey: ["ordem-etapas", ordemId] });
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
+  // Modal de motivo para atraso de processo
+  const [motivoDialog, setMotivoDialog] = useState<{
+    etapaId: string; iniciadoEm: string; processoNome: string; duracaoSeg: number; limiteMin: number;
+  } | null>(null);
+  const [motivoTexto, setMotivoTexto] = useState("");
+
+  const tentarFinalizarProcesso = (etapa: any, processo: any) => {
+    const durSeg = Math.floor((Date.now() - new Date(etapa.iniciado_em).getTime()) / 1000);
+    const limiteMin = processo.tempo_limite_min;
+    if (limiteMin != null && durSeg > limiteMin * 60) {
+      setMotivoTexto("");
+      setMotivoDialog({
+        etapaId: etapa.id, iniciadoEm: etapa.iniciado_em,
+        processoNome: processo.nome, duracaoSeg: durSeg, limiteMin,
+      });
+      return;
+    }
+    finalizar(etapa.id, etapa.iniciado_em);
+  };
+
+  // Captação imediata de uma tag (cria uma etapa já finalizada com o valor lido)
+  const capturarTag = async (processo: any, atividade: any) => {
+    if (disabled) return toast.error("Ordem finalizada.");
+    if (!atividade.tag_nome) return toast.error("Atividade sem tag associada.");
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Não autenticado");
+      const { data: tag, error: te } = await supabase
+        .from("tags_live")
+        .select("nome, valor, valor_num, unidade, atualizado_em")
+        .eq("nome", atividade.tag_nome)
+        .maybeSingle();
+      if (te) throw te;
+      if (!tag) throw new Error("Tag não encontrada nos dados recebidos.");
+      const agora = new Date().toISOString();
+      const valorTxt = tag.valor_num != null ? String(tag.valor_num) : (tag.valor ?? "—");
+      const obs = `Tag ${tag.nome} = ${valorTxt}${tag.unidade ? ` ${tag.unidade}` : ""} (leitura em ${new Date(tag.atualizado_em).toLocaleString("pt-BR")})`;
+      const { error } = await supabase.from("ordem_etapas").insert({
+        owner_id: u.user.id,
+        ordem_id: ordemId,
+        processo_id: processo.id,
+        processo_nome: processo.nome,
+        ordem_processo: processo.ordem,
+        atividade_id: atividade.id,
+        atividade_descricao: atividade.descricao,
+        tipo: "tag_captura",
+        ordem_atividade: atividade.ordem ?? 0,
+        iniciado_em: agora,
+        finalizado_em: agora,
+        duracao_seg: 0,
+        observacao: obs,
+      });
+      if (error) throw error;
+      toast.success("Leitura da tag registrada");
       qc.invalidateQueries({ queryKey: ["ordem-etapas", ordemId] });
     } catch (err) {
       toast.error((err as Error).message);
@@ -854,15 +919,24 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
                 <CardTitle className="text-base">
                   <span className="mr-2 font-mono text-xs text-muted-foreground">{p.ordem + 1}.</span>
                   {p.nome}
-                </CardTitle>
-                {procAberta ? (
-                  <Button size="sm" variant="outline" onClick={() => finalizar(procAberta.id, procAberta.iniciado_em)} disabled={disabled}>
-                    <Square className="mr-1 h-3.5 w-3.5" /> Finalizar processo
-                    <span className="ml-2 font-mono text-xs text-muted-foreground">
-                      {formatDuracao(Math.floor((now - new Date(procAberta.iniciado_em).getTime()) / 1000))}
+                  {p.tempo_limite_min != null ? (
+                    <span className="ml-2 text-[10px] font-normal text-muted-foreground">
+                      (limite {p.tempo_limite_min} min)
                     </span>
-                  </Button>
-                ) : (
+                  ) : null}
+                </CardTitle>
+                {procAberta ? (() => {
+                  const durSeg = Math.floor((now - new Date(procAberta.iniciado_em).getTime()) / 1000);
+                  const excedido = p.tempo_limite_min != null && durSeg > p.tempo_limite_min * 60;
+                  return (
+                    <Button size="sm" variant={excedido ? "destructive" : "outline"} onClick={() => tentarFinalizarProcesso(procAberta, p)} disabled={disabled}>
+                      <Square className="mr-1 h-3.5 w-3.5" /> Finalizar processo
+                      <span className={`ml-2 font-mono text-xs ${excedido ? "" : "text-muted-foreground"}`}>
+                        {formatDuracao(durSeg)}
+                      </span>
+                    </Button>
+                  );
+                })() : (
                   <Button size="sm" onClick={() => iniciar({ processoId: p.id, processoNome: p.nome, ordemProcesso: p.ordem })} disabled={disabled}>
                     <Play className="mr-1 h-3.5 w-3.5" /> Iniciar processo
                   </Button>
@@ -875,6 +949,7 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
                   const key = `${p.id}|${a.id}`;
                   const aberta = abertaPorChave.get(key);
                   const tipoInfo = TIPO_BADGE[a.tipo] ?? { label: a.tipo, cls: "" };
+                  const isTag = a.tipo === "tag_captura";
                   return (
                     <div key={a.id} className="flex items-center gap-2 rounded border border-border/60 p-2">
                       <span className="font-mono text-xs text-muted-foreground">{p.ordem + 1}.{a.ordem + 1}</span>
@@ -882,13 +957,20 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
                         <div className="flex items-center gap-2">
                           <span className="text-sm">{a.descricao}</span>
                           <Badge variant="outline" className={`text-[10px] ${tipoInfo.cls}`}>{tipoInfo.label}</Badge>
+                          {isTag && a.tag_nome ? (
+                            <Badge variant="outline" className="text-[10px]">tag: {a.tag_nome}</Badge>
+                          ) : null}
                         </div>
                         <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
-                          {a.quantidade != null ? <span>{a.quantidade}{a.unidade ? ` ${a.unidade}` : ""}</span> : null}
+                          {!isTag && a.quantidade != null ? <span>{a.quantidade}{a.unidade ? ` ${a.unidade}` : ""}</span> : null}
                           {a.tempo_estimado_min != null ? <span>~{a.tempo_estimado_min} min</span> : null}
                         </div>
                       </div>
-                      {aberta ? (
+                      {isTag ? (
+                        <Button size="sm" variant="outline" onClick={() => capturarTag(p, a)} disabled={disabled || !a.tag_nome}>
+                          <Activity className="mr-1 h-3.5 w-3.5" /> Registrar leitura
+                        </Button>
+                      ) : aberta ? (
                         <div className="flex items-center gap-2">
                           <span className="font-mono text-xs text-primary">
                             {formatDuracao(Math.floor((now - new Date(aberta.iniciado_em).getTime()) / 1000))}
@@ -940,11 +1022,56 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
                 ) : (
                   <div className="text-[10px] text-primary">em andamento</div>
                 )}
+                {e.observacao ? (
+                  <div className="mt-1 text-[11px] text-foreground/80">{e.observacao}</div>
+                ) : null}
+                {e.motivo_atraso ? (
+                  <div className="mt-1 rounded bg-destructive/10 px-1.5 py-1 text-[11px] text-destructive">
+                    <span className="font-semibold">Motivo do atraso:</span> {e.motivo_atraso}
+                  </div>
+                ) : null}
               </div>
             );
           })}
         </CardContent>
       </Card>
+
+      <Dialog open={!!motivoDialog} onOpenChange={(o) => { if (!o) setMotivoDialog(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Tempo limite excedido</DialogTitle>
+          </DialogHeader>
+          {motivoDialog ? (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                O processo <span className="font-medium text-foreground">{motivoDialog.processoNome}</span> levou{" "}
+                <span className="font-mono">{formatDuracao(motivoDialog.duracaoSeg)}</span>, acima do limite de{" "}
+                <span className="font-mono">{motivoDialog.limiteMin} min</span>. Informe o motivo para registrar no relatório:
+              </p>
+              <textarea
+                value={motivoTexto}
+                onChange={(e) => setMotivoTexto(e.target.value)}
+                autoFocus
+                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                placeholder="Ex.: aguardando matéria-prima, falha de equipamento, troca de turno..."
+              />
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMotivoDialog(null)}>Cancelar</Button>
+            <Button
+              onClick={async () => {
+                if (!motivoDialog) return;
+                if (!motivoTexto.trim()) return toast.error("Informe o motivo do atraso.");
+                await finalizar(motivoDialog.etapaId, motivoDialog.iniciadoEm, motivoTexto.trim());
+                setMotivoDialog(null);
+              }}
+            >
+              Registrar e finalizar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -32,16 +32,18 @@ type Produto = {
 type Atividade = {
   id?: string;
   descricao: string;
-  tipo: "materia_prima" | "medicao" | "acao";
+  tipo: "materia_prima" | "medicao" | "acao" | "tag_captura";
   quantidade: string;
   unidade: string;
   tempo_estimado_min: string;
+  tag_nome: string;
 };
 
 type Processo = {
   id?: string;
   nome: string;
   expanded: boolean;
+  tempo_limite_min: string;
   atividades: Atividade[];
 };
 
@@ -49,12 +51,13 @@ const TIPO_LABEL: Record<Atividade["tipo"], string> = {
   materia_prima: "Matéria-prima",
   medicao: "Medição",
   acao: "Ação",
+  tag_captura: "Captação de tag",
 };
 
 const emptyProduto = { codigo: "", nome: "", descricao: "", unidade: "", categoria: "", ativo: true };
 
 function newAtividade(): Atividade {
-  return { descricao: "", tipo: "acao", quantidade: "", unidade: "", tempo_estimado_min: "" };
+  return { descricao: "", tipo: "acao", quantidade: "", unidade: "", tempo_estimado_min: "", tag_nome: "" };
 }
 
 function ProdutosPage() {
@@ -86,6 +89,19 @@ function ProdutosPage() {
     },
   });
 
+  // tags disponíveis (capturadas dos endpoints) para "tag_captura"
+  const tagsList = useQuery({
+    queryKey: ["tags-live-nomes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tags_live")
+        .select("nome, grupo, unidade")
+        .order("nome", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Array<{ nome: string; grupo: string | null; unidade: string | null }>;
+    },
+  });
+
   const filtered = (list.data ?? []).filter((r) => {
     if (!search) return true;
     const s = search.toLowerCase();
@@ -112,21 +128,21 @@ function ProdutosPage() {
     // load existing processes + activities
     const { data: procs } = await supabase
       .from("produto_processos")
-      .select("id, nome, ordem")
+      .select("id, nome, ordem, tempo_limite_min")
       .eq("produto_id", r.id)
       .order("ordem", { ascending: true });
     const procIds = (procs ?? []).map((p) => p.id);
     const { data: ativs } = procIds.length
       ? await supabase
           .from("produto_atividades")
-          .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min")
+          .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min, tag_nome")
           .in("processo_id", procIds)
           .order("ordem", { ascending: true })
       : { data: [] };
     const byProc: Record<string, Atividade[]> = {};
     for (const a of (ativs ?? []) as Array<{
       id: string; processo_id: string; descricao: string; tipo: Atividade["tipo"];
-      quantidade: number | null; unidade: string | null; tempo_estimado_min: number | null;
+      quantidade: number | null; unidade: string | null; tempo_estimado_min: number | null; tag_nome: string | null;
     }>) {
       (byProc[a.processo_id] ??= []).push({
         id: a.id,
@@ -135,13 +151,15 @@ function ProdutosPage() {
         quantidade: a.quantidade == null ? "" : String(a.quantidade),
         unidade: a.unidade ?? "",
         tempo_estimado_min: a.tempo_estimado_min == null ? "" : String(a.tempo_estimado_min),
+        tag_nome: a.tag_nome ?? "",
       });
     }
     setProcessos(
-      (procs ?? []).map((p) => ({
+      ((procs ?? []) as Array<{ id: string; nome: string; ordem: number; tempo_limite_min: number | null }>).map((p) => ({
         id: p.id,
         nome: p.nome,
         expanded: true,
+        tempo_limite_min: p.tempo_limite_min == null ? "" : String(p.tempo_limite_min),
         atividades: byProc[p.id] ?? [],
       })),
     );
@@ -184,7 +202,13 @@ function ProdutosPage() {
         if (!p.nome.trim()) continue;
         const { data: procIns, error: procErr } = await supabase
           .from("produto_processos")
-          .insert({ owner_id: ownerId, produto_id: produtoId, nome: p.nome.trim(), ordem: i })
+          .insert({
+            owner_id: ownerId,
+            produto_id: produtoId,
+            nome: p.nome.trim(),
+            ordem: i,
+            tempo_limite_min: p.tempo_limite_min === "" ? null : Number(p.tempo_limite_min),
+          })
           .select("id")
           .single();
         if (procErr) throw procErr;
@@ -199,6 +223,7 @@ function ProdutosPage() {
             quantidade: a.quantidade === "" ? null : Number(a.quantidade),
             unidade: a.unidade || null,
             tempo_estimado_min: a.tempo_estimado_min === "" ? null : Number(a.tempo_estimado_min),
+            tag_nome: a.tipo === "tag_captura" ? (a.tag_nome || null) : null,
           }));
         if (ativsToInsert.length) {
           const { error: ativErr } = await supabase.from("produto_atividades").insert(ativsToInsert);
@@ -241,7 +266,7 @@ function ProdutosPage() {
 
   // process/activity editors
   const addProcesso = () =>
-    setProcessos((prev) => [...prev, { nome: "", expanded: true, atividades: [newAtividade()] }]);
+    setProcessos((prev) => [...prev, { nome: "", expanded: true, tempo_limite_min: "", atividades: [newAtividade()] }]);
   const updateProcesso = (i: number, patch: Partial<Processo>) =>
     setProcessos((prev) => prev.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
   const removeProcesso = (i: number) =>
@@ -366,7 +391,16 @@ function ProdutosPage() {
                               value={p.nome}
                               onChange={(e) => updateProcesso(pi, { nome: e.target.value })}
                               placeholder="Nome do processo (ex.: Preparação)"
-                              className="h-8"
+                              className="h-8 flex-1"
+                            />
+                            <Input
+                              type="number"
+                              min="0"
+                              value={p.tempo_limite_min}
+                              onChange={(e) => updateProcesso(pi, { tempo_limite_min: e.target.value })}
+                              placeholder="Tempo limite (min)"
+                              className="h-8 w-36"
+                              title="Tempo limite para conclusão deste processo (em minutos). Se ultrapassado, o operador deverá registrar o motivo."
                             />
                             <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => moveProcesso(pi, -1)} disabled={pi === 0}>↑</Button>
                             <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => moveProcesso(pi, 1)} disabled={pi === processos.length - 1}>↓</Button>
@@ -399,26 +433,52 @@ function ProdutosPage() {
                                         <option value="acao">Ação</option>
                                         <option value="materia_prima">Matéria-prima</option>
                                         <option value="medicao">Medição</option>
+                                        <option value="tag_captura">Captação de tag</option>
                                       </select>
                                     </div>
-                                    <div className="col-span-3 sm:col-span-1">
-                                      <Input
-                                        type="number"
-                                        step="0.001"
-                                        value={a.quantidade}
-                                        onChange={(e) => updateAtividade(pi, ai, { quantidade: e.target.value })}
-                                        placeholder="Qtd"
-                                        className="h-8"
-                                      />
-                                    </div>
-                                    <div className="col-span-3 sm:col-span-1">
-                                      <Input
-                                        value={a.unidade}
-                                        onChange={(e) => updateAtividade(pi, ai, { unidade: e.target.value })}
-                                        placeholder="un"
-                                        className="h-8"
-                                      />
-                                    </div>
+                                    {a.tipo === "tag_captura" ? (
+                                      <div className="col-span-12 sm:col-span-4">
+                                        <select
+                                          value={a.tag_nome}
+                                          onChange={(e) => {
+                                            const sel = (tagsList.data ?? []).find((t) => t.nome === e.target.value);
+                                            updateAtividade(pi, ai, {
+                                              tag_nome: e.target.value,
+                                              unidade: sel?.unidade ?? a.unidade,
+                                            });
+                                          }}
+                                          className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                                        >
+                                          <option value="">— selecione a tag —</option>
+                                          {(tagsList.data ?? []).map((t) => (
+                                            <option key={t.nome} value={t.nome}>
+                                              {t.nome}{t.grupo ? ` (${t.grupo})` : ""}{t.unidade ? ` · ${t.unidade}` : ""}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <div className="col-span-3 sm:col-span-1">
+                                          <Input
+                                            type="number"
+                                            step="0.001"
+                                            value={a.quantidade}
+                                            onChange={(e) => updateAtividade(pi, ai, { quantidade: e.target.value })}
+                                            placeholder="Qtd"
+                                            className="h-8"
+                                          />
+                                        </div>
+                                        <div className="col-span-3 sm:col-span-1">
+                                          <Input
+                                            value={a.unidade}
+                                            onChange={(e) => updateAtividade(pi, ai, { unidade: e.target.value })}
+                                            placeholder="un"
+                                            className="h-8"
+                                          />
+                                        </div>
+                                      </>
+                                    )}
                                     <div className="col-span-9 sm:col-span-2">
                                       <Input
                                         type="number"
