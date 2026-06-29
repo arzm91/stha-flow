@@ -260,13 +260,13 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
       return { kind: "line", points: labels.map((l) => ({ label: l, entrada: bIn[l], saida: bOut[l] })) };
     }
     case "list.estoque.recentes": {
-      const { data } = await supabase.from("movimentacoes_estoque").select("tipo,quantidade,ocorrido_em,observacao")
+      const { data } = await supabase.from("movimentacoes_estoque").select("tipo,quantidade,ocorrido_em,origem,destino")
         .order("ocorrido_em", { ascending: false }).limit(10);
       return {
         kind: "list",
         items: (data ?? []).map((r) => ({
           title: `${r.tipo === "entrada" ? "↑" : "↓"} ${formatNumber(Number(r.quantidade))}`,
-          subtitle: r.observacao ?? "",
+          subtitle: [r.origem, r.destino].filter(Boolean).join(" → "),
           value: new Date(r.ocorrido_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }),
         })),
       };
@@ -319,18 +319,18 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
     }
     case "kpi.manutencao.atrasadas": {
       const { count } = await supabase.from("ordens_manutencao").select("*", { count: "exact", head: true })
-        .lt("prazo", new Date().toISOString()).in("status", ["aberta", "em_andamento"]);
+        .lt("agendada_para", new Date().toISOString()).in("status", ["aberta", "em_andamento"]);
       return { kind: "kpi", value: formatInt(count ?? 0), tone: "text-destructive", to: "/manutencao" };
     }
     case "list.manutencao.proximas": {
-      const { data } = await supabase.from("ordens_manutencao").select("titulo,prazo,status,prioridade")
-        .in("status", ["aberta", "em_andamento"]).order("prazo", { ascending: true }).limit(10);
+      const { data } = await supabase.from("ordens_manutencao").select("numero,agendada_para,status,prioridade,descricao_problema")
+        .in("status", ["aberta", "em_andamento"]).order("agendada_para", { ascending: true }).limit(10);
       return {
         kind: "list",
         items: (data ?? []).map((r) => ({
-          title: r.titulo ?? "OS",
+          title: r.numero ?? r.descricao_problema ?? "OS",
           subtitle: r.prioridade ?? "",
-          value: r.prazo ? new Date(r.prazo).toLocaleDateString("pt-BR") : "",
+          value: r.agendada_para ? new Date(r.agendada_para).toLocaleDateString("pt-BR") : "",
         })),
       };
     }
