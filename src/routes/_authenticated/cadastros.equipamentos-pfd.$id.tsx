@@ -209,8 +209,6 @@ function FourSideHandles() {
 // ---------- Nodes ----------
 function EquipNode({ data, selected }: NodeProps) {
   const d = data as unknown as EquipNodeData;
-  const w = d.width ?? 110;
-  const h = d.height ?? 110;
   return (
     <div
       className={cn(
@@ -218,18 +216,17 @@ function EquipNode({ data, selected }: NodeProps) {
         selected ? "border-primary" : "border-border",
         !d.ativo && "opacity-60",
       )}
-      style={{ width: w, height: h }}
     >
       <NodeResizer
         isVisible={selected}
         minWidth={70}
         minHeight={70}
         lineClassName="!border-primary"
-        handleClassName="!h-2 !w-2 !bg-primary !border-primary"
+        handleClassName="!h-3 !w-3 !bg-primary !border-primary"
         keepAspectRatio
       />
       <FourSideHandles />
-      <div className="min-h-0 flex-1">
+      <div className="min-h-0 flex-1 w-full flex items-center justify-center">
         <SymbolSvg kind={d.symbol} ativo={d.ativo} color={d.color} />
       </div>
       <div className="mt-1 max-w-full truncate text-center text-xs font-medium">
