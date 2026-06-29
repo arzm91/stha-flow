@@ -37,12 +37,23 @@ type Alerta = {
   min_val: number | null;
   max_val: number | null;
   stale_minutes: number | null;
+  parametro_id: string | null;
+  analise_id: string | null;
+  processo_id: string | null;
+  evento_processo: string | null;
+  tempo_limite_minutos: number | null;
   severidade: Severidade;
   ativo: boolean;
   notificar_email: boolean;
   cooldown_minutes: number;
   last_fired_at: string | null;
 };
+
+type Parametro = { id: string; nome: string; unidade: string | null; valor_min: number | null; valor_max: number | null };
+type Analise = { id: string; nome: string; unidade: string | null; valor_min: number | null; valor_max: number | null };
+type Processo = { id: string; nome: string; produto_id: string };
+type Produto = { id: string; nome: string };
+
 
 type Disparo = {
   id: string;
@@ -67,6 +78,10 @@ function AlertasPage() {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [disparos, setDisparos] = useState<Disparo[]>([]);
   const [tagOptions, setTagOptions] = useState<string[]>([]);
+  const [parametros, setParametros] = useState<Parametro[]>([]);
+  const [analises, setAnalises] = useState<Analise[]>([]);
+  const [processos, setProcessos] = useState<Processo[]>([]);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("todos");
 
   // form state
@@ -108,11 +123,24 @@ function AlertasPage() {
       .order("nome");
     setTagOptions(Array.from(new Set((data ?? []).map((t) => t.nome))));
   }
+  async function loadCadastros() {
+    const [p, a, pr, pd] = await Promise.all([
+      supabase.from("parametros_cadastro").select("id,nome,unidade,valor_min,valor_max").order("nome"),
+      supabase.from("analises_cadastro").select("id,nome,unidade,valor_min,valor_max").order("nome"),
+      supabase.from("produto_processos").select("id,nome,produto_id").order("nome"),
+      supabase.from("produtos").select("id,nome").order("nome"),
+    ]);
+    setParametros((p.data ?? []) as Parametro[]);
+    setAnalises((a.data ?? []) as Analise[]);
+    setProcessos((pr.data ?? []) as Processo[]);
+    setProdutos((pd.data ?? []) as Produto[]);
+  }
 
   useEffect(() => {
     loadAlertas();
     loadDisparos();
     loadTags();
+    loadCadastros();
     const ch = supabase
       .channel("alertas_page")
       .on("postgres_changes", { event: "*", schema: "public", table: "alertas" }, () => loadAlertas())
@@ -155,6 +183,22 @@ function AlertasPage() {
       toast.error("Informe os minutos sem atualização");
       return;
     }
+    if (form.tipo === "parametro_min_max" && !form.parametro_id) {
+      toast.error("Selecione um parâmetro");
+      return;
+    }
+    if (form.tipo === "analise_min_max" && !form.analise_id) {
+      toast.error("Selecione uma análise");
+      return;
+    }
+    if (form.tipo === "processo_evento" && (!form.processo_id || !form.evento_processo)) {
+      toast.error("Selecione o processo e o evento");
+      return;
+    }
+    if (form.tipo === "processo_evento" && form.evento_processo === "demorou" && !form.tempo_limite_minutos) {
+      toast.error("Informe o tempo limite em minutos");
+      return;
+    }
 
     const { data: u } = await supabase.auth.getUser();
     if (!u.user) return;
@@ -167,6 +211,11 @@ function AlertasPage() {
       min_val: form.min_val ?? null,
       max_val: form.max_val ?? null,
       stale_minutes: form.stale_minutes ?? null,
+      parametro_id: form.parametro_id || null,
+      analise_id: form.analise_id || null,
+      processo_id: form.processo_id || null,
+      evento_processo: form.evento_processo || null,
+      tempo_limite_minutos: form.tempo_limite_minutos ?? null,
       severidade: (form.severidade ?? "warn") as Severidade,
       ativo: form.ativo ?? true,
       notificar_email: form.notificar_email ?? false,
@@ -278,26 +327,42 @@ function AlertasPage() {
                   <TableRow>
                     <TableHead>Nome</TableHead>
                     <TableHead>Tipo</TableHead>
-                    <TableHead>Tag</TableHead>
-                    <TableHead>Limites</TableHead>
+                    <TableHead>Alvo</TableHead>
+                    <TableHead>Condição</TableHead>
                     <TableHead>Severidade</TableHead>
                     <TableHead>Ativo</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {alertas.map((a) => (
+                  {alertas.map((a) => {
+                    const alvo =
+                      a.tipo === "parametro_min_max"
+                        ? parametros.find((p) => p.id === a.parametro_id)?.nome ?? "—"
+                        : a.tipo === "analise_min_max"
+                        ? analises.find((p) => p.id === a.analise_id)?.nome ?? "—"
+                        : a.tipo === "processo_evento"
+                        ? processos.find((p) => p.id === a.processo_id)?.nome ?? "—"
+                        : a.tag_nome ?? "—";
+                    const cond =
+                      a.tipo === "tag_stale"
+                        ? `${a.stale_minutes} min`
+                        : a.tipo === "processo_evento"
+                        ? labelEvento(a.evento_processo) +
+                          (a.evento_processo === "demorou" && a.tempo_limite_minutos
+                            ? ` > ${a.tempo_limite_minutos} min`
+                            : "")
+                        : a.tipo === "parametro_min_max" || a.tipo === "analise_min_max"
+                        ? "limites do cadastro"
+                        : `${a.min_val ?? "—"} / ${a.max_val ?? "—"}`;
+                    return (
                     <TableRow key={a.id} className="cursor-pointer" onClick={() => openEdit(a)}>
                       <TableCell className="font-medium">{a.nome}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{labelTipo(a.tipo)}</Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{a.tag_nome ?? "—"}</TableCell>
-                      <TableCell className="text-xs">
-                        {a.tipo === "tag_stale"
-                          ? `${a.stale_minutes} min`
-                          : `${a.min_val ?? "—"} / ${a.max_val ?? "—"}`}
-                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{alvo}</TableCell>
+                      <TableCell className="text-xs">{cond}</TableCell>
                       <TableCell>
                         <Badge className={SEV_COLOR[a.severidade]} variant="outline">{a.severidade}</Badge>
                       </TableCell>
@@ -310,7 +375,8 @@ function AlertasPage() {
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </Card>
@@ -422,6 +488,9 @@ function AlertasPage() {
                   <SelectContent>
                     <SelectItem value="tag_min_max">Tag fora dos limites</SelectItem>
                     <SelectItem value="tag_stale">Tag sem atualização</SelectItem>
+                    <SelectItem value="parametro_min_max">Parâmetro fora dos limites</SelectItem>
+                    <SelectItem value="analise_min_max">Análise fora dos limites</SelectItem>
+                    <SelectItem value="processo_evento">Evento de processo</SelectItem>
                     <SelectItem value="custom">Personalizado (via automação)</SelectItem>
                   </SelectContent>
                 </Select>
@@ -497,6 +566,111 @@ function AlertasPage() {
               </div>
             )}
 
+            {form.tipo === "parametro_min_max" && (
+              <div className="grid gap-2">
+                <Label>Parâmetro</Label>
+                <Select
+                  value={form.parametro_id ?? ""}
+                  onValueChange={(v) => setForm({ ...form, parametro_id: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione um parâmetro" /></SelectTrigger>
+                  <SelectContent>
+                    {parametros.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                        {p.unidade ? ` (${p.unidade})` : ""}
+                        {p.valor_min != null || p.valor_max != null
+                          ? ` — limites: ${p.valor_min ?? "—"} / ${p.valor_max ?? "—"}`
+                          : " — sem limites cadastrados"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Dispara quando o valor registrado sair dos limites definidos no cadastro do parâmetro.
+                </p>
+              </div>
+            )}
+
+            {form.tipo === "analise_min_max" && (
+              <div className="grid gap-2">
+                <Label>Análise</Label>
+                <Select
+                  value={form.analise_id ?? ""}
+                  onValueChange={(v) => setForm({ ...form, analise_id: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione uma análise" /></SelectTrigger>
+                  <SelectContent>
+                    {analises.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                        {p.unidade ? ` (${p.unidade})` : ""}
+                        {p.valor_min != null || p.valor_max != null
+                          ? ` — limites: ${p.valor_min ?? "—"} / ${p.valor_max ?? "—"}`
+                          : " — sem limites cadastrados"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Dispara quando o resultado registrado sair dos limites definidos no cadastro da análise.
+                </p>
+              </div>
+            )}
+
+            {form.tipo === "processo_evento" && (
+              <>
+                <div className="grid gap-2">
+                  <Label>Processo</Label>
+                  <Select
+                    value={form.processo_id ?? ""}
+                    onValueChange={(v) => setForm({ ...form, processo_id: v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecione um processo" /></SelectTrigger>
+                    <SelectContent>
+                      {processos.map((p) => {
+                        const prod = produtos.find((x) => x.id === p.produto_id)?.nome;
+                        return (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.nome}{prod ? ` — ${prod}` : ""}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Evento</Label>
+                  <Select
+                    value={form.evento_processo ?? ""}
+                    onValueChange={(v) => setForm({ ...form, evento_processo: v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecione um evento" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="entrou">Ordem entrou no processo</SelectItem>
+                      <SelectItem value="concluido">Processo concluído</SelectItem>
+                      <SelectItem value="demorou">Processo demorou mais que o limite</SelectItem>
+                      <SelectItem value="atividade_faltante">Atividade do processo não registrada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.evento_processo === "demorou" && (
+                  <div className="grid gap-2">
+                    <Label>Tempo limite (minutos)</Label>
+                    <Input
+                      type="number"
+                      value={form.tempo_limite_minutos ?? ""}
+                      onChange={(e) =>
+                        setForm({ ...form, tempo_limite_minutos: e.target.value === "" ? null : Number(e.target.value) })
+                      }
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
+
+
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label>Cooldown (min)</Label>
@@ -548,8 +722,19 @@ function StatusBadge({ status }: { status: Disparo["status"] }) {
 }
 
 function labelTipo(t: string) {
-  if (t === "tag_min_max") return "Limites";
-  if (t === "tag_stale") return "Sem atualização";
+  if (t === "tag_min_max") return "Tag (limites)";
+  if (t === "tag_stale") return "Tag (sem atualização)";
+  if (t === "parametro_min_max") return "Parâmetro";
+  if (t === "analise_min_max") return "Análise";
+  if (t === "processo_evento") return "Processo";
   if (t === "custom") return "Personalizado";
   return t;
+}
+
+function labelEvento(e: string | null) {
+  if (e === "entrou") return "Entrou no processo";
+  if (e === "concluido") return "Concluído";
+  if (e === "demorou") return "Demorou";
+  if (e === "atividade_faltante") return "Atividade faltante";
+  return e ?? "—";
 }

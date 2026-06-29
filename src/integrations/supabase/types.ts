@@ -16,10 +16,12 @@ export type Database = {
     Tables: {
       alertas: {
         Row: {
+          analise_id: string | null
           ativo: boolean
           cooldown_minutes: number
           created_at: string
           descricao: string | null
+          evento_processo: string | null
           id: string
           last_fired_at: string | null
           max_val: number | null
@@ -27,17 +29,22 @@ export type Database = {
           nome: string
           notificar_email: boolean
           owner_id: string
+          parametro_id: string | null
+          processo_id: string | null
           severidade: string
           stale_minutes: number | null
           tag_nome: string | null
+          tempo_limite_minutos: number | null
           tipo: string
           updated_at: string
         }
         Insert: {
+          analise_id?: string | null
           ativo?: boolean
           cooldown_minutes?: number
           created_at?: string
           descricao?: string | null
+          evento_processo?: string | null
           id?: string
           last_fired_at?: string | null
           max_val?: number | null
@@ -45,17 +52,22 @@ export type Database = {
           nome: string
           notificar_email?: boolean
           owner_id: string
+          parametro_id?: string | null
+          processo_id?: string | null
           severidade?: string
           stale_minutes?: number | null
           tag_nome?: string | null
+          tempo_limite_minutos?: number | null
           tipo?: string
           updated_at?: string
         }
         Update: {
+          analise_id?: string | null
           ativo?: boolean
           cooldown_minutes?: number
           created_at?: string
           descricao?: string | null
+          evento_processo?: string | null
           id?: string
           last_fired_at?: string | null
           max_val?: number | null
@@ -63,13 +75,38 @@ export type Database = {
           nome?: string
           notificar_email?: boolean
           owner_id?: string
+          parametro_id?: string | null
+          processo_id?: string | null
           severidade?: string
           stale_minutes?: number | null
           tag_nome?: string | null
+          tempo_limite_minutos?: number | null
           tipo?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "alertas_analise_id_fkey"
+            columns: ["analise_id"]
+            isOneToOne: false
+            referencedRelation: "analises_cadastro"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alertas_parametro_id_fkey"
+            columns: ["parametro_id"]
+            isOneToOne: false
+            referencedRelation: "parametros_cadastro"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alertas_processo_id_fkey"
+            columns: ["processo_id"]
+            isOneToOne: false
+            referencedRelation: "produto_processos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       alertas_disparos: {
         Row: {
