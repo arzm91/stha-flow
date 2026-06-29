@@ -327,26 +327,42 @@ function AlertasPage() {
                   <TableRow>
                     <TableHead>Nome</TableHead>
                     <TableHead>Tipo</TableHead>
-                    <TableHead>Tag</TableHead>
-                    <TableHead>Limites</TableHead>
+                    <TableHead>Alvo</TableHead>
+                    <TableHead>Condição</TableHead>
                     <TableHead>Severidade</TableHead>
                     <TableHead>Ativo</TableHead>
                     <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {alertas.map((a) => (
+                  {alertas.map((a) => {
+                    const alvo =
+                      a.tipo === "parametro_min_max"
+                        ? parametros.find((p) => p.id === a.parametro_id)?.nome ?? "—"
+                        : a.tipo === "analise_min_max"
+                        ? analises.find((p) => p.id === a.analise_id)?.nome ?? "—"
+                        : a.tipo === "processo_evento"
+                        ? processos.find((p) => p.id === a.processo_id)?.nome ?? "—"
+                        : a.tag_nome ?? "—";
+                    const cond =
+                      a.tipo === "tag_stale"
+                        ? `${a.stale_minutes} min`
+                        : a.tipo === "processo_evento"
+                        ? labelEvento(a.evento_processo) +
+                          (a.evento_processo === "demorou" && a.tempo_limite_minutos
+                            ? ` > ${a.tempo_limite_minutos} min`
+                            : "")
+                        : a.tipo === "parametro_min_max" || a.tipo === "analise_min_max"
+                        ? "limites do cadastro"
+                        : `${a.min_val ?? "—"} / ${a.max_val ?? "—"}`;
+                    return (
                     <TableRow key={a.id} className="cursor-pointer" onClick={() => openEdit(a)}>
                       <TableCell className="font-medium">{a.nome}</TableCell>
                       <TableCell>
                         <Badge variant="outline">{labelTipo(a.tipo)}</Badge>
                       </TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{a.tag_nome ?? "—"}</TableCell>
-                      <TableCell className="text-xs">
-                        {a.tipo === "tag_stale"
-                          ? `${a.stale_minutes} min`
-                          : `${a.min_val ?? "—"} / ${a.max_val ?? "—"}`}
-                      </TableCell>
+                      <TableCell className="text-xs text-muted-foreground">{alvo}</TableCell>
+                      <TableCell className="text-xs">{cond}</TableCell>
                       <TableCell>
                         <Badge className={SEV_COLOR[a.severidade]} variant="outline">{a.severidade}</Badge>
                       </TableCell>
