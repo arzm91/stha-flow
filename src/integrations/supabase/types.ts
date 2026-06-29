@@ -807,6 +807,7 @@ export type Database = {
           finalizado_em: string | null
           id: string
           iniciado_em: string
+          motivo_atraso: string | null
           observacao: string | null
           ordem_atividade: number
           ordem_id: string
@@ -825,6 +826,7 @@ export type Database = {
           finalizado_em?: string | null
           id?: string
           iniciado_em?: string
+          motivo_atraso?: string | null
           observacao?: string | null
           ordem_atividade?: number
           ordem_id: string
@@ -843,6 +845,7 @@ export type Database = {
           finalizado_em?: string | null
           id?: string
           iniciado_em?: string
+          motivo_atraso?: string | null
           observacao?: string | null
           ordem_atividade?: number
           ordem_id?: string
@@ -1167,6 +1170,7 @@ export type Database = {
           owner_id: string
           processo_id: string
           quantidade: number | null
+          tag_nome: string | null
           tempo_estimado_min: number | null
           tipo: string
           unidade: string | null
@@ -1180,6 +1184,7 @@ export type Database = {
           owner_id: string
           processo_id: string
           quantidade?: number | null
+          tag_nome?: string | null
           tempo_estimado_min?: number | null
           tipo?: string
           unidade?: string | null
@@ -1193,6 +1198,7 @@ export type Database = {
           owner_id?: string
           processo_id?: string
           quantidade?: number | null
+          tag_nome?: string | null
           tempo_estimado_min?: number | null
           tipo?: string
           unidade?: string | null
@@ -1216,6 +1222,7 @@ export type Database = {
           ordem: number
           owner_id: string
           produto_id: string
+          tempo_limite_min: number | null
           updated_at: string
         }
         Insert: {
@@ -1225,6 +1232,7 @@ export type Database = {
           ordem?: number
           owner_id: string
           produto_id: string
+          tempo_limite_min?: number | null
           updated_at?: string
         }
         Update: {
@@ -1234,6 +1242,7 @@ export type Database = {
           ordem?: number
           owner_id?: string
           produto_id?: string
+          tempo_limite_min?: number | null
           updated_at?: string
         }
         Relationships: [
