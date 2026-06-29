@@ -246,7 +246,7 @@ function ProdutosPage() {
 
   // process/activity editors
   const addProcesso = () =>
-    setProcessos((prev) => [...prev, { nome: "", expanded: true, atividades: [newAtividade()] }]);
+    setProcessos((prev) => [...prev, { nome: "", expanded: true, tempo_limite_min: "", atividades: [newAtividade()] }]);
   const updateProcesso = (i: number, patch: Partial<Processo>) =>
     setProcessos((prev) => prev.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
   const removeProcesso = (i: number) =>
