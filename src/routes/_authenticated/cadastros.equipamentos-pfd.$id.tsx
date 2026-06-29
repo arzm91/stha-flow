@@ -55,11 +55,16 @@ type EquipNodeData = {
   symbol: SymbolKind;
   label: string;
   ativo: boolean;
+  color?: string | null;
+  width?: number;
+  height?: number;
 };
 type TagNodeData = {
   kind: "tag";
   tagNome: string;
   label?: string;
+  width?: number;
+  height?: number;
 };
 type AnyData = EquipNodeData | TagNodeData;
 
