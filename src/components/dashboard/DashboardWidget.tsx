@@ -627,7 +627,7 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
         supabase.from("custom_sheets").select("nome,columns").eq("id", sheetId).maybeSingle(),
         supabase.from("custom_sheet_rows").select("data,created_at").eq("sheet_id", sheetId).order("created_at", { ascending: false }).limit(10),
       ]);
-      const cols = ((sheet?.columns ?? []) as Array<{ key: string; label?: string }>) ?? [];
+      const cols = (sheet?.columns ?? []) as Array<{ key: string; label?: string }>;
       const titleKey = cols[0]?.key;
       const subKey = cols[1]?.key;
       const valKey = cols[2]?.key;
