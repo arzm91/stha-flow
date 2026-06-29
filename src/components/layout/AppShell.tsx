@@ -3,7 +3,9 @@ import { useNavigate } from "@tanstack/react-router";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Button } from "@/components/ui/button";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Sun, Moon } from "lucide-react";
+import { useTheme } from "@/lib/theme";
+
 import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
