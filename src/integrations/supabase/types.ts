@@ -1460,33 +1460,45 @@ export type Database = {
         Row: {
           capacidade: number | null
           codigo: string
+          cor: string | null
           created_at: string
           id: string
           nome: string
           owner_id: string
           produto_id: string | null
+          tag_nivel_modo: string
+          tag_nivel_nome: string | null
+          tipo: string
           unidade: string | null
           updated_at: string
         }
         Insert: {
           capacidade?: number | null
           codigo: string
+          cor?: string | null
           created_at?: string
           id?: string
           nome: string
           owner_id: string
           produto_id?: string | null
+          tag_nivel_modo?: string
+          tag_nivel_nome?: string | null
+          tipo?: string
           unidade?: string | null
           updated_at?: string
         }
         Update: {
           capacidade?: number | null
           codigo?: string
+          cor?: string | null
           created_at?: string
           id?: string
           nome?: string
           owner_id?: string
           produto_id?: string | null
+          tag_nivel_modo?: string
+          tag_nivel_nome?: string | null
+          tipo?: string
           unidade?: string | null
           updated_at?: string
         }
