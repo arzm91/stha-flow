@@ -93,9 +93,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootShell({ children }: { children: ReactNode }) {
+  // Inline script avoids flash of wrong theme on first paint
+  const noFlash = `(function(){try{var t=localStorage.getItem('sthapc:theme');if(t!=='light'){document.documentElement.classList.add('dark');document.documentElement.style.colorScheme='dark';}else{document.documentElement.style.colorScheme='light';}}catch(e){document.documentElement.classList.add('dark');}})();`;
   return (
-    <html lang="pt-BR" className="dark">
+    <html lang="pt-BR">
       <head>
+        <script dangerouslySetInnerHTML={{ __html: noFlash }} />
         <HeadContent />
       </head>
       <body>
@@ -121,10 +124,18 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="dark min-h-screen bg-background text-foreground">
-        <Outlet />
-      </div>
-      <Toaster richColors position="top-right" theme="dark" />
+      <ThemeProvider>
+        <div className="min-h-screen bg-background text-foreground">
+          <Outlet />
+        </div>
+        <ThemedToaster />
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
+
+function ThemedToaster() {
+  const { theme } = useTheme();
+  return <Toaster richColors position="top-right" theme={theme} />;
+}
+
