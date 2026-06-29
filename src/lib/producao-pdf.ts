@@ -47,6 +47,7 @@ export async function gerarRelatorioProducaoPdf(ordemId: string) {
   const observacoes = obsRes.data ?? [];
   const etapas = etapasRes.data ?? [];
   const movs = movsRes.data ?? [];
+  const tagHist = (tagHistRes.data ?? []) as { tag_nome: string; valor_num: number | null; unidade: string | null; registrado_em: string }[];
 
   // Operador
   let operador = "—";
