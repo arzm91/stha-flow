@@ -816,16 +816,80 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
     }
   };
 
-  const finalizar = async (etapaId: string, iniciadoEm: string) => {
+  const finalizar = async (etapaId: string, iniciadoEm: string, motivo?: string) => {
     try {
       const fim = new Date();
       const dur = Math.max(0, Math.floor((fim.getTime() - new Date(iniciadoEm).getTime()) / 1000));
       const { error } = await supabase
         .from("ordem_etapas")
-        .update({ finalizado_em: fim.toISOString(), duracao_seg: dur })
+        .update({
+          finalizado_em: fim.toISOString(),
+          duracao_seg: dur,
+          ...(motivo ? { motivo_atraso: motivo } : {}),
+        })
         .eq("id", etapaId);
       if (error) throw error;
       toast.success(`Etapa finalizada (${formatDuracao(dur)})`);
+      qc.invalidateQueries({ queryKey: ["ordem-etapas", ordemId] });
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
+  // Modal de motivo para atraso de processo
+  const [motivoDialog, setMotivoDialog] = useState<{
+    etapaId: string; iniciadoEm: string; processoNome: string; duracaoSeg: number; limiteMin: number;
+  } | null>(null);
+  const [motivoTexto, setMotivoTexto] = useState("");
+
+  const tentarFinalizarProcesso = (etapa: any, processo: any) => {
+    const durSeg = Math.floor((Date.now() - new Date(etapa.iniciado_em).getTime()) / 1000);
+    const limiteMin = processo.tempo_limite_min;
+    if (limiteMin != null && durSeg > limiteMin * 60) {
+      setMotivoTexto("");
+      setMotivoDialog({
+        etapaId: etapa.id, iniciadoEm: etapa.iniciado_em,
+        processoNome: processo.nome, duracaoSeg: durSeg, limiteMin,
+      });
+      return;
+    }
+    finalizar(etapa.id, etapa.iniciado_em);
+  };
+
+  // Captação imediata de uma tag (cria uma etapa já finalizada com o valor lido)
+  const capturarTag = async (processo: any, atividade: any) => {
+    if (disabled) return toast.error("Ordem finalizada.");
+    if (!atividade.tag_nome) return toast.error("Atividade sem tag associada.");
+    try {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Não autenticado");
+      const { data: tag, error: te } = await supabase
+        .from("tags_live")
+        .select("nome, valor, valor_num, unidade, atualizado_em")
+        .eq("nome", atividade.tag_nome)
+        .maybeSingle();
+      if (te) throw te;
+      if (!tag) throw new Error("Tag não encontrada nos dados recebidos.");
+      const agora = new Date().toISOString();
+      const valorTxt = tag.valor_num != null ? String(tag.valor_num) : (tag.valor ?? "—");
+      const obs = `Tag ${tag.nome} = ${valorTxt}${tag.unidade ? ` ${tag.unidade}` : ""} (leitura em ${new Date(tag.atualizado_em).toLocaleString("pt-BR")})`;
+      const { error } = await supabase.from("ordem_etapas").insert({
+        owner_id: u.user.id,
+        ordem_id: ordemId,
+        processo_id: processo.id,
+        processo_nome: processo.nome,
+        ordem_processo: processo.ordem,
+        atividade_id: atividade.id,
+        atividade_descricao: atividade.descricao,
+        tipo: "tag_captura",
+        ordem_atividade: atividade.ordem ?? 0,
+        iniciado_em: agora,
+        finalizado_em: agora,
+        duracao_seg: 0,
+        observacao: obs,
+      });
+      if (error) throw error;
+      toast.success("Leitura da tag registrada");
       qc.invalidateQueries({ queryKey: ["ordem-etapas", ordemId] });
     } catch (err) {
       toast.error((err as Error).message);
