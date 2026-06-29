@@ -391,7 +391,16 @@ function ProdutosPage() {
                               value={p.nome}
                               onChange={(e) => updateProcesso(pi, { nome: e.target.value })}
                               placeholder="Nome do processo (ex.: Preparação)"
-                              className="h-8"
+                              className="h-8 flex-1"
+                            />
+                            <Input
+                              type="number"
+                              min="0"
+                              value={p.tempo_limite_min}
+                              onChange={(e) => updateProcesso(pi, { tempo_limite_min: e.target.value })}
+                              placeholder="Tempo limite (min)"
+                              className="h-8 w-36"
+                              title="Tempo limite para conclusão deste processo (em minutos). Se ultrapassado, o operador deverá registrar o motivo."
                             />
                             <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => moveProcesso(pi, -1)} disabled={pi === 0}>↑</Button>
                             <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => moveProcesso(pi, 1)} disabled={pi === processos.length - 1}>↓</Button>
