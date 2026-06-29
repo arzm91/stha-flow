@@ -488,6 +488,9 @@ function AlertasPage() {
                   <SelectContent>
                     <SelectItem value="tag_min_max">Tag fora dos limites</SelectItem>
                     <SelectItem value="tag_stale">Tag sem atualização</SelectItem>
+                    <SelectItem value="parametro_min_max">Parâmetro fora dos limites</SelectItem>
+                    <SelectItem value="analise_min_max">Análise fora dos limites</SelectItem>
+                    <SelectItem value="processo_evento">Evento de processo</SelectItem>
                     <SelectItem value="custom">Personalizado (via automação)</SelectItem>
                   </SelectContent>
                 </Select>
