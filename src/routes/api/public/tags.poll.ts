@@ -28,7 +28,8 @@ async function handle(request: Request) {
 
   const backendUrl = process.env.SUPABASE_URL;
   const apiKey = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY;
-  if (!backendUrl || !apiKey) {
+  const internalSecret = process.env.TAGS_POLL_SECRET;
+  if (!backendUrl || !apiKey || !internalSecret) {
     return json({ ok: false, message: "Backend não configurado para sincronização" }, 500);
   }
 
@@ -39,6 +40,7 @@ async function handle(request: Request) {
       Accept: "application/json",
       "Content-Type": "application/json",
       apikey: apiKey,
+      "x-tags-poll-secret": internalSecret,
     },
     body: request.method === "GET" ? undefined : await request.text().catch(() => "{}"),
     signal: AbortSignal.timeout(25_000),

@@ -27,13 +27,13 @@ function json(body: unknown, status = 200) {
 
 function hasValidApiKey(request: Request) {
   const url = new URL(request.url);
-  const provided = request.headers.get("apikey") || request.headers.get("x-api-key") || url.searchParams.get("key");
-  const expected = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY");
-  // Em Lovable Cloud algumas funções recebem apenas os segredos de serviço.
-  // Como esta rota só dispara a coleta de endpoints já cadastrados no banco,
-  // aceitamos qualquer chave pública longa enviada pelo app/cron quando a chave
-  // pública não está disponível como variável de ambiente da função.
-  return Boolean(provided && ((expected && provided === expected) || (!expected && provided.length > 80)));
+  const internalProvided = request.headers.get("x-tags-poll-secret");
+  const internalExpected = Deno.env.get("TAGS_POLL_SECRET");
+  if (internalProvided && internalExpected && internalProvided === internalExpected) return true;
+
+  const publicProvided = request.headers.get("apikey") || request.headers.get("x-api-key") || url.searchParams.get("key");
+  const publicExpected = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY");
+  return Boolean(publicProvided && publicExpected && publicProvided === publicExpected);
 }
 
 function createAdminClient() {
