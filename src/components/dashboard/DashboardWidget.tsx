@@ -163,7 +163,139 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
     );
   }
 
+
+  if (data.kind === "tank") {
+    return (
+      <div className="h-full overflow-auto">
+        <StorageLocationCard loc={data.loc} saldo={data.saldo} tag={data.tag} />
+      </div>
+    );
+  }
+
+  if (data.kind === "producao-prev") {
+    if (!data.ordem) {
+      return (
+        <div className="grid h-full place-items-center text-center text-xs text-muted-foreground">
+          <div>
+            <Factory className="mx-auto mb-2 h-6 w-6 opacity-60" />
+            <div className="font-medium text-foreground">{data.equipamento_nome ?? "Equipamento"}</div>
+            <div>Sem produção ativa</div>
+          </div>
+        </div>
+      );
+    }
+    const o = data.ordem;
+    const pct = o.qtd_planejada > 0 ? Math.min(100, (o.qtd_produzida / o.qtd_planejada) * 100) : 0;
+    return (
+      <Link to="/producao/$id" params={{ id: o.id }} className="block h-full">
+        <div className="flex h-full flex-col gap-2 text-sm">
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0">
+              <div className="truncate text-xs uppercase tracking-wider text-muted-foreground">{data.equipamento_nome}</div>
+              <div className="truncate font-semibold">{o.numero}</div>
+            </div>
+            <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+              {o.status}
+            </span>
+          </div>
+          <div className="truncate text-xs text-muted-foreground">{o.produto_nome}</div>
+          <div className="mt-auto">
+            <div className="flex items-baseline justify-between">
+              <span className="font-mono text-lg font-semibold">{formatNumber(o.qtd_produzida)}</span>
+              <span className="text-xs text-muted-foreground">/ {formatNumber(o.qtd_planejada)}</span>
+            </div>
+            <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div className="h-full rounded-full bg-primary" style={{ width: `${pct}%` }} />
+            </div>
+            <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
+              <span>{pct.toFixed(0)}%</span>
+              <span>iniciado {new Date(o.inicio_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+            </div>
+          </div>
+        </div>
+      </Link>
+    );
+  }
+
+  if (data.kind === "xray-manut") {
+    const x = data;
+    return (
+      <div className="flex h-full flex-col gap-3">
+        <div className="grid grid-cols-4 gap-2">
+          <MiniStat icon={<Wrench className="h-3 w-3" />} label="Abertas" value={x.abertas} />
+          <MiniStat icon={<Clock className="h-3 w-3" />} label="Em andamento" value={x.em_andamento} tone="text-primary" />
+          <MiniStat icon={<AlertOctagon className="h-3 w-3" />} label="Atrasadas" value={x.atrasadas} tone="text-destructive" />
+          <MiniStat icon={<CheckCircle2 className="h-3 w-3" />} label="Concluídas 30d" value={x.concluidas_30d} tone="text-success" />
+        </div>
+        <div className="min-h-0 flex-1 overflow-auto">
+          <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Próximas</div>
+          {x.proximas.length === 0 ? (
+            <div className="text-xs text-muted-foreground">Nada agendado</div>
+          ) : (
+            <ul className="divide-y text-sm">
+              {x.proximas.map((p, i) => (
+                <li key={i} className="flex items-center justify-between gap-2 py-1.5">
+                  <span className="truncate"><span className="font-medium">{p.numero}</span> <span className="text-xs text-muted-foreground">· {p.prioridade}</span></span>
+                  <span className="shrink-0 font-mono text-[11px] text-muted-foreground">{p.data}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (data.kind === "xray-qual") {
+    const x = data;
+    const total = x.conformes + x.naoconformes;
+    const pct = total ? (x.conformes / total) * 100 : 100;
+    return (
+      <div className="flex h-full flex-col gap-3">
+        <div className="grid grid-cols-3 gap-2">
+          <MiniStat icon={<FlaskConical className="h-3 w-3" />} label="Análises 7d" value={total} />
+          <MiniStat icon={<CheckCircle2 className="h-3 w-3" />} label="Conformes" value={x.conformes} tone="text-success" />
+          <MiniStat icon={<AlertOctagon className="h-3 w-3" />} label="Não-conformes" value={x.naoconformes} tone={x.naoconformes ? "text-destructive" : undefined} />
+        </div>
+        <div>
+          <div className="mb-1 flex justify-between text-[11px] text-muted-foreground">
+            <span>Taxa de conformidade</span><span className="font-mono">{pct.toFixed(1)}%</span>
+          </div>
+          <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div className="h-full rounded-full bg-success" style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+        <div className="min-h-0 flex-1 overflow-auto">
+          <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Últimas NC</div>
+          {x.ultimas_nc.length === 0 ? (
+            <div className="text-xs text-muted-foreground">Nenhuma não-conformidade recente</div>
+          ) : (
+            <ul className="divide-y text-sm">
+              {x.ultimas_nc.map((p, i) => (
+                <li key={i} className="flex items-center justify-between gap-2 py-1.5">
+                  <span className="truncate">{p.titulo}</span>
+                  <span className="shrink-0 font-mono text-[11px] text-destructive">{p.valor}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return null;
+}
+
+function MiniStat({ icon, label, value, tone }: { icon?: React.ReactNode; label: string; value: number | string; tone?: string }) {
+  return (
+    <div className="rounded-md border bg-card/50 p-2">
+      <div className="flex items-center gap-1 text-[10px] uppercase tracking-wider text-muted-foreground">
+        {icon}<span className="truncate">{label}</span>
+      </div>
+      <div className={`mt-0.5 font-mono text-lg font-semibold ${tone ?? ""}`}>{typeof value === "number" ? formatInt(value) : value}</div>
+    </div>
+  );
 }
 
 // ============ Data fetchers ============
@@ -174,7 +306,11 @@ type WidgetData =
   | { kind: "line"; points: { label: string; entrada: number; saida: number }[] }
   | { kind: "pie"; points: { label: string; value: number }[] }
   | { kind: "list"; items: { title: string; subtitle?: string; value?: string }[] }
-  | { kind: "gauge"; value: number; max: number; unit?: string; tag: string };
+  | { kind: "gauge"; value: number; max: number; unit?: string; tag: string }
+  | { kind: "tank"; loc: StorageLocation; saldo: number; tag: { nome: string; valor_num: number | null; valor: string | null; unidade: string | null } | null }
+  | { kind: "producao-prev"; equipamento_nome: string; ordem: { id: string; numero: string; status: string; produto_nome: string; qtd_planejada: number; qtd_produzida: number; inicio_em: string } | null }
+  | { kind: "xray-manut"; abertas: number; em_andamento: number; atrasadas: number; concluidas_30d: number; proximas: { numero: string; prioridade: string; data: string }[] }
+  | { kind: "xray-qual"; conformes: number; naoconformes: number; ultimas_nc: { titulo: string; valor: string }[] };
 
 async function fetchData(fonte: string, config: Record<string, unknown>): Promise<WidgetData> {
   switch (fonte) {
