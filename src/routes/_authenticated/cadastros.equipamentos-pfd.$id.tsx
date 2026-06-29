@@ -601,6 +601,7 @@ function PfdEditor() {
               onEdgeClick={(_, e) => { setSelectedEdgeId(e.id); setSelectedNodeId(null); }}
               onPaneClick={() => { setSelectedNodeId(null); setSelectedEdgeId(null); }}
               fitView
+              connectionMode={ConnectionMode.Loose}
               deleteKeyCode={["Delete", "Backspace"]}
             >
               <Background gap={16} />
