@@ -7,7 +7,8 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { getSource } from "@/lib/dashboard/widget-catalog";
 import { formatInt, formatNumber } from "@/lib/format";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, Wrench, FlaskConical, Factory, CheckCircle2, Clock, AlertOctagon } from "lucide-react";
+import { StorageLocationCard, type StorageLocation } from "@/components/StorageLocationCard";
 
 type WidgetRow = {
   id: string;
