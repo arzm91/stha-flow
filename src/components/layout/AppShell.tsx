@@ -3,7 +3,9 @@ import { useNavigate } from "@tanstack/react-router";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Button } from "@/components/ui/button";
-import { LogOut, User } from "lucide-react";
+import { LogOut, User, Sun, Moon } from "lucide-react";
+import { useTheme } from "@/lib/theme";
+
 import { supabase } from "@/integrations/supabase/client";
 import {
   DropdownMenu,
@@ -18,7 +20,9 @@ import { useQueryClient } from "@tanstack/react-query";
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { theme, toggle } = useTheme();
   const [profile, setProfile] = useState<{ nome: string; empresa: string | null; email: string | null } | null>(null);
+
 
   useEffect(() => {
     (async () => {
@@ -53,6 +57,16 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span className="text-sm font-semibold">{profile?.empresa ?? "—"}</span>
             </div>
             <div className="ml-auto flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggle}
+                aria-label={theme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
+                title={theme === "dark" ? "Modo claro" : "Modo escuro"}
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="gap-2">
