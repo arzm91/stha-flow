@@ -755,7 +755,7 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
     queryFn: async () => {
       const { data: ps, error } = await supabase
         .from("produto_processos")
-        .select("id, nome, ordem")
+        .select("id, nome, ordem, tempo_limite_min")
         .eq("produto_id", produtoId)
         .order("ordem", { ascending: true });
       if (error) throw error;
@@ -763,7 +763,7 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
       const { data: ats } = ids.length
         ? await supabase
             .from("produto_atividades")
-            .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min")
+            .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min, tag_nome")
             .in("processo_id", ids)
             .order("ordem", { ascending: true })
         : { data: [] };
