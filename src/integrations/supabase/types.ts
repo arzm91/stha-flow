@@ -426,6 +426,42 @@ export type Database = {
         }
         Relationships: []
       }
+      dashboard_widgets: {
+        Row: {
+          config: Json
+          created_at: string
+          fonte: string
+          id: string
+          layout: Json
+          tipo: string
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          fonte: string
+          id?: string
+          layout?: Json
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          fonte?: string
+          id?: string
+          layout?: Json
+          tipo?: string
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       equipamentos: {
         Row: {
           ativo: boolean
