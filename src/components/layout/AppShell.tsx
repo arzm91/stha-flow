@@ -57,6 +57,16 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span className="text-sm font-semibold">{profile?.empresa ?? "—"}</span>
             </div>
             <div className="ml-auto flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggle}
+                aria-label={theme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
+                title={theme === "dark" ? "Modo claro" : "Modo escuro"}
+              >
+                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </Button>
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="gap-2">
