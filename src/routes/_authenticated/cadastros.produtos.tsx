@@ -433,26 +433,52 @@ function ProdutosPage() {
                                         <option value="acao">Ação</option>
                                         <option value="materia_prima">Matéria-prima</option>
                                         <option value="medicao">Medição</option>
+                                        <option value="tag_captura">Captação de tag</option>
                                       </select>
                                     </div>
-                                    <div className="col-span-3 sm:col-span-1">
-                                      <Input
-                                        type="number"
-                                        step="0.001"
-                                        value={a.quantidade}
-                                        onChange={(e) => updateAtividade(pi, ai, { quantidade: e.target.value })}
-                                        placeholder="Qtd"
-                                        className="h-8"
-                                      />
-                                    </div>
-                                    <div className="col-span-3 sm:col-span-1">
-                                      <Input
-                                        value={a.unidade}
-                                        onChange={(e) => updateAtividade(pi, ai, { unidade: e.target.value })}
-                                        placeholder="un"
-                                        className="h-8"
-                                      />
-                                    </div>
+                                    {a.tipo === "tag_captura" ? (
+                                      <div className="col-span-12 sm:col-span-4">
+                                        <select
+                                          value={a.tag_nome}
+                                          onChange={(e) => {
+                                            const sel = (tagsList.data ?? []).find((t) => t.nome === e.target.value);
+                                            updateAtividade(pi, ai, {
+                                              tag_nome: e.target.value,
+                                              unidade: sel?.unidade ?? a.unidade,
+                                            });
+                                          }}
+                                          className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                                        >
+                                          <option value="">— selecione a tag —</option>
+                                          {(tagsList.data ?? []).map((t) => (
+                                            <option key={t.nome} value={t.nome}>
+                                              {t.nome}{t.grupo ? ` (${t.grupo})` : ""}{t.unidade ? ` · ${t.unidade}` : ""}
+                                            </option>
+                                          ))}
+                                        </select>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <div className="col-span-3 sm:col-span-1">
+                                          <Input
+                                            type="number"
+                                            step="0.001"
+                                            value={a.quantidade}
+                                            onChange={(e) => updateAtividade(pi, ai, { quantidade: e.target.value })}
+                                            placeholder="Qtd"
+                                            className="h-8"
+                                          />
+                                        </div>
+                                        <div className="col-span-3 sm:col-span-1">
+                                          <Input
+                                            value={a.unidade}
+                                            onChange={(e) => updateAtividade(pi, ai, { unidade: e.target.value })}
+                                            placeholder="un"
+                                            className="h-8"
+                                          />
+                                        </div>
+                                      </>
+                                    )}
                                     <div className="col-span-9 sm:col-span-2">
                                       <Input
                                         type="number"
