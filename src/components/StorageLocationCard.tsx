@@ -166,7 +166,7 @@ function PalletVisual({
 }: { cor?: string; saldo: number; unidade?: string | null; capacidade?: number | string | null; tag?: TagLive | null; hasTag: boolean }) {
   const fill = cor || "var(--primary)";
   const cap = capacidade ? Number(capacidade) : null;
-  const layers = Math.max(1, Math.min(6, Math.round((saldo / Math.max(1, cap ?? saldo || 1)) * 6) || 1));
+  const layers = Math.max(1, Math.min(6, Math.round((saldo / Math.max(1, (cap ?? saldo) || 1)) * 6) || 1));
   return (
     <div className="grid grid-cols-2 gap-3 items-center">
       <div className="flex flex-col items-center">
