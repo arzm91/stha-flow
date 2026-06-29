@@ -1,158 +1,359 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import GridLayout, { type Layout, type LayoutItem } from "react-grid-layout";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
-import { KpiCard } from "@/components/KpiCard";
 import { EmptyState } from "@/components/EmptyState";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
-  Factory, Boxes, ClipboardCheck, Activity, Play, CheckCircle2, Pause,
-  ArrowDownToLine, ArrowUpFromLine, AlertTriangle, Cpu,
-} from "lucide-react";
-import { formatInt, formatNumber, formatDuration } from "@/lib/format";
+  Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription,
+} from "@/components/ui/dialog";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import { Plus, Pencil, X, LayoutGrid, Lock, Unlock } from "lucide-react";
+import { toast } from "sonner";
+import { WIDGET_SOURCES, getSource, type WidgetSource } from "@/lib/dashboard/widget-catalog";
+import { DashboardWidget } from "@/components/dashboard/DashboardWidget";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: DashboardPage,
 });
 
+type Widget = {
+  id: string;
+  titulo: string;
+  tipo: string;
+  fonte: string;
+  config: Record<string, unknown>;
+  layout: { x: number; y: number; w: number; h: number };
+};
+
+type TagRow = { nome: string; unidade: string | null };
+
+const COLS = 12;
+const ROW_H = 60;
+
 function DashboardPage() {
-  const q = useQuery({
-    queryKey: ["dashboard"],
+  const qc = useQueryClient();
+  const [editing, setEditing] = useState<Widget | null>(null);
+  const [newOpen, setNewOpen] = useState(false);
+  const [locked, setLocked] = useState(true);
+
+  const widgets = useQuery({
+    queryKey: ["dashboard_widgets"],
     queryFn: async () => {
-      const today = new Date(); today.setHours(0, 0, 0, 0);
-      const todayISO = today.toISOString();
-
-      const [eq, ops, prods, mov, anls, params] = await Promise.all([
-        supabase.from("equipamentos").select("id,status,ativo"),
-        supabase.from("ordens_producao").select("id,status,inicio_em,fim_em,qtd_produzida,equipamento_id"),
-        supabase.from("produtos").select("id"),
-        supabase.from("movimentacoes_estoque").select("id,tipo,quantidade,ocorrido_em"),
-        supabase.from("analises_registradas").select("id,resultado,analise_id"),
-        supabase.from("analises_cadastro").select("id,nome,valor_min,valor_max"),
-      ]);
-
-      const equip = eq.data ?? [];
-      const ordens = ops.data ?? [];
-      const movs = mov.data ?? [];
-      const analises = anls.data ?? [];
-      const paramsMap = new Map((params.data ?? []).map((p) => [p.id, p]));
-
-      const emAndamento = ordens.filter((o) => o.status === "em_andamento").length;
-      const finalizadas = ordens.filter((o) => o.status === "finalizada").length;
-      const opEquip = equip.filter((e) => e.status === "ocupado").length;
-      const equipParados = equip.filter((e) => e.status === "parado" || !e.ativo).length;
-
-      const tempos = ordens
-        .filter((o) => o.fim_em && o.inicio_em)
-        .map((o) => new Date(o.fim_em!).getTime() - new Date(o.inicio_em).getTime());
-      const tempoMedio = tempos.length ? tempos.reduce((a, b) => a + b, 0) / tempos.length : 0;
-      const qtdTotal = ordens.reduce((s, o) => s + Number(o.qtd_produzida ?? 0), 0);
-
-      const movHoje = movs.filter((m) => new Date(m.ocorrido_em) >= today);
-      const entradas = movs.filter((m) => m.tipo === "entrada").reduce((s, m) => s + Number(m.quantidade), 0);
-      const saidas = movs.filter((m) => m.tipo === "saida").reduce((s, m) => s + Number(m.quantidade), 0);
-      const saldo = entradas - saidas;
-
-      const naoConformes = analises.filter((a) => {
-        const ref = paramsMap.get(a.analise_id);
-        if (!ref) return false;
-        const v = Number(a.resultado);
-        if (ref.valor_min != null && v < Number(ref.valor_min)) return true;
-        if (ref.valor_max != null && v > Number(ref.valor_max)) return true;
-        return false;
-      }).length;
-
-      const eficiencia = ordens.length
-        ? Math.min(100, (finalizadas / ordens.length) * 100)
-        : 0;
-
-      return {
-        emAndamento, finalizadas, opEquip, equipParados,
-        tempoMedio, qtdTotal,
-        saldo, entradas, saidas, movHoje: movHoje.length,
-        analisesTotal: analises.length, naoConformes,
-        eficiencia,
-        equipTotal: equip.length, produtos: (prods.data ?? []).length,
-      };
+      const { data, error } = await supabase
+        .from("dashboard_widgets")
+        .select("id,titulo,tipo,fonte,config,layout")
+        .order("created_at");
+      if (error) throw error;
+      return (data ?? []) as unknown as Widget[];
     },
-    refetchInterval: 30_000,
   });
 
-  const d = q.data;
-  const empty = !d || (d.equipTotal === 0 && d.produtos === 0);
+  const tags = useQuery({
+    queryKey: ["tags-live-names"],
+    queryFn: async () => {
+      const { data } = await supabase.from("tags_live").select("nome,unidade").order("nome");
+      return (data ?? []) as TagRow[];
+    },
+  });
+
+  const save = useMutation({
+    mutationFn: async (w: Partial<Widget> & { id?: string }) => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Não autenticado");
+      if (w.id) {
+        const { error } = await supabase.from("dashboard_widgets").update({
+          titulo: w.titulo, tipo: w.tipo, fonte: w.fonte, config: w.config, layout: w.layout,
+        }).eq("id", w.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("dashboard_widgets").insert({
+          user_id: u.user.id,
+          titulo: w.titulo!, tipo: w.tipo!, fonte: w.fonte!, config: w.config ?? {}, layout: w.layout ?? { x: 0, y: 999, w: 3, h: 2 },
+        });
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["dashboard_widgets"] });
+      setEditing(null);
+      setNewOpen(false);
+      toast.success("Widget salvo");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("dashboard_widgets").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["dashboard_widgets"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateLayouts = useMutation({
+    mutationFn: async (items: { id: string; layout: Widget["layout"] }[]) => {
+      await Promise.all(items.map((it) =>
+        supabase.from("dashboard_widgets").update({ layout: it.layout }).eq("id", it.id),
+      ));
+    },
+  });
+
+  const handleLayoutChange = (next: readonly LayoutItem[]) => {
+    if (!widgets.data || locked) return;
+    const changed: { id: string; layout: Widget["layout"] }[] = [];
+    for (const l of next) {
+      const w = widgets.data.find((x) => x.id === l.i);
+      if (!w) continue;
+      const cur = w.layout;
+      if (cur.x !== l.x || cur.y !== l.y || cur.w !== l.w || cur.h !== l.h) {
+        changed.push({ id: w.id, layout: { x: l.x, y: l.y, w: l.w, h: l.h } });
+      }
+    }
+    if (changed.length) updateLayouts.mutate(changed);
+  };
 
   return (
-    <div>
+    <div className="space-y-5">
       <PageHeader
         title="Dashboard"
-        description="Visão executiva da operação industrial."
+        description="Sua central de controle — adicione, mova e redimensione widgets de todo o sistema."
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" className="gap-1">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              ao vivo
+            </Badge>
+            <Button size="sm" variant="outline" onClick={() => setLocked((v) => !v)}>
+              {locked ? <><Lock className="mr-2 h-4 w-4" />Layout travado</> : <><Unlock className="mr-2 h-4 w-4" />Layout editável</>}
+            </Button>
+            <Dialog open={newOpen} onOpenChange={setNewOpen}>
+              <DialogTrigger asChild>
+                <Button size="sm"><Plus className="mr-2 h-4 w-4" />Novo widget</Button>
+              </DialogTrigger>
+              <WidgetDialog
+                key={newOpen ? "new" : "closed"}
+                tags={tags.data ?? []}
+                onSave={(p) => save.mutate(p)}
+                loading={save.isPending}
+              />
+            </Dialog>
+          </div>
+        }
       />
-      {empty ? (
+
+      {widgets.isLoading ? (
+        <div className="text-sm text-muted-foreground">Carregando widgets...</div>
+      ) : !widgets.data || widgets.data.length === 0 ? (
         <EmptyState
-          icon={<Cpu className="h-6 w-6" />}
-          title="Bem-vindo ao STHApc"
-          description="Comece cadastrando equipamentos e produtos para liberar todas as métricas."
-          action={
-            <div className="flex gap-2">
-              <Button asChild><Link to="/cadastros/equipamentos">Cadastrar equipamento</Link></Button>
-              <Button asChild variant="secondary"><Link to="/cadastros/produtos">Cadastrar produto</Link></Button>
-            </div>
-          }
+          icon={<LayoutGrid className="h-6 w-6" />}
+          title="Seu dashboard está vazio"
+          description="Adicione widgets para acompanhar produção, estoque, alertas, manutenção e mais."
+          action={<Button onClick={() => setNewOpen(true)}><Plus className="mr-2 h-4 w-4" />Adicionar primeiro widget</Button>}
         />
-      ) : null}
+      ) : (
+        <DashboardGrid
+          widgets={widgets.data}
+          locked={locked}
+          onEdit={setEditing}
+          onDelete={(id) => remove.mutate(id)}
+          onLayoutChange={handleLayoutChange}
+        />
+      )}
 
-      <section className="mt-2">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Produção</h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-6">
-          <KpiCard label="Em andamento" value={formatInt(d?.emAndamento ?? 0)} icon={<Play className="h-4 w-4" />} tone="primary" to="/producao" />
-          <KpiCard label="Finalizadas" value={formatInt(d?.finalizadas ?? 0)} icon={<CheckCircle2 className="h-4 w-4" />} tone="success" to="/relatorios/producao" />
-          <KpiCard label="Equip. operando" value={formatInt(d?.opEquip ?? 0)} icon={<Factory className="h-4 w-4" />} to="/producao" />
-          <KpiCard label="Equip. parados" value={formatInt(d?.equipParados ?? 0)} icon={<Pause className="h-4 w-4" />} tone="warning" to="/cadastros/equipamentos" />
-          <KpiCard label="Tempo médio" value={formatDuration(d?.tempoMedio)} icon={<Activity className="h-4 w-4" />} to="/indicadores" />
-          <KpiCard label="Qtd. produzida" value={formatNumber(d?.qtdTotal ?? 0)} icon={<ClipboardCheck className="h-4 w-4" />} to="/relatorios/producao" />
-        </div>
-      </section>
-
-      <section className="mt-6">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Estoque</h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          <KpiCard label="Saldo atual" value={formatNumber(d?.saldo ?? 0)} icon={<Boxes className="h-4 w-4" />} tone="primary" to="/estoque" />
-          <KpiCard label="Entradas" value={formatNumber(d?.entradas ?? 0)} icon={<ArrowDownToLine className="h-4 w-4" />} tone="success" to="/relatorios/estoque" />
-          <KpiCard label="Saídas" value={formatNumber(d?.saidas ?? 0)} icon={<ArrowUpFromLine className="h-4 w-4" />} to="/relatorios/estoque" />
-          <KpiCard label="Movim. de hoje" value={formatInt(d?.movHoje ?? 0)} to="/estoque/movimentacao" />
-        </div>
-      </section>
-
-      <section className="mt-6">
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">Qualidade</h2>
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-          <KpiCard label="Análises realizadas" value={formatInt(d?.analisesTotal ?? 0)} icon={<ClipboardCheck className="h-4 w-4" />} to="/relatorios/qualidade" />
-          <KpiCard label="Não conformidades" value={formatInt(d?.naoConformes ?? 0)} icon={<AlertTriangle className="h-4 w-4" />} tone={d?.naoConformes ? "destructive" : "default"} to="/relatorios/qualidade" />
-          <KpiCard label="Eficiência operacional" value={`${formatNumber(d?.eficiencia ?? 0, 1)}%`} icon={<Activity className="h-4 w-4" />} tone="success" to="/indicadores" />
-        </div>
-      </section>
-
-      <section className="mt-6 grid gap-3 md:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle className="text-base">Atalhos rápidos</CardTitle></CardHeader>
-          <CardContent className="flex flex-wrap gap-2">
-            <Button asChild><Link to="/producao/nova">Nova Ordem de Produção</Link></Button>
-            <Button asChild variant="secondary"><Link to="/estoque/movimentacao">Movimentar estoque</Link></Button>
-            <Button asChild variant="outline"><Link to="/cadastros/equipamentos">Cadastros</Link></Button>
-            <Button asChild variant="outline"><Link to="/indicadores">Indicadores</Link></Button>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle className="text-base">Indicadores gerais</CardTitle></CardHeader>
-          <CardContent className="grid grid-cols-2 gap-3">
-            <KpiCard label="OEE estimado" value={`${formatNumber(d?.eficiencia ?? 0, 1)}%`} tone="primary" />
-            <KpiCard label="Equipamentos" value={formatInt(d?.equipTotal ?? 0)} to="/cadastros/equipamentos" />
-            <KpiCard label="Produtos" value={formatInt(d?.produtos ?? 0)} to="/cadastros/produtos" />
-            <KpiCard label="Movimentações" value={formatInt((d?.entradas ?? 0) + (d?.saidas ?? 0) > 0 ? 1 : 0)} to="/estoque" />
-          </CardContent>
-        </Card>
-      </section>
+      {editing && (
+        <Dialog open onOpenChange={(o) => !o && setEditing(null)}>
+          <WidgetDialog
+            key={editing.id}
+            initial={editing}
+            tags={tags.data ?? []}
+            onSave={(p) => save.mutate({ ...p, id: editing.id, layout: editing.layout })}
+            loading={save.isPending}
+          />
+        </Dialog>
+      )}
     </div>
+  );
+}
+
+function DashboardGrid({
+  widgets, locked, onEdit, onDelete, onLayoutChange,
+}: {
+  widgets: Widget[];
+  locked: boolean;
+  onEdit: (w: Widget) => void;
+  onDelete: (id: string) => void;
+  onLayoutChange: (l: readonly LayoutItem[]) => void;
+}) {
+  const [width, setWidth] = useState(1200);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(() => setWidth(el.clientWidth));
+    ro.observe(el);
+    setWidth(el.clientWidth);
+    return () => ro.disconnect();
+  }, []);
+
+  const layout: LayoutItem[] = widgets.map((w) => ({
+    i: w.id, x: w.layout.x, y: w.layout.y, w: w.layout.w, h: w.layout.h, minW: 2, minH: 2,
+  }));
+
+  return (
+    <div ref={ref} className={`w-full ${locked ? "pd-no-resize" : ""}`}>
+      <GridLayout
+        className="layout"
+        layout={layout as unknown as Layout}
+        width={width}
+        gridConfig={{ cols: COLS, rowHeight: ROW_H, margin: [12, 12] }}
+        dragConfig={{ handle: ".widget-drag", disabled: locked }}
+        onLayoutChange={onLayoutChange as (l: Layout) => void}
+      >
+        {widgets.map((w) => (
+          <div key={w.id}>
+            <Card className="h-full overflow-hidden flex flex-col">
+              <CardHeader className={`flex-row items-center justify-between space-y-0 py-2 px-3 border-b ${locked ? "" : "widget-drag cursor-move"}`}>
+                <CardTitle className="text-sm font-semibold truncate">{w.titulo}</CardTitle>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(w)}>
+                    <Pencil className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => onDelete(w.id)}>
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1 min-h-0 p-3">
+                <DashboardWidget widget={w} />
+              </CardContent>
+            </Card>
+          </div>
+        ))}
+      </GridLayout>
+    </div>
+  );
+}
+
+// ---------- Widget Dialog ----------
+function WidgetDialog({
+  initial, tags, onSave, loading,
+}: {
+  initial?: Widget;
+  tags: TagRow[];
+  onSave: (w: Partial<Widget>) => void;
+  loading: boolean;
+}) {
+  const [titulo, setTitulo] = useState(initial?.titulo ?? "");
+  const [fonte, setFonte] = useState(initial?.fonte ?? "");
+  const [tagNome, setTagNome] = useState<string>(String(initial?.config?.tag_nome ?? ""));
+  const [min, setMin] = useState<string>(String(initial?.config?.min ?? "0"));
+  const [max, setMax] = useState<string>(String(initial?.config?.max ?? "100"));
+
+  const src = getSource(fonte);
+
+  // auto-fill title when picking source
+  useEffect(() => {
+    if (!initial && src && !titulo) setTitulo(src.label);
+  }, [fonte]); // eslint-disable-line
+
+  const grouped = useMemo(() => {
+    const g: Record<string, WidgetSource[]> = {};
+    for (const s of WIDGET_SOURCES) {
+      (g[s.grupo] ??= []).push(s);
+    }
+    return g;
+  }, []);
+
+  const submit = () => {
+    if (!fonte || !src) { toast.error("Escolha uma fonte de dados"); return; }
+    if (src.needsTag && !tagNome) { toast.error("Escolha uma tag"); return; }
+    const config: Record<string, unknown> = {};
+    if (src.needsTag) config.tag_nome = tagNome;
+    if (fonte === "tag.gauge") {
+      config.min = Number(min) || 0;
+      config.max = Number(max) || 100;
+    }
+    const layout = initial?.layout ?? {
+      x: 0, y: 999,
+      w: src.defaultSize?.w ?? 3,
+      h: src.defaultSize?.h ?? 2,
+    };
+    onSave({ titulo: titulo || src.label, tipo: src.tipo, fonte, config, layout });
+  };
+
+  return (
+    <DialogContent className="max-w-lg">
+      <DialogHeader>
+        <DialogTitle>{initial ? "Editar widget" : "Novo widget"}</DialogTitle>
+        <DialogDescription>Escolha a fonte de dados e personalize o título.</DialogDescription>
+      </DialogHeader>
+      <div className="space-y-4">
+        <div>
+          <Label>Fonte de dados</Label>
+          <Select value={fonte} onValueChange={setFonte}>
+            <SelectTrigger><SelectValue placeholder="Escolha uma fonte..." /></SelectTrigger>
+            <SelectContent className="max-h-[400px]">
+              {Object.entries(grouped).map(([grupo, items]) => (
+                <div key={grupo}>
+                  <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{grupo}</div>
+                  {items.map((s) => (
+                    <SelectItem key={s.key} value={s.key}>
+                      <span className="mr-2 text-[10px] uppercase text-muted-foreground">[{s.tipo}]</span>
+                      {s.label}
+                    </SelectItem>
+                  ))}
+                </div>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Título</Label>
+          <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ex: Produção do dia" />
+        </div>
+        {src?.needsTag && (
+          <div>
+            <Label>Tag</Label>
+            <Select value={tagNome} onValueChange={setTagNome}>
+              <SelectTrigger><SelectValue placeholder="Escolha uma tag..." /></SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {tags.length === 0 ? (
+                  <div className="px-3 py-2 text-xs text-muted-foreground">Nenhuma tag recebida</div>
+                ) : tags.map((t) => (
+                  <SelectItem key={t.nome} value={t.nome}>
+                    {t.nome}{t.unidade ? ` (${t.unidade})` : ""}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+        {fonte === "tag.gauge" && (
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Mínimo</Label>
+              <Input type="number" value={min} onChange={(e) => setMin(e.target.value)} />
+            </div>
+            <div>
+              <Label>Máximo</Label>
+              <Input type="number" value={max} onChange={(e) => setMax(e.target.value)} />
+            </div>
+          </div>
+        )}
+      </div>
+      <DialogFooter>
+        <Button onClick={submit} disabled={loading}>{loading ? "Salvando..." : "Salvar"}</Button>
+      </DialogFooter>
+    </DialogContent>
   );
 }
