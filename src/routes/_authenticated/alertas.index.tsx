@@ -566,6 +566,111 @@ function AlertasPage() {
               </div>
             )}
 
+            {form.tipo === "parametro_min_max" && (
+              <div className="grid gap-2">
+                <Label>Parâmetro</Label>
+                <Select
+                  value={form.parametro_id ?? ""}
+                  onValueChange={(v) => setForm({ ...form, parametro_id: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione um parâmetro" /></SelectTrigger>
+                  <SelectContent>
+                    {parametros.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                        {p.unidade ? ` (${p.unidade})` : ""}
+                        {p.valor_min != null || p.valor_max != null
+                          ? ` — limites: ${p.valor_min ?? "—"} / ${p.valor_max ?? "—"}`
+                          : " — sem limites cadastrados"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Dispara quando o valor registrado sair dos limites definidos no cadastro do parâmetro.
+                </p>
+              </div>
+            )}
+
+            {form.tipo === "analise_min_max" && (
+              <div className="grid gap-2">
+                <Label>Análise</Label>
+                <Select
+                  value={form.analise_id ?? ""}
+                  onValueChange={(v) => setForm({ ...form, analise_id: v })}
+                >
+                  <SelectTrigger><SelectValue placeholder="Selecione uma análise" /></SelectTrigger>
+                  <SelectContent>
+                    {analises.map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.nome}
+                        {p.unidade ? ` (${p.unidade})` : ""}
+                        {p.valor_min != null || p.valor_max != null
+                          ? ` — limites: ${p.valor_min ?? "—"} / ${p.valor_max ?? "—"}`
+                          : " — sem limites cadastrados"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Dispara quando o resultado registrado sair dos limites definidos no cadastro da análise.
+                </p>
+              </div>
+            )}
+
+            {form.tipo === "processo_evento" && (
+              <>
+                <div className="grid gap-2">
+                  <Label>Processo</Label>
+                  <Select
+                    value={form.processo_id ?? ""}
+                    onValueChange={(v) => setForm({ ...form, processo_id: v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecione um processo" /></SelectTrigger>
+                    <SelectContent>
+                      {processos.map((p) => {
+                        const prod = produtos.find((x) => x.id === p.produto_id)?.nome;
+                        return (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.nome}{prod ? ` — ${prod}` : ""}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Evento</Label>
+                  <Select
+                    value={form.evento_processo ?? ""}
+                    onValueChange={(v) => setForm({ ...form, evento_processo: v })}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Selecione um evento" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="entrou">Ordem entrou no processo</SelectItem>
+                      <SelectItem value="concluido">Processo concluído</SelectItem>
+                      <SelectItem value="demorou">Processo demorou mais que o limite</SelectItem>
+                      <SelectItem value="atividade_faltante">Atividade do processo não registrada</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {form.evento_processo === "demorou" && (
+                  <div className="grid gap-2">
+                    <Label>Tempo limite (minutos)</Label>
+                    <Input
+                      type="number"
+                      value={form.tempo_limite_minutos ?? ""}
+                      onChange={(e) =>
+                        setForm({ ...form, tempo_limite_minutos: e.target.value === "" ? null : Number(e.target.value) })
+                      }
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
+
+
             <div className="grid grid-cols-2 gap-3">
               <div className="grid gap-2">
                 <Label>Cooldown (min)</Label>
