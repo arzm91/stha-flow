@@ -9,6 +9,18 @@ export const Route = createFileRoute("/_authenticated/cadastros/tanques")({
   component: TanquesPage,
 });
 
+const TIPO_OPTIONS = [
+  { value: "tanque", label: "Tanque (líquido/granel)" },
+  { value: "container", label: "Container / IBC / Bombona" },
+  { value: "pallet", label: "Pallet" },
+  { value: "generico", label: "Local físico genérico" },
+];
+
+const MODO_TAG_OPTIONS = [
+  { value: "percent", label: "Percentual (0–100%)" },
+  { value: "absoluto", label: "Mesma unidade do local" },
+];
+
 function TanquesPage() {
   const produtos = useQuery({
     queryKey: ["produtos"],
@@ -21,21 +33,26 @@ function TanquesPage() {
   return (
     <CrudTable
       table="tanques"
-      title="Tanques"
-      description="Cadastro de tanques de armazenamento."
-      initialValues={{ codigo: "", nome: "", capacidade: "", unidade: "", produto_id: "" }}
+      title="Locais de armazenamento"
+      description="Tanques, containers, pallets e outros locais físicos de estoque."
+      initialValues={{ codigo: "", nome: "", tipo: "tanque", capacidade: "", unidade: "", produto_id: "", tag_nivel_nome: "", tag_nivel_modo: "percent", cor: "" }}
       searchKeys={["nome", "codigo"]}
       fields={[
         { key: "codigo", label: "Código", required: true },
         { key: "nome", label: "Nome", required: true },
+        { key: "tipo", label: "Tipo de local", type: "select", required: true, options: TIPO_OPTIONS },
         { key: "capacidade", label: "Capacidade", type: "number", step: "any" },
-        { key: "unidade", label: "Unidade", placeholder: "L, kg..." },
+        { key: "unidade", label: "Unidade", placeholder: "L, kg, un..." },
         { key: "produto_id", label: "Produto armazenado", type: "select",
           options: (produtos.data ?? []).map((p) => ({ value: p.id, label: `${p.codigo} — ${p.nome}` })) },
+        { key: "tag_nivel_nome", label: "Tag de nível (opcional)", placeholder: "Ex.: TANK01_LEVEL", help: "Tag recebida em Tags para comparativo visual. Não afeta o saldo." },
+        { key: "tag_nivel_modo", label: "Como interpretar a tag", type: "select", options: MODO_TAG_OPTIONS },
+        { key: "cor", label: "Cor do ícone (opcional)", placeholder: "#3b82f6" },
       ]}
       columns={[
         { key: "codigo", label: "Código" },
         { key: "nome", label: "Nome" },
+        { key: "tipo", label: "Tipo", render: (r) => TIPO_OPTIONS.find((t) => t.value === r.tipo)?.label ?? String(r.tipo ?? "—") },
         { key: "capacidade", label: "Capacidade" },
         { key: "unidade", label: "Unidade" },
       ]}
