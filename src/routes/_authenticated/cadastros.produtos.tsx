@@ -32,16 +32,18 @@ type Produto = {
 type Atividade = {
   id?: string;
   descricao: string;
-  tipo: "materia_prima" | "medicao" | "acao";
+  tipo: "materia_prima" | "medicao" | "acao" | "tag_captura";
   quantidade: string;
   unidade: string;
   tempo_estimado_min: string;
+  tag_nome: string;
 };
 
 type Processo = {
   id?: string;
   nome: string;
   expanded: boolean;
+  tempo_limite_min: string;
   atividades: Atividade[];
 };
 
@@ -49,12 +51,13 @@ const TIPO_LABEL: Record<Atividade["tipo"], string> = {
   materia_prima: "Matéria-prima",
   medicao: "Medição",
   acao: "Ação",
+  tag_captura: "Captação de tag",
 };
 
 const emptyProduto = { codigo: "", nome: "", descricao: "", unidade: "", categoria: "", ativo: true };
 
 function newAtividade(): Atividade {
-  return { descricao: "", tipo: "acao", quantidade: "", unidade: "", tempo_estimado_min: "" };
+  return { descricao: "", tipo: "acao", quantidade: "", unidade: "", tempo_estimado_min: "", tag_nome: "" };
 }
 
 function ProdutosPage() {
