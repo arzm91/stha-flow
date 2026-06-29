@@ -64,7 +64,8 @@ export const verifyOwnerAdminPassword = createServerFn({ method: "POST" })
       password: data.password,
     });
     if (signErr || !signIn.session) return { ok: false as const };
-    // Clean up the temp session
-    await temp.auth.signOut().catch(() => {});
+    // Clean up only the throwaway client state. A global signOut here revokes
+    // the real browser session when the current user is the owner admin.
+    await temp.auth.signOut({ scope: "local" }).catch(() => {});
     return { ok: true as const };
   });
