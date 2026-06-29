@@ -92,9 +92,26 @@ function OPPage() {
   if (!op.data) return <div className="text-sm text-muted-foreground">Ordem não encontrada.</div>;
 
   const isFinal = op.data.status === "finalizada";
+  const tagNomes = ((op.data.equipamento as any)?.tag_nomes ?? []) as string[];
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isFs, setIsFs] = useState(false);
+  useEffect(() => {
+    const onChange = () => setIsFs(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+  const toggleFs = async () => {
+    try {
+      if (!document.fullscreenElement) await containerRef.current?.requestFullscreen();
+      else await document.exitFullscreen();
+    } catch (err) {
+      toast.error("Tela cheia indisponível: " + (err as Error).message);
+    }
+  };
 
   return (
-    <div>
+    <div ref={containerRef} className={isFs ? "h-screen w-screen overflow-auto bg-background p-6" : undefined}>
       <Button asChild variant="ghost" size="sm" className="mb-3">
         <Link to="/producao"><ArrowLeft className="mr-1 h-4 w-4" /> Voltar</Link>
       </Button>
@@ -106,6 +123,10 @@ function OPPage() {
             <Badge variant="outline" className={isFinal ? "bg-success/20 text-success border-success/30" : "bg-primary/20 text-primary border-primary/30"}>
               {isFinal ? "Finalizada" : "Em andamento"}
             </Badge>
+            <Button variant="outline" size="sm" onClick={toggleFs} title={isFs ? "Sair da tela cheia" : "Tela cheia"}>
+              {isFs ? <Minimize2 className="mr-1 h-4 w-4" /> : <Maximize2 className="mr-1 h-4 w-4" />}
+              {isFs ? "Sair" : "Tela cheia"}
+            </Button>
             {!isFinal && <FinalizarDialog op={op.data} tanques={tanquesProd.data ?? []} onDone={() => { qc.invalidateQueries(); navigate({ to: "/producao" }); }} />}
           </div>
         }
@@ -122,7 +143,7 @@ function OPPage() {
 
       {op.data.equipamento_id ? <PfdViewer equipamentoId={op.data.equipamento_id as string} /> : null}
 
-
+      <TagsMonitoramento ordemId={id} tagNomes={tagNomes} ativa={!isFinal} />
 
       {(op.data.obs_iniciais || op.data.obs_finais) ? (
         <Card className="mb-4">
@@ -143,7 +164,7 @@ function OPPage() {
         </Card>
       ) : null}
 
-      <TagsDoEquipamento tagNomes={((op.data.equipamento as any)?.tag_nomes ?? []) as string[]} ordemId={id} disabled={isFinal} />
+      <TagsDoEquipamento tagNomes={tagNomes} ordemId={id} disabled={isFinal} />
 
       <Tabs defaultValue="processos">
         <TabsList>
