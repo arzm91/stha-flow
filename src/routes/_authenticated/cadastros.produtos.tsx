@@ -189,7 +189,13 @@ function ProdutosPage() {
         if (!p.nome.trim()) continue;
         const { data: procIns, error: procErr } = await supabase
           .from("produto_processos")
-          .insert({ owner_id: ownerId, produto_id: produtoId, nome: p.nome.trim(), ordem: i })
+          .insert({
+            owner_id: ownerId,
+            produto_id: produtoId,
+            nome: p.nome.trim(),
+            ordem: i,
+            tempo_limite_min: p.tempo_limite_min === "" ? null : Number(p.tempo_limite_min),
+          })
           .select("id")
           .single();
         if (procErr) throw procErr;
@@ -204,6 +210,7 @@ function ProdutosPage() {
             quantidade: a.quantidade === "" ? null : Number(a.quantidade),
             unidade: a.unidade || null,
             tempo_estimado_min: a.tempo_estimado_min === "" ? null : Number(a.tempo_estimado_min),
+            tag_nome: a.tipo === "tag_captura" ? (a.tag_nome || null) : null,
           }));
         if (ativsToInsert.length) {
           const { error: ativErr } = await supabase.from("produto_atividades").insert(ativsToInsert);
