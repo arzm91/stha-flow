@@ -9,6 +9,8 @@ import {
   Handle,
   Position,
   MarkerType,
+  ConnectionMode,
+  NodeResizer,
   addEdge,
   applyEdgeChanges,
   applyNodeChanges,
