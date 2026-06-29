@@ -26,7 +26,8 @@ function json(body: unknown, status = 200) {
 }
 
 function hasValidApiKey(request: Request) {
-  const provided = request.headers.get("apikey") || request.headers.get("x-api-key");
+  const url = new URL(request.url);
+  const provided = request.headers.get("apikey") || request.headers.get("x-api-key") || url.searchParams.get("key");
   const expected = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY");
   // Em Lovable Cloud algumas funções recebem apenas os segredos de serviço.
   // Como esta rota só dispara a coleta de endpoints já cadastrados no banco,
