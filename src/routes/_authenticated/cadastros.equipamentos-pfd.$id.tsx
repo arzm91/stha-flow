@@ -668,6 +668,36 @@ function EquipPropsPanel({
         <Label className="text-xs">Nome / etiqueta</Label>
         <Input value={node.data.label} onChange={(e) => onChange({ label: e.target.value })} />
       </div>
+      <div>
+        <Label className="text-xs">Cor do símbolo</Label>
+        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+          {SYMBOL_COLOR_PRESETS.map((c) => (
+            <button
+              key={c.value ?? "default"}
+              type="button"
+              onClick={() => onChange({ color: c.value })}
+              title={c.label}
+              className={cn(
+                "size-6 rounded-full border-2 transition",
+                (node.data.color ?? null) === c.value
+                  ? "border-primary ring-2 ring-primary/40"
+                  : "border-border hover:border-primary/60",
+                !c.value && "bg-card",
+              )}
+              style={c.value ? { background: c.value } : undefined}
+            >
+              {!c.value && <span className="text-[9px] text-muted-foreground">auto</span>}
+            </button>
+          ))}
+          <input
+            type="color"
+            value={node.data.color ?? "#64748b"}
+            onChange={(e) => onChange({ color: e.target.value })}
+            className="h-6 w-8 cursor-pointer rounded border border-border bg-transparent p-0"
+            title="Cor personalizada"
+          />
+        </div>
+      </div>
       <div className="flex items-center justify-between rounded-md border px-3 py-2">
         <Label className="text-xs">Ativo</Label>
         <Switch checked={node.data.ativo} onCheckedChange={(v) => onChange({ ativo: v })} />
@@ -675,6 +705,19 @@ function EquipPropsPanel({
     </>
   );
 }
+
+const SYMBOL_COLOR_PRESETS: { label: string; value: string | null }[] = [
+  { label: "Padrão", value: null },
+  { label: "Vermelho", value: "#ef4444" },
+  { label: "Laranja", value: "#f97316" },
+  { label: "Âmbar", value: "#f59e0b" },
+  { label: "Verde", value: "#10b981" },
+  { label: "Ciano", value: "#06b6d4" },
+  { label: "Azul", value: "#3b82f6" },
+  { label: "Roxo", value: "#a855f7" },
+  { label: "Rosa", value: "#ec4899" },
+  { label: "Cinza", value: "#64748b" },
+];
 
 function TagPropsPanel({
   node, onChange, tagOptions,
