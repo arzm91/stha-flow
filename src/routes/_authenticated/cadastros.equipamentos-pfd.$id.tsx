@@ -455,7 +455,8 @@ function PfdEditor() {
       id: crypto.randomUUID(),
       type: "equip",
       position: { x: 120 + nodes.length * 30, y: 120 + nodes.length * 20 },
-      data: { kind: "equip", symbol, label: SYMBOL_LABEL[symbol], ativo: true },
+      style: { width: 110, height: 110 },
+      data: { kind: "equip", symbol, label: SYMBOL_LABEL[symbol], ativo: true, width: 110, height: 110 },
     };
     setNodes((n0) => [...n0, n]);
     setSelectedNodeId(n.id);
@@ -466,7 +467,8 @@ function PfdEditor() {
       id: crypto.randomUUID(),
       type: "tag",
       position: { x: 200 + nodes.length * 30, y: 200 + nodes.length * 20 },
-      data: { kind: "tag", tagNome: "" },
+      style: { width: 140, height: 60 },
+      data: { kind: "tag", tagNome: "", width: 140, height: 60 },
     };
     setNodes((n0) => [...n0, n]);
     setSelectedNodeId(n.id);
