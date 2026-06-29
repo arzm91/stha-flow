@@ -1111,6 +1111,53 @@ export type Database = {
           },
         ]
       }
+      producao_tag_historico: {
+        Row: {
+          created_at: string
+          equipamento_id: string | null
+          id: string
+          ordem_id: string
+          owner_id: string
+          registrado_em: string
+          tag_nome: string
+          unidade: string | null
+          valor: string | null
+          valor_num: number | null
+        }
+        Insert: {
+          created_at?: string
+          equipamento_id?: string | null
+          id?: string
+          ordem_id: string
+          owner_id: string
+          registrado_em?: string
+          tag_nome: string
+          unidade?: string | null
+          valor?: string | null
+          valor_num?: number | null
+        }
+        Update: {
+          created_at?: string
+          equipamento_id?: string | null
+          id?: string
+          ordem_id?: string
+          owner_id?: string
+          registrado_em?: string
+          tag_nome?: string
+          unidade?: string | null
+          valor?: string | null
+          valor_num?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "producao_tag_historico_ordem_id_fkey"
+            columns: ["ordem_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_producao"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       produto_atividades: {
         Row: {
           created_at: string

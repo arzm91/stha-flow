@@ -19,7 +19,7 @@ function lastY(doc: jsPDF): number {
 
 export async function gerarRelatorioProducaoPdf(ordemId: string) {
   // Buscar todos os dados em paralelo
-  const [opRes, paramsRes, anlRes, obsRes, etapasRes, movsRes] = await Promise.all([
+  const [opRes, paramsRes, anlRes, obsRes, etapasRes, movsRes, tagHistRes] = await Promise.all([
     supabase.from("ordens_producao")
       .select("*, produto:produto_id(nome,codigo,unidade), equipamento:equipamento_id(nome,codigo), tanque:tanque_destino_id(nome,codigo)")
       .eq("id", ordemId).maybeSingle(),
@@ -35,6 +35,9 @@ export async function gerarRelatorioProducaoPdf(ordemId: string) {
       .select("*").eq("ordem_id", ordemId).order("iniciado_em", { ascending: true }),
     supabase.from("movimentacoes_estoque")
       .select("*, tanque:tanque_id(codigo,nome)").eq("ordem_id", ordemId).order("ocorrido_em", { ascending: true }),
+    supabase.from("producao_tag_historico")
+      .select("tag_nome,valor_num,unidade,registrado_em")
+      .eq("ordem_id", ordemId).order("registrado_em", { ascending: true }),
   ]);
 
   const op: any = opRes.data;
@@ -44,6 +47,7 @@ export async function gerarRelatorioProducaoPdf(ordemId: string) {
   const observacoes = obsRes.data ?? [];
   const etapas = etapasRes.data ?? [];
   const movs = movsRes.data ?? [];
+  const tagHist = (tagHistRes.data ?? []) as { tag_nome: string; valor_num: number | null; unidade: string | null; registrado_em: string }[];
 
   // Operador
   let operador = "—";
@@ -260,6 +264,68 @@ export async function gerarRelatorioProducaoPdf(ordemId: string) {
       headStyles: { fillColor: [30, 41, 59] },
     });
   }
+
+  // Monitoramento das tags do equipamento (histórico gravado durante a OP)
+  if (tagHist.length > 0) {
+    const byTag = new Map<string, { unidade: string | null; values: number[]; first: string; last: string }>();
+    for (const r of tagHist) {
+      if (r.valor_num == null) continue;
+      const cur = byTag.get(r.tag_nome) ?? { unidade: r.unidade, values: [], first: r.registrado_em, last: r.registrado_em };
+      cur.values.push(Number(r.valor_num));
+      cur.last = r.registrado_em;
+      if (!cur.unidade && r.unidade) cur.unidade = r.unidade;
+      byTag.set(r.tag_nome, cur);
+    }
+    doc.setFontSize(12); doc.setFont("helvetica", "bold");
+    doc.text("Monitoramento das tags do equipamento", 40, lastY(doc) + 22);
+    autoTable(doc, {
+      startY: lastY(doc) + 28,
+      head: [["Tag", "Pontos", "Mín", "Méd", "Máx", "Último", "Unidade", "Início", "Fim"]],
+      body: Array.from(byTag.entries()).map(([nome, s]) => {
+        const min = Math.min(...s.values);
+        const max = Math.max(...s.values);
+        const avg = s.values.reduce((a, b) => a + b, 0) / s.values.length;
+        const last = s.values[s.values.length - 1];
+        return [
+          nome,
+          String(s.values.length),
+          formatNumber(min),
+          formatNumber(avg),
+          formatNumber(max),
+          formatNumber(last),
+          s.unidade ?? "",
+          formatDate(s.first),
+          formatDate(s.last),
+        ];
+      }),
+      styles: { fontSize: 8, cellPadding: 4 },
+      headStyles: { fillColor: [30, 41, 59] },
+    });
+
+    // Sparklines por tag desenhadas com primitivas
+    const W = doc.internal.pageSize.getWidth();
+    for (const [nome, s] of byTag) {
+      if (s.values.length < 2) continue;
+      let y = lastY(doc) + 18;
+      if (y > doc.internal.pageSize.getHeight() - 80) { doc.addPage(); y = 60; }
+      doc.setFontSize(9); doc.setFont("helvetica", "bold");
+      doc.text(nome + (s.unidade ? ` (${s.unidade})` : ""), 40, y);
+      const x0 = 40, y0 = y + 6, plotW = W - 80, plotH = 50;
+      doc.setDrawColor(220); doc.rect(x0, y0, plotW, plotH);
+      const mn = Math.min(...s.values), mx = Math.max(...s.values);
+      const range = mx - mn || 1;
+      doc.setDrawColor(30, 64, 175); doc.setLineWidth(0.8);
+      const pts: [number, number][] = s.values.map((v, i) => [
+        x0 + (i / (s.values.length - 1)) * plotW,
+        y0 + plotH - ((v - mn) / range) * plotH,
+      ]);
+      for (let i = 1; i < pts.length; i++) {
+        doc.line(pts[i - 1][0], pts[i - 1][1], pts[i][0], pts[i][1]);
+      }
+      (doc as any).lastAutoTable = { finalY: y0 + plotH + 4 };
+    }
+  }
+
 
   // Histórico unificado (timeline completa)
   type Evt = { when: string; tipo: string; titulo: string; detalhe: string };
