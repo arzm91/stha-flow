@@ -123,6 +123,18 @@ function AlertasPage() {
       .order("nome");
     setTagOptions(Array.from(new Set((data ?? []).map((t) => t.nome))));
   }
+  async function loadCadastros() {
+    const [p, a, pr, pd] = await Promise.all([
+      supabase.from("parametros_cadastro").select("id,nome,unidade,valor_min,valor_max").order("nome"),
+      supabase.from("analises_cadastro").select("id,nome,unidade,valor_min,valor_max").order("nome"),
+      supabase.from("produto_processos").select("id,nome,produto_id").order("nome"),
+      supabase.from("produtos").select("id,nome").order("nome"),
+    ]);
+    setParametros((p.data ?? []) as Parametro[]);
+    setAnalises((a.data ?? []) as Analise[]);
+    setProcessos((pr.data ?? []) as Processo[]);
+    setProdutos((pd.data ?? []) as Produto[]);
+  }
 
   useEffect(() => {
     loadAlertas();
