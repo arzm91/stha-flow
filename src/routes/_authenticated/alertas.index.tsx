@@ -37,12 +37,23 @@ type Alerta = {
   min_val: number | null;
   max_val: number | null;
   stale_minutes: number | null;
+  parametro_id: string | null;
+  analise_id: string | null;
+  processo_id: string | null;
+  evento_processo: string | null;
+  tempo_limite_minutos: number | null;
   severidade: Severidade;
   ativo: boolean;
   notificar_email: boolean;
   cooldown_minutes: number;
   last_fired_at: string | null;
 };
+
+type Parametro = { id: string; nome: string; unidade: string | null; valor_min: number | null; valor_max: number | null };
+type Analise = { id: string; nome: string; unidade: string | null; valor_min: number | null; valor_max: number | null };
+type Processo = { id: string; nome: string; produto_id: string };
+type Produto = { id: string; nome: string };
+
 
 type Disparo = {
   id: string;
