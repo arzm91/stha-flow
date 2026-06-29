@@ -140,6 +140,7 @@ function AlertasPage() {
     loadAlertas();
     loadDisparos();
     loadTags();
+    loadCadastros();
     const ch = supabase
       .channel("alertas_page")
       .on("postgres_changes", { event: "*", schema: "public", table: "alertas" }, () => loadAlertas())
