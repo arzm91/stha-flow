@@ -89,6 +89,19 @@ function ProdutosPage() {
     },
   });
 
+  // tags disponíveis (capturadas dos endpoints) para "tag_captura"
+  const tagsList = useQuery({
+    queryKey: ["tags-live-nomes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tags_live")
+        .select("nome, grupo, unidade")
+        .order("nome", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Array<{ nome: string; grupo: string | null; unidade: string | null }>;
+    },
+  });
+
   const filtered = (list.data ?? []).filter((r) => {
     if (!search) return true;
     const s = search.toLowerCase();
