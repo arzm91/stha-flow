@@ -209,8 +209,6 @@ function FourSideHandles() {
 // ---------- Nodes ----------
 function EquipNode({ data, selected }: NodeProps) {
   const d = data as unknown as EquipNodeData;
-  const w = d.width ?? 110;
-  const h = d.height ?? 110;
   return (
     <div
       className={cn(
@@ -218,18 +216,17 @@ function EquipNode({ data, selected }: NodeProps) {
         selected ? "border-primary" : "border-border",
         !d.ativo && "opacity-60",
       )}
-      style={{ width: w, height: h }}
     >
       <NodeResizer
         isVisible={selected}
         minWidth={70}
         minHeight={70}
         lineClassName="!border-primary"
-        handleClassName="!h-2 !w-2 !bg-primary !border-primary"
+        handleClassName="!h-3 !w-3 !bg-primary !border-primary"
         keepAspectRatio
       />
       <FourSideHandles />
-      <div className="min-h-0 flex-1">
+      <div className="min-h-0 flex-1 w-full flex items-center justify-center">
         <SymbolSvg kind={d.symbol} ativo={d.ativo} color={d.color} />
       </div>
       <div className="mt-1 max-w-full truncate text-center text-xs font-medium">
@@ -289,9 +286,6 @@ function TagNode({ data, selected }: NodeProps) {
     ? live.valor_num.toLocaleString("pt-BR", { maximumFractionDigits: 3 })
     : live?.valor ?? "—";
 
-  const w = d.width ?? 130;
-  const h = d.height ?? 56;
-
   return (
     <div
       className={cn(
@@ -299,14 +293,13 @@ function TagNode({ data, selected }: NodeProps) {
         statusCls,
         selected && "ring-2 ring-primary/50",
       )}
-      style={{ width: w, height: h }}
     >
       <NodeResizer
         isVisible={selected}
         minWidth={90}
         minHeight={40}
         lineClassName="!border-primary"
-        handleClassName="!h-2 !w-2 !bg-primary !border-primary"
+        handleClassName="!h-3 !w-3 !bg-primary !border-primary"
       />
       <FourSideHandles />
       <div className="truncate font-mono text-[10px] text-muted-foreground">
@@ -462,7 +455,8 @@ function PfdEditor() {
       id: crypto.randomUUID(),
       type: "equip",
       position: { x: 120 + nodes.length * 30, y: 120 + nodes.length * 20 },
-      data: { kind: "equip", symbol, label: SYMBOL_LABEL[symbol], ativo: true },
+      style: { width: 110, height: 110 },
+      data: { kind: "equip", symbol, label: SYMBOL_LABEL[symbol], ativo: true, width: 110, height: 110 },
     };
     setNodes((n0) => [...n0, n]);
     setSelectedNodeId(n.id);
@@ -473,7 +467,8 @@ function PfdEditor() {
       id: crypto.randomUUID(),
       type: "tag",
       position: { x: 200 + nodes.length * 30, y: 200 + nodes.length * 20 },
-      data: { kind: "tag", tagNome: "" },
+      style: { width: 140, height: 60 },
+      data: { kind: "tag", tagNome: "", width: 140, height: 60 },
     };
     setNodes((n0) => [...n0, n]);
     setSelectedNodeId(n.id);
