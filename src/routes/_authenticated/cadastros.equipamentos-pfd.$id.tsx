@@ -389,7 +389,14 @@ function PfdEditor() {
       }
       setEquipNome(data.nome);
       const g = (data.pfd_graph as { nodes?: Node<AnyData>[]; edges?: Edge<FlowEdgeData>[] }) ?? {};
-      setNodes(g.nodes ?? []);
+      // Rehydrate persisted size into React Flow's style prop so NodeResizer
+      // restores the saved width/height on reload.
+      const hydrated = (g.nodes ?? []).map((n) => {
+        const w = (n.data as AnyData)?.width;
+        const h = (n.data as AnyData)?.height;
+        return w && h ? { ...n, style: { ...(n.style ?? {}), width: w, height: h } } : n;
+      });
+      setNodes(hydrated);
       setEdges(g.edges ?? []);
       setLoading(false);
     })();
