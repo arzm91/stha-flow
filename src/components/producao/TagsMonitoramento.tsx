@@ -1,4 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
+import { keepPreviousData } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -78,7 +79,7 @@ export function TagsMonitoramento({
   const [nowTick, setNowTick] = useState(() => Date.now());
   useEffect(() => {
     if (!ativa) return;
-    const id = setInterval(() => setNowTick(Date.now()), 5_000);
+    const id = setInterval(() => setNowTick(Date.now()), 10_000);
     return () => clearInterval(id);
   }, [ativa]);
 
@@ -99,7 +100,8 @@ export function TagsMonitoramento({
       if (error) throw error;
       return (data ?? []) as Row[];
     },
-    refetchInterval: ativa ? 5_000 : false,
+    refetchInterval: ativa ? 10_000 : false,
+    placeholderData: keepPreviousData,
   });
 
 
@@ -257,11 +259,10 @@ export function TagsMonitoramento({
     return { eventosPontos: pontos, eventosFaixas: faixas };
   }, [eventosQuery.data]);
 
-  // Janela visível baseada nos dados carregados
-  const janela = useMemo(() => {
-    if (chartData.length === 0) return null;
-    return { min: chartData[0].t as number, max: chartData[chartData.length - 1].t as number };
-  }, [chartData]);
+  // Janela de visualização: período selecionado, ancorado em "agora".
+  const janelaFim = nowTick;
+  const janelaInicio = nowTick - periodoMs;
+  const janela = { min: janelaInicio, max: janelaFim };
 
   const pontosVisiveis = useMemo(() => {
     if (!janela) return [];
@@ -301,7 +302,7 @@ export function TagsMonitoramento({
         </CardTitle>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>
-            {ativa ? "Ao vivo (atualiza a cada 5s)" : "Histórico desta produção"}
+            {ativa ? "Ao vivo (atualiza a cada 10s)" : "Histórico desta produção"}
           </span>
           <span className="hidden sm:inline">·</span>
           <span className="hidden sm:inline">
@@ -391,7 +392,8 @@ export function TagsMonitoramento({
                 <XAxis
                   dataKey="t"
                   type="number"
-                  domain={["dataMin", "dataMax"]}
+                  domain={[janelaInicio, janelaFim]}
+                  allowDataOverflow
                   scale="time"
                   tickFormatter={(t) =>
                     new Date(t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
