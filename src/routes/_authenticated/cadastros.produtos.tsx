@@ -103,6 +103,15 @@ function newGatilho(tipo: GatilhoTipo): Gatilho {
   return { tipo, tag_nome: "", operador: "gt", valor: "" };
 }
 
+function tagLabel(t: { nome: string; nome_amigavel?: string | null; grupo?: string | null; unidade?: string | null }): string {
+  const main = t.nome_amigavel?.trim() ? t.nome_amigavel : t.nome;
+  const tech = t.nome_amigavel?.trim() ? ` · ${t.nome}` : "";
+  const grp = t.grupo ? ` (${t.grupo})` : "";
+  const un = t.unidade ? ` · ${t.unidade}` : "";
+  return `${main}${grp}${un}${tech}`;
+}
+
+
 
 function normalizeTipo(raw: string | null | undefined): TipoEtapa {
   if (raw === "materia_prima" || raw === "tag_captura") return raw;
