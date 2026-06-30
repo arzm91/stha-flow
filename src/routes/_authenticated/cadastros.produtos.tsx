@@ -11,7 +11,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Pencil, Plus, Trash2, Search, ChevronDown, ChevronRight, ListChecks } from "lucide-react";
+import { Pencil, Plus, Trash2, Search, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import { useResourcePermissions } from "@/hooks/useResourcePermissions";
@@ -31,35 +31,66 @@ type Produto = {
   ativo: boolean;
 };
 
-type Atividade = {
+type TipoEtapa = "materia_prima" | "tarefa" | "tag_captura";
+
+type GatilhoTipo = "inicio" | "fim";
+type GatilhoOperador = "gt" | "lt" | "gte" | "lte" | "eq" | "neq" | "change";
+
+type Gatilho = {
+  tipo: GatilhoTipo;
+  tag_nome: string;
+  operador: GatilhoOperador;
+  valor: string; // string for the form; converted to number on save (or null when change)
+};
+
+type Etapa = {
   id?: string;
   descricao: string;
-  tipo: "materia_prima" | "medicao" | "acao" | "tag_captura";
+  tipo: TipoEtapa;
   quantidade: string;
   unidade: string;
   tempo_estimado_min: string;
-  tag_nome: string;
+  tag_nome: string; // used by tag_captura
+  gatilhos: Gatilho[]; // only for materia_prima
 };
 
-type Processo = {
-  id?: string;
-  nome: string;
-  expanded: boolean;
-  tempo_limite_min: string;
-  atividades: Atividade[];
-};
-
-const TIPO_LABEL: Record<Atividade["tipo"], string> = {
+const TIPO_LABEL: Record<TipoEtapa, string> = {
   materia_prima: "Matéria-prima",
-  medicao: "Medição",
-  acao: "Ação",
+  tarefa: "Tarefa",
   tag_captura: "Captação de tag",
+};
+
+const OPERADOR_LABEL: Record<GatilhoOperador, string> = {
+  gt: "maior que (>)",
+  lt: "menor que (<)",
+  gte: "maior ou igual (≥)",
+  lte: "menor ou igual (≤)",
+  eq: "igual (=)",
+  neq: "diferente (≠)",
+  change: "qualquer mudança",
 };
 
 const emptyProduto = { codigo: "", nome: "", descricao: "", unidade: "", categoria: "", ativo: true };
 
-function newAtividade(): Atividade {
-  return { descricao: "", tipo: "acao", quantidade: "", unidade: "", tempo_estimado_min: "", tag_nome: "" };
+function newEtapa(): Etapa {
+  return {
+    descricao: "",
+    tipo: "tarefa",
+    quantidade: "",
+    unidade: "",
+    tempo_estimado_min: "",
+    tag_nome: "",
+    gatilhos: [],
+  };
+}
+
+function newGatilho(tipo: GatilhoTipo): Gatilho {
+  return { tipo, tag_nome: "", operador: "gt", valor: "" };
+}
+
+function normalizeTipo(raw: string | null | undefined): TipoEtapa {
+  if (raw === "materia_prima" || raw === "tag_captura") return raw;
+  return "tarefa"; // map legacy "acao" / "medicao" / null -> tarefa
 }
 
 function ProdutosPage() {
@@ -68,7 +99,7 @@ function ProdutosPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Produto | null>(null);
   const [form, setForm] = useState<typeof emptyProduto>(emptyProduto);
-  const [processos, setProcessos] = useState<Processo[]>([]);
+  const [etapas, setEtapas] = useState<Etapa[]>([]);
 
   const list = useQuery({
     queryKey: ["produtos"],
@@ -79,19 +110,26 @@ function ProdutosPage() {
     },
   });
 
-  // counts per produto
+  // counts of etapas per produto (across all processes for legacy compatibility)
   const counts = useQuery({
-    queryKey: ["produtos-processos-count"],
+    queryKey: ["produtos-etapas-count"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("produto_processos").select("produto_id");
-      if (error) throw error;
+      const { data: procs } = await supabase.from("produto_processos").select("id, produto_id");
+      const procToProd: Record<string, string> = {};
+      for (const p of (procs ?? []) as { id: string; produto_id: string }[]) procToProd[p.id] = p.produto_id;
+      const ids = Object.keys(procToProd);
+      if (!ids.length) return {} as Record<string, number>;
+      const { data: ativs } = await supabase.from("produto_atividades").select("processo_id").in("processo_id", ids);
       const map: Record<string, number> = {};
-      for (const r of (data ?? []) as { produto_id: string }[]) map[r.produto_id] = (map[r.produto_id] ?? 0) + 1;
+      for (const a of (ativs ?? []) as { processo_id: string }[]) {
+        const pid = procToProd[a.processo_id];
+        if (pid) map[pid] = (map[pid] ?? 0) + 1;
+      }
       return map;
     },
   });
 
-  // tags disponíveis (capturadas dos endpoints) para "tag_captura"
+  // tags disponíveis (capturadas dos endpoints)
   const tagsList = useQuery({
     queryKey: ["tags-live-nomes"],
     queryFn: async () => {
@@ -116,7 +154,7 @@ function ProdutosPage() {
   const openCreate = () => {
     setEditing(null);
     setForm(emptyProduto);
-    setProcessos([]);
+    setEtapas([]);
     setOpen(true);
   };
 
@@ -130,43 +168,53 @@ function ProdutosPage() {
       categoria: r.categoria ?? "",
       ativo: r.ativo,
     });
-    // load existing processes + activities
+    // load all existing processes + activities, flatten into a single ordered list
     const { data: procs } = await supabase
       .from("produto_processos")
-      .select("id, nome, ordem, tempo_limite_min")
+      .select("id, ordem")
       .eq("produto_id", r.id)
       .order("ordem", { ascending: true });
     const procIds = (procs ?? []).map((p) => p.id);
     const { data: ativs } = procIds.length
       ? await supabase
           .from("produto_atividades")
-          .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min, tag_nome")
+          .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min, tag_nome, gatilhos")
           .in("processo_id", procIds)
           .order("ordem", { ascending: true })
       : { data: [] };
-    const byProc: Record<string, Atividade[]> = {};
-    for (const a of (ativs ?? []) as Array<{
-      id: string; processo_id: string; descricao: string; tipo: Atividade["tipo"];
-      quantidade: number | null; unidade: string | null; tempo_estimado_min: number | null; tag_nome: string | null;
-    }>) {
-      (byProc[a.processo_id] ??= []).push({
-        id: a.id,
-        descricao: a.descricao,
-        tipo: a.tipo,
-        quantidade: a.quantidade == null ? "" : String(a.quantidade),
-        unidade: a.unidade ?? "",
-        tempo_estimado_min: a.tempo_estimado_min == null ? "" : String(a.tempo_estimado_min),
-        tag_nome: a.tag_nome ?? "",
-      });
-    }
-    setProcessos(
-      ((procs ?? []) as Array<{ id: string; nome: string; ordem: number; tempo_limite_min: number | null }>).map((p) => ({
-        id: p.id,
-        nome: p.nome,
-        expanded: true,
-        tempo_limite_min: p.tempo_limite_min == null ? "" : String(p.tempo_limite_min),
-        atividades: byProc[p.id] ?? [],
-      })),
+    const procOrder = new Map<string, number>();
+    (procs ?? []).forEach((p, idx) => procOrder.set(p.id, idx));
+    const all = ((ativs ?? []) as Array<{
+      id: string; processo_id: string; descricao: string; tipo: string | null;
+      quantidade: number | null; unidade: string | null; tempo_estimado_min: number | null;
+      tag_nome: string | null; ordem: number; gatilhos: unknown;
+    }>).slice().sort((a, b) => {
+      const pa = procOrder.get(a.processo_id) ?? 0;
+      const pb = procOrder.get(b.processo_id) ?? 0;
+      if (pa !== pb) return pa - pb;
+      return a.ordem - b.ordem;
+    });
+    setEtapas(
+      all.map((a) => {
+        const gats = Array.isArray(a.gatilhos)
+          ? (a.gatilhos as Array<Partial<Gatilho> & { valor?: number | string | null }>).map((g) => ({
+              tipo: (g.tipo === "fim" ? "fim" : "inicio") as GatilhoTipo,
+              tag_nome: g.tag_nome ?? "",
+              operador: (g.operador as GatilhoOperador) ?? "gt",
+              valor: g.valor == null ? "" : String(g.valor),
+            }))
+          : [];
+        return {
+          id: a.id,
+          descricao: a.descricao,
+          tipo: normalizeTipo(a.tipo),
+          quantidade: a.quantidade == null ? "" : String(a.quantidade),
+          unidade: a.unidade ?? "",
+          tempo_estimado_min: a.tempo_estimado_min == null ? "" : String(a.tempo_estimado_min),
+          tag_nome: a.tag_nome ?? "",
+          gatilhos: gats,
+        };
+      }),
     );
     setOpen(true);
   };
@@ -198,52 +246,61 @@ function ProdutosPage() {
       }
       if (!produtoId) throw new Error("Falha ao salvar produto");
 
-      // Replace processes (cascade clears activities)
+      // Single process per produto: wipe all existing processes (cascades activities), recreate one.
       const { error: delErr } = await supabase.from("produto_processos").delete().eq("produto_id", produtoId);
       if (delErr) throw delErr;
 
-      for (let i = 0; i < processos.length; i++) {
-        const p = processos[i];
-        if (!p.nome.trim()) continue;
-        const { data: procIns, error: procErr } = await supabase
-          .from("produto_processos")
-          .insert({
-            owner_id: ownerId,
-            produto_id: produtoId,
-            nome: p.nome.trim(),
-            ordem: i,
-            tempo_limite_min: p.tempo_limite_min === "" ? null : Number(p.tempo_limite_min),
-          })
-          .select("id")
-          .single();
-        if (procErr) throw procErr;
-        const ativsToInsert = p.atividades
-          .filter((a) => a.descricao.trim())
-          .map((a, idx) => ({
-            owner_id: ownerId,
-            processo_id: procIns.id,
-            descricao: a.descricao.trim(),
-            ordem: idx,
-            tipo: a.tipo,
-            quantidade: a.quantidade === "" ? null : Number(a.quantidade),
-            unidade: a.unidade || null,
-            tempo_estimado_min: a.tempo_estimado_min === "" ? null : Number(a.tempo_estimado_min),
-            tag_nome: a.tipo === "tag_captura" ? (a.tag_nome || null) : null,
-          }));
-        if (ativsToInsert.length) {
-          const { error: ativErr } = await supabase.from("produto_atividades").insert(ativsToInsert);
-          if (ativErr) throw ativErr;
-        }
-      }
+      const etapasValidas = etapas.filter((e) => e.descricao.trim());
+      if (etapasValidas.length === 0) return;
+
+      const { data: procIns, error: procErr } = await supabase
+        .from("produto_processos")
+        .insert({
+          owner_id: ownerId,
+          produto_id: produtoId,
+          nome: "Processo de fabricação",
+          ordem: 0,
+        })
+        .select("id")
+        .single();
+      if (procErr) throw procErr;
+
+      const toInsert = etapasValidas.map((e, idx) => {
+        const gatilhos =
+          e.tipo === "materia_prima"
+            ? e.gatilhos
+                .filter((g) => g.tag_nome.trim())
+                .map((g) => ({
+                  tipo: g.tipo,
+                  tag_nome: g.tag_nome.trim(),
+                  operador: g.operador,
+                  valor: g.operador === "change" || g.valor === "" ? null : Number(g.valor),
+                }))
+            : [];
+        return {
+          owner_id: ownerId,
+          processo_id: procIns.id,
+          descricao: e.descricao.trim(),
+          ordem: idx,
+          tipo: e.tipo,
+          quantidade: e.tipo === "materia_prima" && e.quantidade !== "" ? Number(e.quantidade) : null,
+          unidade: e.tipo === "tag_captura" ? (e.unidade || null) : e.tipo === "materia_prima" ? (e.unidade || null) : null,
+          tempo_estimado_min: e.tempo_estimado_min === "" ? null : Number(e.tempo_estimado_min),
+          tag_nome: e.tipo === "tag_captura" ? (e.tag_nome || null) : null,
+          gatilhos,
+        };
+      });
+      const { error: ativErr } = await supabase.from("produto_atividades").insert(toInsert);
+      if (ativErr) throw ativErr;
     },
     onSuccess: () => {
       toast.success(editing ? "Produto atualizado" : "Produto criado");
       qc.invalidateQueries({ queryKey: ["produtos"] });
-      qc.invalidateQueries({ queryKey: ["produtos-processos-count"] });
+      qc.invalidateQueries({ queryKey: ["produtos-etapas-count"] });
       setOpen(false);
       setEditing(null);
       setForm(emptyProduto);
-      setProcessos([]);
+      setEtapas([]);
     },
     onError: async (e: Error) => {
       const { isAdminCancelled } = await import("@/lib/security/guard-admin");
@@ -261,7 +318,7 @@ function ProdutosPage() {
     onSuccess: () => {
       toast.success("Produto removido");
       qc.invalidateQueries({ queryKey: ["produtos"] });
-      qc.invalidateQueries({ queryKey: ["produtos-processos-count"] });
+      qc.invalidateQueries({ queryKey: ["produtos-etapas-count"] });
     },
     onError: async (e: Error) => {
       const { isAdminCancelled } = await import("@/lib/security/guard-admin");
@@ -269,15 +326,13 @@ function ProdutosPage() {
     },
   });
 
-  // process/activity editors
-  const addProcesso = () =>
-    setProcessos((prev) => [...prev, { nome: "", expanded: true, tempo_limite_min: "", atividades: [newAtividade()] }]);
-  const updateProcesso = (i: number, patch: Partial<Processo>) =>
-    setProcessos((prev) => prev.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
-  const removeProcesso = (i: number) =>
-    setProcessos((prev) => prev.filter((_, idx) => idx !== i));
-  const moveProcesso = (i: number, dir: -1 | 1) =>
-    setProcessos((prev) => {
+  // etapa editors
+  const addEtapa = () => setEtapas((prev) => [...prev, newEtapa()]);
+  const updateEtapa = (i: number, patch: Partial<Etapa>) =>
+    setEtapas((prev) => prev.map((e, idx) => (idx === i ? { ...e, ...patch } : e)));
+  const removeEtapa = (i: number) => setEtapas((prev) => prev.filter((_, idx) => idx !== i));
+  const moveEtapa = (i: number, dir: -1 | 1) =>
+    setEtapas((prev) => {
       const next = [...prev];
       const j = i + dir;
       if (j < 0 || j >= next.length) return prev;
@@ -285,14 +340,14 @@ function ProdutosPage() {
       return next;
     });
 
-  const addAtividade = (pi: number) =>
-    updateProcesso(pi, { atividades: [...processos[pi].atividades, newAtividade()] });
-  const updateAtividade = (pi: number, ai: number, patch: Partial<Atividade>) =>
-    updateProcesso(pi, {
-      atividades: processos[pi].atividades.map((a, idx) => (idx === ai ? { ...a, ...patch } : a)),
+  const addGatilho = (ei: number, tipo: GatilhoTipo) =>
+    updateEtapa(ei, { gatilhos: [...etapas[ei].gatilhos, newGatilho(tipo)] });
+  const updateGatilho = (ei: number, gi: number, patch: Partial<Gatilho>) =>
+    updateEtapa(ei, {
+      gatilhos: etapas[ei].gatilhos.map((g, idx) => (idx === gi ? { ...g, ...patch } : g)),
     });
-  const removeAtividade = (pi: number, ai: number) =>
-    updateProcesso(pi, { atividades: processos[pi].atividades.filter((_, idx) => idx !== ai) });
+  const removeGatilho = (ei: number, gi: number) =>
+    updateEtapa(ei, { gatilhos: etapas[ei].gatilhos.filter((_, idx) => idx !== gi) });
 
   return (
     <div>
@@ -300,7 +355,7 @@ function ProdutosPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Produtos</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Cadastro de produtos com processos e atividades de fabricação.
+            Cadastro de produtos e etapas do processo de fabricação.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -314,11 +369,11 @@ function ProdutosPage() {
                 <Plus className="mr-2 h-4 w-4" /> Novo
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-h-[92vh] w-[calc(100vw-2rem)] max-w-3xl overflow-y-auto">
+            <DialogContent className="max-h-[92vh] w-[calc(100vw-2rem)] max-w-4xl overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editing ? "Editar produto" : "Novo produto"}</DialogTitle>
                 <DialogDescription>
-                  Defina os dados do produto e o passo a passo de fabricação.
+                  Defina os dados do produto e as etapas do processo de fabricação.
                 </DialogDescription>
               </DialogHeader>
               <form
@@ -365,145 +420,210 @@ function ProdutosPage() {
                 <div className="space-y-3 rounded-md border border-border bg-muted/30 p-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="text-sm font-semibold">Processos de fabricação</h3>
-                      <p className="text-xs text-muted-foreground">Agrupe atividades em etapas ordenadas.</p>
+                      <h3 className="text-sm font-semibold">Processo de fabricação</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Adicione as etapas em ordem: matérias-primas, tarefas (medições/ações) e captações de tag.
+                      </p>
                     </div>
-                    <Button type="button" size="sm" variant="outline" onClick={addProcesso}>
-                      <Plus className="mr-1 h-4 w-4" /> Processo
+                    <Button type="button" size="sm" variant="outline" onClick={addEtapa}>
+                      <Plus className="mr-1 h-4 w-4" /> Etapa
                     </Button>
                   </div>
 
-                  {processos.length === 0 ? (
+                  {etapas.length === 0 ? (
                     <p className="rounded border border-dashed border-border bg-background p-4 text-center text-xs text-muted-foreground">
-                      Nenhum processo adicionado.
+                      Nenhuma etapa adicionada.
                     </p>
                   ) : (
                     <div className="space-y-3">
-                      {processos.map((p, pi) => (
-                        <div key={pi} className="rounded-md border border-border bg-background">
-                          <div className="flex items-center gap-2 border-b border-border p-2">
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7 shrink-0"
-                              onClick={() => updateProcesso(pi, { expanded: !p.expanded })}
+                      {etapas.map((e, ei) => (
+                        <div key={ei} className="rounded-md border border-border bg-background p-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono text-muted-foreground">{ei + 1}.</span>
+                            <select
+                              value={e.tipo}
+                              onChange={(ev) => {
+                                const tipo = ev.target.value as TipoEtapa;
+                                updateEtapa(ei, {
+                                  tipo,
+                                  gatilhos: tipo === "materia_prima" ? e.gatilhos : [],
+                                });
+                              }}
+                              className="h-8 rounded-md border border-input bg-background px-2 text-xs"
                             >
-                              {p.expanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                            </Button>
-                            <span className="text-xs font-mono text-muted-foreground">{pi + 1}.</span>
+                              <option value="materia_prima">{TIPO_LABEL.materia_prima}</option>
+                              <option value="tarefa">{TIPO_LABEL.tarefa}</option>
+                              <option value="tag_captura">{TIPO_LABEL.tag_captura}</option>
+                            </select>
                             <Input
-                              value={p.nome}
-                              onChange={(e) => updateProcesso(pi, { nome: e.target.value })}
-                              placeholder="Nome do processo (ex.: Preparação)"
+                              value={e.descricao}
+                              onChange={(ev) => updateEtapa(ei, { descricao: ev.target.value })}
+                              placeholder={
+                                e.tipo === "materia_prima" ? "Nome da matéria-prima"
+                                : e.tipo === "tarefa" ? "Descrição da tarefa (ex.: medir pH)"
+                                : "Descrição da captação"
+                              }
                               className="h-8 flex-1"
                             />
-                            <Input
-                              type="number"
-                              min="0"
-                              value={p.tempo_limite_min}
-                              onChange={(e) => updateProcesso(pi, { tempo_limite_min: e.target.value })}
-                              placeholder="Tempo limite (min)"
-                              className="h-8 w-36"
-                              title="Tempo limite para conclusão deste processo (em minutos). Se ultrapassado, o operador deverá registrar o motivo."
-                            />
-                            <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => moveProcesso(pi, -1)} disabled={pi === 0}>↑</Button>
-                            <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => moveProcesso(pi, 1)} disabled={pi === processos.length - 1}>↓</Button>
-                            <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => removeProcesso(pi)}>
+                            <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => moveEtapa(ei, -1)} disabled={ei === 0}>↑</Button>
+                            <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => moveEtapa(ei, 1)} disabled={ei === etapas.length - 1}>↓</Button>
+                            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeEtapa(ei)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
 
-                          {p.expanded ? (
-                            <div className="space-y-2 p-2">
-                              {p.atividades.length === 0 ? (
-                                <p className="px-1 text-xs text-muted-foreground">Sem atividades.</p>
+                          <div className="mt-2 grid grid-cols-12 gap-2">
+                            {e.tipo === "materia_prima" ? (
+                              <>
+                                <div className="col-span-4 sm:col-span-3">
+                                  <Input
+                                    type="number"
+                                    step="0.001"
+                                    value={e.quantidade}
+                                    onChange={(ev) => updateEtapa(ei, { quantidade: ev.target.value })}
+                                    placeholder="Quantidade"
+                                    className="h-8"
+                                  />
+                                </div>
+                                <div className="col-span-4 sm:col-span-2">
+                                  <Input
+                                    value={e.unidade}
+                                    onChange={(ev) => updateEtapa(ei, { unidade: ev.target.value })}
+                                    placeholder="un (kg, L...)"
+                                    className="h-8"
+                                  />
+                                </div>
+                                <div className="col-span-4 sm:col-span-3">
+                                  <Input
+                                    type="number"
+                                    value={e.tempo_estimado_min}
+                                    onChange={(ev) => updateEtapa(ei, { tempo_estimado_min: ev.target.value })}
+                                    placeholder="Tempo de adição (min)"
+                                    className="h-8"
+                                    title="Tempo previsto de dosagem em minutos (primário). Os gatilhos abaixo são opcionais."
+                                  />
+                                </div>
+                              </>
+                            ) : e.tipo === "tag_captura" ? (
+                              <>
+                                <div className="col-span-12 sm:col-span-7">
+                                  <select
+                                    value={e.tag_nome}
+                                    onChange={(ev) => {
+                                      const sel = (tagsList.data ?? []).find((t) => t.nome === ev.target.value);
+                                      updateEtapa(ei, {
+                                        tag_nome: ev.target.value,
+                                        unidade: sel?.unidade ?? e.unidade,
+                                      });
+                                    }}
+                                    className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                                  >
+                                    <option value="">— selecione a tag —</option>
+                                    {(tagsList.data ?? []).map((t) => (
+                                      <option key={t.nome} value={t.nome}>
+                                        {t.nome}{t.grupo ? ` (${t.grupo})` : ""}{t.unidade ? ` · ${t.unidade}` : ""}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="col-span-12 sm:col-span-3">
+                                  <Input
+                                    type="number"
+                                    value={e.tempo_estimado_min}
+                                    onChange={(ev) => updateEtapa(ei, { tempo_estimado_min: ev.target.value })}
+                                    placeholder="Tempo (min)"
+                                    className="h-8"
+                                  />
+                                </div>
+                                <div className="col-span-12 text-[11px] text-muted-foreground">
+                                  Captura o valor atual da tag no momento em que o operador executar a etapa.
+                                </div>
+                              </>
+                            ) : (
+                              <div className="col-span-12 sm:col-span-4">
+                                <Input
+                                  type="number"
+                                  value={e.tempo_estimado_min}
+                                  onChange={(ev) => updateEtapa(ei, { tempo_estimado_min: ev.target.value })}
+                                  placeholder="Tempo estimado (min)"
+                                  className="h-8"
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          {e.tipo === "materia_prima" ? (
+                            <div className="mt-3 rounded border border-dashed border-border bg-muted/30 p-2">
+                              <div className="mb-2 flex items-center justify-between">
+                                <div>
+                                  <p className="text-xs font-semibold">Gatilhos por tag (opcional)</p>
+                                  <p className="text-[11px] text-muted-foreground">
+                                    Condições para iniciar ou finalizar automaticamente a adição. O tempo de adição acima continua sendo o primário.
+                                  </p>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button type="button" size="sm" variant="outline" className="h-7" onClick={() => addGatilho(ei, "inicio")}>
+                                    <Plus className="mr-1 h-3 w-3" /> Início
+                                  </Button>
+                                  <Button type="button" size="sm" variant="outline" className="h-7" onClick={() => addGatilho(ei, "fim")}>
+                                    <Plus className="mr-1 h-3 w-3" /> Fim
+                                  </Button>
+                                </div>
+                              </div>
+                              {e.gatilhos.length === 0 ? (
+                                <p className="text-[11px] text-muted-foreground">Nenhum gatilho.</p>
                               ) : (
-                                p.atividades.map((a, ai) => (
-                                  <div key={ai} className="grid grid-cols-12 gap-2 rounded border border-border/60 p-2">
-                                    <div className="col-span-12 sm:col-span-5">
-                                      <Input
-                                        value={a.descricao}
-                                        onChange={(e) => updateAtividade(pi, ai, { descricao: e.target.value })}
-                                        placeholder="Descrição da atividade"
-                                        className="h-8"
-                                      />
-                                    </div>
-                                    <div className="col-span-6 sm:col-span-2">
+                                <div className="space-y-2">
+                                  {e.gatilhos.map((g, gi) => (
+                                    <div key={gi} className="grid grid-cols-12 items-center gap-2">
                                       <select
-                                        value={a.tipo}
-                                        onChange={(e) => updateAtividade(pi, ai, { tipo: e.target.value as Atividade["tipo"] })}
-                                        className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                                        value={g.tipo}
+                                        onChange={(ev) => updateGatilho(ei, gi, { tipo: ev.target.value as GatilhoTipo })}
+                                        className="col-span-3 sm:col-span-2 h-8 rounded-md border border-input bg-background px-2 text-xs"
                                       >
-                                        <option value="acao">Ação</option>
-                                        <option value="materia_prima">Matéria-prima</option>
-                                        <option value="medicao">Medição</option>
-                                        <option value="tag_captura">Captação de tag</option>
+                                        <option value="inicio">Início</option>
+                                        <option value="fim">Fim</option>
                                       </select>
-                                    </div>
-                                    {a.tipo === "tag_captura" ? (
-                                      <div className="col-span-12 sm:col-span-4">
-                                        <select
-                                          value={a.tag_nome}
-                                          onChange={(e) => {
-                                            const sel = (tagsList.data ?? []).find((t) => t.nome === e.target.value);
-                                            updateAtividade(pi, ai, {
-                                              tag_nome: e.target.value,
-                                              unidade: sel?.unidade ?? a.unidade,
-                                            });
-                                          }}
-                                          className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
-                                        >
-                                          <option value="">— selecione a tag —</option>
-                                          {(tagsList.data ?? []).map((t) => (
-                                            <option key={t.nome} value={t.nome}>
-                                              {t.nome}{t.grupo ? ` (${t.grupo})` : ""}{t.unidade ? ` · ${t.unidade}` : ""}
-                                            </option>
-                                          ))}
-                                        </select>
+                                      <select
+                                        value={g.tag_nome}
+                                        onChange={(ev) => updateGatilho(ei, gi, { tag_nome: ev.target.value })}
+                                        className="col-span-9 sm:col-span-4 h-8 rounded-md border border-input bg-background px-2 text-xs"
+                                      >
+                                        <option value="">— tag —</option>
+                                        {(tagsList.data ?? []).map((t) => (
+                                          <option key={t.nome} value={t.nome}>
+                                            {t.nome}{t.unidade ? ` · ${t.unidade}` : ""}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <select
+                                        value={g.operador}
+                                        onChange={(ev) => updateGatilho(ei, gi, { operador: ev.target.value as GatilhoOperador })}
+                                        className="col-span-6 sm:col-span-3 h-8 rounded-md border border-input bg-background px-2 text-xs"
+                                      >
+                                        {(Object.keys(OPERADOR_LABEL) as GatilhoOperador[]).map((op) => (
+                                          <option key={op} value={op}>{OPERADOR_LABEL[op]}</option>
+                                        ))}
+                                      </select>
+                                      <div className="col-span-5 sm:col-span-2">
+                                        <Input
+                                          type="number"
+                                          value={g.valor}
+                                          disabled={g.operador === "change"}
+                                          onChange={(ev) => updateGatilho(ei, gi, { valor: ev.target.value })}
+                                          placeholder="Valor"
+                                          className="h-8"
+                                        />
                                       </div>
-                                    ) : (
-                                      <>
-                                        <div className="col-span-3 sm:col-span-1">
-                                          <Input
-                                            type="number"
-                                            step="0.001"
-                                            value={a.quantidade}
-                                            onChange={(e) => updateAtividade(pi, ai, { quantidade: e.target.value })}
-                                            placeholder="Qtd"
-                                            className="h-8"
-                                          />
-                                        </div>
-                                        <div className="col-span-3 sm:col-span-1">
-                                          <Input
-                                            value={a.unidade}
-                                            onChange={(e) => updateAtividade(pi, ai, { unidade: e.target.value })}
-                                            placeholder="un"
-                                            className="h-8"
-                                          />
-                                        </div>
-                                      </>
-                                    )}
-                                    <div className="col-span-9 sm:col-span-2">
-                                      <Input
-                                        type="number"
-                                        value={a.tempo_estimado_min}
-                                        onChange={(e) => updateAtividade(pi, ai, { tempo_estimado_min: e.target.value })}
-                                        placeholder="Tempo (min)"
-                                        className="h-8"
-                                      />
+                                      <div className="col-span-1 flex justify-end">
+                                        <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeGatilho(ei, gi)}>
+                                          <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                      </div>
                                     </div>
-                                    <div className="col-span-3 flex justify-end sm:col-span-1">
-                                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => removeAtividade(pi, ai)}>
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </div>
-                                ))
+                                  ))}
+                                </div>
                               )}
-                              <Button type="button" size="sm" variant="ghost" onClick={() => addAtividade(pi)}>
-                                <Plus className="mr-1 h-4 w-4" /> Atividade
-                              </Button>
                             </div>
                           ) : null}
                         </div>
@@ -537,7 +657,7 @@ function ProdutosPage() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Unidade</TableHead>
                 <TableHead>Categoria</TableHead>
-                <TableHead>Processos</TableHead>
+                <TableHead>Etapas</TableHead>
                 <TableHead>Ativo</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
