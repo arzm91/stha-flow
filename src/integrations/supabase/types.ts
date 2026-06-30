@@ -323,6 +323,7 @@ export type Database = {
           snoozed_until: string | null
           status: string
           trigger_context: Json
+          trigger_fired_at: string
           updated_at: string
         }
         Insert: {
@@ -339,6 +340,7 @@ export type Database = {
           snoozed_until?: string | null
           status?: string
           trigger_context?: Json
+          trigger_fired_at?: string
           updated_at?: string
         }
         Update: {
@@ -355,6 +357,7 @@ export type Database = {
           snoozed_until?: string | null
           status?: string
           trigger_context?: Json
+          trigger_fired_at?: string
           updated_at?: string
         }
         Relationships: [
