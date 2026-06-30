@@ -226,6 +226,8 @@ function ProdutosPage() {
       tag_nome: string | null; ordem: number; gatilhos: unknown;
       qtd_modo: string | null; qtd_tag_nome: string | null;
       captura_modo: string | null; captura_gatilho: unknown;
+      estab_enabled: boolean | null; estab_pct: number | null;
+      estab_janela_seg: number | null; estab_min_estavel_seg: number | null;
     }>).slice().sort((a, b) => {
       const pa = procOrder.get(a.processo_id) ?? 0;
       const pb = procOrder.get(b.processo_id) ?? 0;
@@ -254,6 +256,10 @@ function ProdutosPage() {
           gatilhos: gats,
           qtd_modo: ((a.qtd_modo === "tag_valor" || a.qtd_modo === "tag_diferenca") ? a.qtd_modo : "fixa") as QtdModo,
           qtd_tag_nome: a.qtd_tag_nome ?? "",
+          estab_enabled: !!a.estab_enabled,
+          estab_pct: a.estab_pct == null ? "2" : String(a.estab_pct),
+          estab_janela_seg: a.estab_janela_seg == null ? "30" : String(a.estab_janela_seg),
+          estab_min_estavel_seg: a.estab_min_estavel_seg == null ? "30" : String(a.estab_min_estavel_seg),
           captura_modo: (a.captura_modo === "gatilho_valor" ? "gatilho_valor" : "na_execucao") as CapturaModo,
           captura_operador: ((cg.operador as GatilhoOperador) ?? "gt"),
           captura_valor: cg.valor == null ? "" : String(cg.valor),
