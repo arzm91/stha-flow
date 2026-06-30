@@ -65,6 +65,19 @@ export function TagsMonitoramento({
   ativa: boolean;
 }) {
   const [horas, setHoras] = useState<number>(1);
+  const [agora, setAgora] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    if (!ativa) return;
+    const id = setInterval(() => setAgora(Date.now()), 5_000);
+    return () => clearInterval(id);
+  }, [ativa]);
+
+  const janelaPeriodo = useMemo(() => {
+    const fim = agora;
+    const inicio = fim - horas * 3600_000;
+    return { inicio, fim };
+  }, [agora, horas]);
 
   // Busca o histórico das últimas N horas para a ordem (paginado para passar do limite de 1000).
   const hist = useQuery({
@@ -245,21 +258,19 @@ export function TagsMonitoramento({
     return { eventosPontos: pontos, eventosFaixas: faixas };
   }, [eventosQuery.data]);
 
-  // Janela visível baseada nos dados carregados
-  const janela = useMemo(() => {
-    if (chartData.length === 0) return null;
-    return { min: chartData[0].t as number, max: chartData[chartData.length - 1].t as number };
-  }, [chartData]);
+  // Janela visível = período exato selecionado (mesmo sem dados)
+  const janela = useMemo(
+    () => ({ min: janelaPeriodo.inicio, max: janelaPeriodo.fim }),
+    [janelaPeriodo],
+  );
 
   const pontosVisiveis = useMemo(() => {
-    if (!janela) return [];
     return eventosPontos.filter(
       (e) => evtAtivos[e.tipo] && e.when >= janela.min && e.when <= janela.max,
     );
   }, [eventosPontos, janela, evtAtivos]);
 
   const faixasVisiveis = useMemo(() => {
-    if (!janela) return [];
     return eventosFaixas
       .filter((e) => evtAtivos.processo && e.fim >= janela.min && e.inicio <= janela.max)
       .map((e) => ({ ...e, inicio: Math.max(e.inicio, janela.min), fim: Math.min(e.fim, janela.max) }));
@@ -273,8 +284,8 @@ export function TagsMonitoramento({
 
   const totalVisivel = dadosOrdenados.length;
 
-  const inicioJanela = totalVisivel > 0 ? dadosOrdenados[0].registrado_em : null;
-  const fimJanela = totalVisivel > 0 ? dadosOrdenados[dadosOrdenados.length - 1].registrado_em : null;
+  const inicioJanela = new Date(janela.min).toISOString();
+  const fimJanela = new Date(janela.max).toISOString();
 
   if (!tagNomes || tagNomes.length === 0) return null;
 
@@ -365,10 +376,6 @@ export function TagsMonitoramento({
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               Selecione ao menos uma tag para visualizar.
             </div>
-          ) : chartData.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              {hist.isLoading ? "Carregando histórico..." : "Aguardando pontos do histórico..."}
-            </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 24, left: 0 }}>
@@ -376,7 +383,8 @@ export function TagsMonitoramento({
                 <XAxis
                   dataKey="t"
                   type="number"
-                  domain={["dataMin", "dataMax"]}
+                  domain={[janela.min, janela.max]}
+                  allowDataOverflow
                   scale="time"
                   tickFormatter={(t) =>
                     new Date(t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
