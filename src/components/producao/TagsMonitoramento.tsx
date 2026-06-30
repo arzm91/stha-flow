@@ -48,7 +48,12 @@ const PALETTE = [
   "#ec4899", "#14b8a6", "#eab308", "#6366f1", "#f97316",
 ];
 
-const PAGE_SIZE = 200;
+const PERIODOS = [
+  { label: "1 hora", hours: 1 },
+  { label: "6 horas", hours: 6 },
+  { label: "12 horas", hours: 12 },
+  { label: "24 horas", hours: 24 },
+] as const;
 
 export function TagsMonitoramento({
   ordemId,
