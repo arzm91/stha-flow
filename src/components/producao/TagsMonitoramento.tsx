@@ -4,9 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Brush, ReferenceLine, ReferenceArea } from "recharts";
-import { LineChart as LineChartIcon, ChevronLeft, ChevronRight, RotateCcw, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon } from "lucide-react";
+import { LineChart as LineChartIcon, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon } from "lucide-react";
 import { formatNumber, formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+const PERIODOS = [
+  { k: "1h", label: "1 hora", ms: 60 * 60 * 1000 },
+  { k: "6h", label: "6 horas", ms: 6 * 60 * 60 * 1000 },
+  { k: "12h", label: "12 horas", ms: 12 * 60 * 60 * 1000 },
+  { k: "24h", label: "24 horas", ms: 24 * 60 * 60 * 1000 },
+] as const;
+type PeriodoKey = (typeof PERIODOS)[number]["k"];
+
 
 type EventoPonto = {
   key: string;
@@ -48,7 +57,7 @@ const PALETTE = [
   "#ec4899", "#14b8a6", "#eab308", "#6366f1", "#f97316",
 ];
 
-const PAGE_SIZE = 200;
+const MAX_ROWS = 5000;
 
 export function TagsMonitoramento({
   ordemId,
@@ -59,26 +68,40 @@ export function TagsMonitoramento({
   tagNomes: string[];
   ativa: boolean;
 }) {
-  const [offset, setOffset] = useState(0);
+  const [periodo, setPeriodo] = useState<PeriodoKey>("1h");
+  const periodoMs = useMemo(
+    () => PERIODOS.find((p) => p.k === periodo)!.ms,
+    [periodo],
+  );
 
-  // Busca a janela atual do histórico ordenada do mais recente para o mais antigo.
-  // offset = 0 → últimos PAGE_SIZE registros. offset = PAGE_SIZE → 200 registros anteriores.
-  // Invertemos a lista para renderizar o gráfico em ordem cronológica.
+  // Tick para recalcular a janela de tempo de forma "ao vivo".
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    if (!ativa) return;
+    const id = setInterval(() => setNowTick(Date.now()), 5_000);
+    return () => clearInterval(id);
+  }, [ativa]);
+
+  // Bucket de 30s para estabilizar a queryKey (evita refetch a cada render).
+  const desdeBucket = Math.floor((nowTick - periodoMs) / 30_000) * 30_000;
+  const desdeIso = new Date(desdeBucket).toISOString();
+
   const hist = useQuery({
-    queryKey: ["producao-tag-historico", ordemId, offset],
+    queryKey: ["producao-tag-historico", ordemId, periodo, desdeBucket],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("producao_tag_historico")
         .select("id,tag_nome,valor_num,unidade,registrado_em")
         .eq("ordem_id", ordemId)
+        .gte("registrado_em", desdeIso)
         .order("registrado_em", { ascending: false })
-        .range(offset, offset + PAGE_SIZE - 1);
+        .limit(MAX_ROWS);
       if (error) throw error;
       return (data ?? []) as Row[];
     },
-    // Atualiza automaticamente apenas quando estamos vendo os dados mais recentes.
-    refetchInterval: ativa && offset === 0 ? 5_000 : false,
+    refetchInterval: ativa ? 5_000 : false,
   });
+
 
   // Eventos da produção (registros que serão sobrepostos ao gráfico)
   const eventosQuery = useQuery({
@@ -261,10 +284,8 @@ export function TagsMonitoramento({
   };
 
   const totalVisivel = dadosOrdenados.length;
-  // Existem dados anteriores se a página atual está completa (sabemos que há mais após ela).
-  const podeAnteriores = hist.data && hist.data.length === PAGE_SIZE;
-  // Existem dados mais recentes se estamos afastados do início (offset > 0).
-  const podeProximos = offset > 0;
+  const periodoLabel = PERIODOS.find((p) => p.k === periodo)!.label;
+  const limiteAtingido = (hist.data?.length ?? 0) >= MAX_ROWS;
 
   const inicioJanela = totalVisivel > 0 ? dadosOrdenados[0].registrado_em : null;
   const fimJanela = totalVisivel > 0 ? dadosOrdenados[dadosOrdenados.length - 1].registrado_em : null;
@@ -280,16 +301,15 @@ export function TagsMonitoramento({
         </CardTitle>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>
-            {ativa ? "Gravando histórico (a cada ~10s)" : "Histórico desta produção"}
+            {ativa ? "Ao vivo (atualiza a cada 5s)" : "Histórico desta produção"}
           </span>
           <span className="hidden sm:inline">·</span>
           <span className="hidden sm:inline">
-            {offset === 0
-              ? `últimos ${totalVisivel} registros`
-              : `registros ${offset + 1} a ${offset + totalVisivel}`}
+            últimas {periodoLabel} · {totalVisivel} pontos
           </span>
         </div>
       </CardHeader>
+
       <CardContent className="space-y-3">
         {/* Seletor de tags */}
         <div className="flex flex-wrap gap-2">
@@ -464,43 +484,41 @@ export function TagsMonitoramento({
           )}
         </div>
 
-        {/* Controles de navegação entre janelas de histórico */}
-        <div className="flex items-center justify-between gap-2">
+        {/* Seletor de período de visualização */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] uppercase tracking-wide text-muted-foreground mr-1">
+              Período:
+            </span>
+            {PERIODOS.map((p) => {
+              const on = periodo === p.k;
+              return (
+                <Button
+                  key={p.k}
+                  type="button"
+                  variant={on ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPeriodo(p.k)}
+                  className="h-7 text-xs"
+                >
+                  {p.label}
+                </Button>
+              );
+            })}
+          </div>
           <div className="text-xs text-muted-foreground">
             <span className="font-mono text-foreground">{totalVisivel}</span> pontos
             {inicioJanela && fimJanela ? (
               <span className="ml-2 hidden sm:inline">
-                ({new Date(inicioJanela).toLocaleString("pt-BR")} → {new Date(fimJanela).toLocaleString("pt-BR")})
+                ({new Date(inicioJanela).toLocaleTimeString("pt-BR")} → {new Date(fimJanela).toLocaleTimeString("pt-BR")})
               </span>
             ) : null}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setOffset((o) => o + PAGE_SIZE)}
-              disabled={!podeAnteriores || hist.isLoading}
-            >
-              <ChevronLeft className="mr-1 h-4 w-4" /> Anteriores
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setOffset(0)}
-              disabled={offset === 0 || hist.isLoading}
-            >
-              <RotateCcw className="mr-1 h-4 w-4" /> Mais recentes
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
-              disabled={!podeProximos || hist.isLoading}
-            >
-              Próximos <ChevronRight className="ml-1 h-4 w-4" />
-            </Button>
+            {limiteAtingido ? (
+              <span className="ml-2 text-warning">· limite de {MAX_ROWS} pontos atingido</span>
+            ) : null}
           </div>
         </div>
+
 
         {/* Estatísticas resumidas */}
         {stats.size > 0 ? (
