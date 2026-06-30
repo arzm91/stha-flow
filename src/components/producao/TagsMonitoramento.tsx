@@ -3,10 +3,37 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Brush } from "recharts";
-import { LineChart as LineChartIcon, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
-import { formatNumber } from "@/lib/format";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Brush, ReferenceLine, ReferenceArea } from "recharts";
+import { LineChart as LineChartIcon, ChevronLeft, ChevronRight, RotateCcw, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon } from "lucide-react";
+import { formatNumber, formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+type EventoPonto = {
+  key: string;
+  tipo: "parametro" | "analise" | "observacao" | "tag_captura";
+  when: number; // epoch ms
+  titulo: string;
+  detalhe?: string;
+  cor: string;
+};
+type EventoFaixa = {
+  key: string;
+  tipo: "processo";
+  inicio: number;
+  fim: number; // epoch ms (now() se em curso)
+  titulo: string;
+  detalhe?: string;
+  emCurso: boolean;
+  cor: string;
+};
+
+const EVT_CORES = {
+  parametro: "#3b82f6",
+  analise: "#a855f7",
+  observacao: "#64748b",
+  tag_captura: "#14b8a6",
+  processo: "#f59e0b",
+} as const;
 
 type Row = {
   id: string;
@@ -51,6 +78,35 @@ export function TagsMonitoramento({
     },
     // Atualiza automaticamente apenas quando estamos vendo os dados mais recentes.
     refetchInterval: ativa && offset === 0 ? 5_000 : false,
+  });
+
+  // Eventos da produção (registros que serão sobrepostos ao gráfico)
+  const eventosQuery = useQuery({
+    queryKey: ["producao-eventos-grafico", ordemId],
+    queryFn: async () => {
+      const [params, anls, obs, etps] = await Promise.all([
+        supabase.from("parametros_registrados")
+          .select("id,valor,registrado_em,parametro:parametro_id(nome,unidade)").eq("ordem_id", ordemId),
+        supabase.from("analises_registradas")
+          .select("id,resultado,registrado_em,analise:analise_id(nome,unidade)").eq("ordem_id", ordemId),
+        supabase.from("observacoes_producao")
+          .select("id,texto,registrado_em").eq("ordem_id", ordemId),
+        supabase.from("ordem_etapas")
+          .select("id,tipo,processo_nome,atividade_descricao,iniciado_em,finalizado_em,observacao,motivo_atraso")
+          .eq("ordem_id", ordemId),
+      ]);
+      return {
+        parametros: params.data ?? [],
+        analises: anls.data ?? [],
+        observacoes: obs.data ?? [],
+        etapas: etps.data ?? [],
+      };
+    },
+    refetchInterval: ativa ? 10_000 : false,
+  });
+
+  const [evtAtivos, setEvtAtivos] = useState<Record<string, boolean>>({
+    parametro: true, analise: true, observacao: true, tag_captura: true, processo: true,
   });
 
   // Dados em ordem cronológica (do mais antigo para o mais recente) para o gráfico.
@@ -119,6 +175,84 @@ export function TagsMonitoramento({
     }
     return m;
   }, [dadosOrdenados, selecionadas]);
+
+  // Constrói eventos pontuais (parâmetros, análises, observações, capturas de tag)
+  // e faixas (processos com início/fim).
+  const { eventosPontos, eventosFaixas } = useMemo(() => {
+    const pontos: EventoPonto[] = [];
+    const faixas: EventoFaixa[] = [];
+    const q = eventosQuery.data;
+    if (!q) return { eventosPontos: pontos, eventosFaixas: faixas };
+
+    for (const p of q.parametros) {
+      const nome = (p as any).parametro?.nome ?? "Parâmetro";
+      const u = (p as any).parametro?.unidade;
+      pontos.push({
+        key: `par-${p.id}`, tipo: "parametro", when: new Date(p.registrado_em).getTime(),
+        titulo: nome, detalhe: `${formatNumber(Number(p.valor))}${u ? " " + u : ""}`,
+        cor: EVT_CORES.parametro,
+      });
+    }
+    for (const a of q.analises) {
+      const nome = (a as any).analise?.nome ?? "Análise";
+      const u = (a as any).analise?.unidade;
+      pontos.push({
+        key: `anl-${a.id}`, tipo: "analise", when: new Date(a.registrado_em).getTime(),
+        titulo: nome, detalhe: `${formatNumber(Number(a.resultado))}${u ? " " + u : ""}`,
+        cor: EVT_CORES.analise,
+      });
+    }
+    for (const o of q.observacoes) {
+      pontos.push({
+        key: `obs-${o.id}`, tipo: "observacao", when: new Date(o.registrado_em).getTime(),
+        titulo: "Observação", detalhe: (o as any).texto ?? "", cor: EVT_CORES.observacao,
+      });
+    }
+    for (const e of q.etapas) {
+      const t = (e as any).tipo as string;
+      if (t === "tag_captura") {
+        pontos.push({
+          key: `tag-${e.id}`, tipo: "tag_captura",
+          when: new Date((e as any).iniciado_em).getTime(),
+          titulo: (e as any).atividade_descricao ?? "Captura de tag",
+          detalhe: (e as any).observacao ?? "",
+          cor: EVT_CORES.tag_captura,
+        });
+      } else if ((e as any).processo_nome) {
+        const ini = new Date((e as any).iniciado_em).getTime();
+        const fimRaw = (e as any).finalizado_em;
+        const emCurso = !fimRaw;
+        const fim = fimRaw ? new Date(fimRaw).getTime() : Date.now();
+        faixas.push({
+          key: `proc-${e.id}`, tipo: "processo", inicio: ini, fim,
+          titulo: (e as any).processo_nome,
+          detalhe: (e as any).motivo_atraso || (e as any).observacao || undefined,
+          emCurso, cor: EVT_CORES.processo,
+        });
+      }
+    }
+    return { eventosPontos: pontos, eventosFaixas: faixas };
+  }, [eventosQuery.data]);
+
+  // Janela visível baseada nos dados carregados
+  const janela = useMemo(() => {
+    if (chartData.length === 0) return null;
+    return { min: chartData[0].t as number, max: chartData[chartData.length - 1].t as number };
+  }, [chartData]);
+
+  const pontosVisiveis = useMemo(() => {
+    if (!janela) return [];
+    return eventosPontos.filter(
+      (e) => evtAtivos[e.tipo] && e.when >= janela.min && e.when <= janela.max,
+    );
+  }, [eventosPontos, janela, evtAtivos]);
+
+  const faixasVisiveis = useMemo(() => {
+    if (!janela) return [];
+    return eventosFaixas
+      .filter((e) => evtAtivos.processo && e.fim >= janela.min && e.inicio <= janela.max)
+      .map((e) => ({ ...e, inicio: Math.max(e.inicio, janela.min), fim: Math.min(e.fim, janela.max) }));
+  }, [eventosFaixas, janela, evtAtivos]);
 
   const toggle = (nome: string) => {
     setSelecionadas((cur) =>
@@ -190,6 +324,36 @@ export function TagsMonitoramento({
           )}
         </div>
 
+        {/* Seletor de tipos de eventos sobrepostos ao gráfico */}
+        <div className="flex flex-wrap items-center gap-1.5 border-t border-border pt-2">
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground mr-1">Eventos:</span>
+          {([
+            { k: "processo", label: "Processos", icon: Workflow },
+            { k: "parametro", label: "Parâmetros", icon: Activity },
+            { k: "analise", label: "Análises", icon: FlaskConical },
+            { k: "tag_captura", label: "Capturas", icon: TagIcon },
+            { k: "observacao", label: "Observações", icon: MessageSquare },
+          ] as const).map(({ k, label, icon: Icon }) => {
+            const on = evtAtivos[k];
+            const cor = EVT_CORES[k];
+            return (
+              <Button
+                key={k}
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setEvtAtivos((s) => ({ ...s, [k]: !s[k] }))}
+                className={cn("h-7 gap-1.5 text-xs", on ? "border-2" : "opacity-50 hover:opacity-100")}
+                style={on ? { borderColor: cor, color: cor } : undefined}
+              >
+                <Icon className="h-3 w-3" />
+                {label}
+              </Button>
+            );
+          })}
+        </div>
+
+
         {/* Gráfico único combinado com Brush para zoom/pan */}
         <div className="h-96 w-full">
           {selecionadas.length === 0 ? (
@@ -246,6 +410,44 @@ export function TagsMonitoramento({
                     dot={false}
                     isAnimationActive={false}
                     connectNulls
+                  />
+                ))}
+                {/* Faixas de processos (duração) */}
+                {faixasVisiveis.map((f) => (
+                  <ReferenceArea
+                    key={f.key}
+                    x1={f.inicio}
+                    x2={f.fim}
+                    fill={f.cor}
+                    fillOpacity={f.emCurso ? 0.08 : 0.14}
+                    stroke={f.cor}
+                    strokeOpacity={0.5}
+                    strokeDasharray={f.emCurso ? "4 3" : undefined}
+                    ifOverflow="hidden"
+                    label={{
+                      value: f.titulo,
+                      position: "insideTop",
+                      fill: f.cor,
+                      fontSize: 10,
+                      fontWeight: 600,
+                    }}
+                  />
+                ))}
+                {/* Eventos pontuais */}
+                {pontosVisiveis.map((p) => (
+                  <ReferenceLine
+                    key={p.key}
+                    x={p.when}
+                    stroke={p.cor}
+                    strokeDasharray="2 2"
+                    ifOverflow="hidden"
+                    label={{
+                      value: `● ${p.titulo}${p.detalhe ? ` ${p.detalhe}` : ""}`,
+                      position: "top",
+                      fill: p.cor,
+                      fontSize: 9,
+                      angle: -35,
+                    }}
                   />
                 ))}
                 <Brush
@@ -328,6 +530,43 @@ export function TagsMonitoramento({
             })}
           </div>
         ) : null}
+
+        {/* Linha do tempo de eventos da janela visível */}
+        {janela && (faixasVisiveis.length > 0 || pontosVisiveis.length > 0) ? (
+          <div className="rounded-md border border-border bg-muted/10 p-2">
+            <div className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+              Linha do tempo ({faixasVisiveis.length} processos · {pontosVisiveis.length} eventos)
+            </div>
+            <div className="max-h-40 space-y-1 overflow-y-auto text-xs">
+              {[
+                ...faixasVisiveis.map((f) => ({
+                  when: f.inicio,
+                  cor: f.cor,
+                  label: `Processo: ${f.titulo}`,
+                  extra: `${formatDuration(f.fim - f.inicio)}${f.emCurso ? " (em curso)" : ""}${f.detalhe ? " — " + f.detalhe : ""}`,
+                })),
+                ...pontosVisiveis.map((p) => ({
+                  when: p.when,
+                  cor: p.cor,
+                  label: `${p.tipo === "parametro" ? "Parâmetro" : p.tipo === "analise" ? "Análise" : p.tipo === "tag_captura" ? "Captura" : "Observação"}: ${p.titulo}`,
+                  extra: p.detalhe ?? "",
+                })),
+              ]
+                .sort((a, b) => a.when - b.when)
+                .map((row, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="mt-1 inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: row.cor }} />
+                    <span className="font-mono text-[10px] text-muted-foreground tabular-nums">
+                      {new Date(row.when).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                    </span>
+                    <span className="font-medium">{row.label}</span>
+                    {row.extra ? <span className="truncate text-muted-foreground">{row.extra}</span> : null}
+                  </div>
+                ))}
+            </div>
+          </div>
+        ) : null}
+
       </CardContent>
     </Card>
   );
