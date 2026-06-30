@@ -214,7 +214,7 @@ function ProdutosPage() {
     const { data: ativs } = procIds.length
       ? await supabase
           .from("produto_atividades")
-          .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min, tag_nome, gatilhos, qtd_modo, qtd_tag_nome, captura_modo, captura_gatilho")
+          .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min, tag_nome, gatilhos, qtd_modo, qtd_tag_nome, captura_modo, captura_gatilho, estab_enabled, estab_pct, estab_janela_seg, estab_min_estavel_seg")
           .in("processo_id", procIds)
           .order("ordem", { ascending: true })
       : { data: [] };
