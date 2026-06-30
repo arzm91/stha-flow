@@ -190,7 +190,7 @@ function OPPage() {
               const { data: u } = await supabase.auth.getUser();
               if (!u.user) throw new Error("Não autenticado");
               const { error } = await supabase.from("parametros_registrados").insert({
-                owner_id: u.user.id, ordem_id: id, parametro_id: refId, valor: Number(valor), registrado_em: new Date().toISOString(),
+                owner_id: u.user.id, ordem_id: id, parametro_id: refId, valor: Number(valor),
               });
               if (error) throw error;
               qc.invalidateQueries({ queryKey: ["params", id] });
@@ -211,7 +211,7 @@ function OPPage() {
               const { data: u } = await supabase.auth.getUser();
               if (!u.user) throw new Error("Não autenticado");
               const { error } = await supabase.from("analises_registradas").insert({
-                owner_id: u.user.id, ordem_id: id, analise_id: refId, resultado: Number(valor), registrado_em: new Date().toISOString(),
+                owner_id: u.user.id, ordem_id: id, analise_id: refId, resultado: Number(valor),
               });
               if (error) throw error;
               qc.invalidateQueries({ queryKey: ["analises", id] });
@@ -230,7 +230,7 @@ function OPPage() {
               const { data: u } = await supabase.auth.getUser();
               if (!u.user) throw new Error("Não autenticado");
               const { error } = await supabase.from("observacoes_producao").insert({
-                owner_id: u.user.id, ordem_id: id, texto, registrado_em: new Date().toISOString(),
+                owner_id: u.user.id, ordem_id: id, texto,
               });
               if (error) throw error;
               qc.invalidateQueries({ queryKey: ["obs", id] });
@@ -448,7 +448,6 @@ function TagsDoEquipamento({ tagNomes, ordemId, disabled }: { tagNomes: string[]
         ordem_id: ordemId,
         parametro_id: parametroId,
         valor: Number(t.valor_num),
-        registrado_em: new Date().toISOString(),
       });
       if (regErr) throw regErr;
       toast.success(`${t.nome} registrado: ${t.valor_num}${t.unidade ? " " + t.unidade : ""}`);
@@ -806,7 +805,6 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
         atividade_descricao: params.descricao ?? null,
         tipo: params.tipo ?? null,
         ordem_atividade: params.ordemAtividade ?? 0,
-        iniciado_em: new Date().toISOString(),
       });
       if (error) throw error;
       toast.success("Etapa iniciada");
@@ -818,7 +816,9 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
 
   const finalizar = async (etapaId: string, iniciadoEm: string, motivo?: string) => {
     try {
-      const fim = new Date();
+      const { data: nowData, error: nowErr } = await supabase.rpc("server_now");
+      if (nowErr) throw nowErr;
+      const fim = new Date(nowData as unknown as string);
       const dur = Math.max(0, Math.floor((fim.getTime() - new Date(iniciadoEm).getTime()) / 1000));
       const { error } = await supabase
         .from("ordem_etapas")
@@ -870,7 +870,9 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
         .maybeSingle();
       if (te) throw te;
       if (!tag) throw new Error("Tag não encontrada nos dados recebidos.");
-      const agora = new Date().toISOString();
+      const { data: nowData, error: nowErr } = await supabase.rpc("server_now");
+      if (nowErr) throw nowErr;
+      const agora = new Date(nowData as unknown as string).toISOString();
       const valorTxt = tag.valor_num != null ? String(tag.valor_num) : (tag.valor ?? "—");
       const obs = `Tag ${tag.nome} = ${valorTxt}${tag.unidade ? ` ${tag.unidade}` : ""} (leitura em ${new Date(tag.atualizado_em).toLocaleString("pt-BR")})`;
       const { error } = await supabase.from("ordem_etapas").insert({
