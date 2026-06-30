@@ -79,7 +79,7 @@ export function TagsMonitoramento({
   const [nowTick, setNowTick] = useState(() => Date.now());
   useEffect(() => {
     if (!ativa) return;
-    const id = setInterval(() => setNowTick(Date.now()), 5_000);
+    const id = setInterval(() => setNowTick(Date.now()), 10_000);
     return () => clearInterval(id);
   }, [ativa]);
 
