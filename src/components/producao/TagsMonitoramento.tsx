@@ -176,6 +176,84 @@ export function TagsMonitoramento({
     return m;
   }, [dadosOrdenados, selecionadas]);
 
+  // Constrói eventos pontuais (parâmetros, análises, observações, capturas de tag)
+  // e faixas (processos com início/fim).
+  const { eventosPontos, eventosFaixas } = useMemo(() => {
+    const pontos: EventoPonto[] = [];
+    const faixas: EventoFaixa[] = [];
+    const q = eventosQuery.data;
+    if (!q) return { eventosPontos: pontos, eventosFaixas: faixas };
+
+    for (const p of q.parametros) {
+      const nome = (p as any).parametro?.nome ?? "Parâmetro";
+      const u = (p as any).parametro?.unidade;
+      pontos.push({
+        key: `par-${p.id}`, tipo: "parametro", when: new Date(p.registrado_em).getTime(),
+        titulo: nome, detalhe: `${formatNumber(Number(p.valor))}${u ? " " + u : ""}`,
+        cor: EVT_CORES.parametro,
+      });
+    }
+    for (const a of q.analises) {
+      const nome = (a as any).analise?.nome ?? "Análise";
+      const u = (a as any).analise?.unidade;
+      pontos.push({
+        key: `anl-${a.id}`, tipo: "analise", when: new Date(a.registrado_em).getTime(),
+        titulo: nome, detalhe: `${formatNumber(Number(a.resultado))}${u ? " " + u : ""}`,
+        cor: EVT_CORES.analise,
+      });
+    }
+    for (const o of q.observacoes) {
+      pontos.push({
+        key: `obs-${o.id}`, tipo: "observacao", when: new Date(o.registrado_em).getTime(),
+        titulo: "Observação", detalhe: (o as any).texto ?? "", cor: EVT_CORES.observacao,
+      });
+    }
+    for (const e of q.etapas) {
+      const t = (e as any).tipo as string;
+      if (t === "tag_captura") {
+        pontos.push({
+          key: `tag-${e.id}`, tipo: "tag_captura",
+          when: new Date((e as any).iniciado_em).getTime(),
+          titulo: (e as any).atividade_descricao ?? "Captura de tag",
+          detalhe: (e as any).observacao ?? "",
+          cor: EVT_CORES.tag_captura,
+        });
+      } else if ((e as any).processo_nome) {
+        const ini = new Date((e as any).iniciado_em).getTime();
+        const fimRaw = (e as any).finalizado_em;
+        const emCurso = !fimRaw;
+        const fim = fimRaw ? new Date(fimRaw).getTime() : Date.now();
+        faixas.push({
+          key: `proc-${e.id}`, tipo: "processo", inicio: ini, fim,
+          titulo: (e as any).processo_nome,
+          detalhe: (e as any).motivo_atraso || (e as any).observacao || undefined,
+          emCurso, cor: EVT_CORES.processo,
+        });
+      }
+    }
+    return { eventosPontos: pontos, eventosFaixas: faixas };
+  }, [eventosQuery.data]);
+
+  // Janela visível baseada nos dados carregados
+  const janela = useMemo(() => {
+    if (chartData.length === 0) return null;
+    return { min: chartData[0].t as number, max: chartData[chartData.length - 1].t as number };
+  }, [chartData]);
+
+  const pontosVisiveis = useMemo(() => {
+    if (!janela) return [];
+    return eventosPontos.filter(
+      (e) => evtAtivos[e.tipo] && e.when >= janela.min && e.when <= janela.max,
+    );
+  }, [eventosPontos, janela, evtAtivos]);
+
+  const faixasVisiveis = useMemo(() => {
+    if (!janela) return [];
+    return eventosFaixas
+      .filter((e) => evtAtivos.processo && e.fim >= janela.min && e.inicio <= janela.max)
+      .map((e) => ({ ...e, inicio: Math.max(e.inicio, janela.min), fim: Math.min(e.fim, janela.max) }));
+  }, [eventosFaixas, janela, evtAtivos]);
+
   const toggle = (nome: string) => {
     setSelecionadas((cur) =>
       cur.includes(nome) ? cur.filter((n) => n !== nome) : [...cur, nome],
