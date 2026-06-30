@@ -3,8 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid } from "recharts";
-import { LineChart as LineChartIcon } from "lucide-react";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Brush } from "recharts";
+import { LineChart as LineChartIcon, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
 import { formatNumber } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -21,6 +21,8 @@ const PALETTE = [
   "#ec4899", "#14b8a6", "#eab308", "#6366f1", "#f97316",
 ];
 
+const PAGE_SIZE = 200;
+
 export function TagsMonitoramento({
   ordemId,
   tagNomes,
@@ -30,23 +32,35 @@ export function TagsMonitoramento({
   tagNomes: string[];
   ativa: boolean;
 }) {
+  const [offset, setOffset] = useState(0);
+
+  // Busca a janela atual do histórico ordenada do mais recente para o mais antigo.
+  // offset = 0 → últimos PAGE_SIZE registros. offset = PAGE_SIZE → 200 registros anteriores.
+  // Invertemos a lista para renderizar o gráfico em ordem cronológica.
   const hist = useQuery({
-    queryKey: ["producao-tag-historico", ordemId],
+    queryKey: ["producao-tag-historico", ordemId, offset],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("producao_tag_historico")
         .select("id,tag_nome,valor_num,unidade,registrado_em")
         .eq("ordem_id", ordemId)
-        .order("registrado_em", { ascending: true });
+        .order("registrado_em", { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
       if (error) throw error;
       return (data ?? []) as Row[];
     },
-    refetchInterval: ativa ? 5_000 : false,
+    // Atualiza automaticamente apenas quando estamos vendo os dados mais recentes.
+    refetchInterval: ativa && offset === 0 ? 5_000 : false,
   });
+
+  // Dados em ordem cronológica (do mais antigo para o mais recente) para o gráfico.
+  const dadosOrdenados = useMemo(() => {
+    return [...(hist.data ?? [])].reverse();
+  }, [hist.data]);
 
   const { tagsDisponiveis, unidades } = useMemo(() => {
     const map = new Map<string, string | null>();
-    for (const r of hist.data ?? []) {
+    for (const r of dadosOrdenados) {
       if (!map.has(r.tag_nome)) map.set(r.tag_nome, r.unidade);
       else if (!map.get(r.tag_nome) && r.unidade) map.set(r.tag_nome, r.unidade);
     }
@@ -56,7 +70,7 @@ export function TagsMonitoramento({
       tagsDisponiveis: Array.from(map.keys()),
       unidades: map,
     };
-  }, [hist.data, tagNomes]);
+  }, [dadosOrdenados, tagNomes]);
 
   const [selecionadas, setSelecionadas] = useState<string[]>([]);
 
@@ -75,9 +89,9 @@ export function TagsMonitoramento({
 
   // Constrói dataset combinado: cada timestamp vira uma linha com colunas por tag
   const chartData = useMemo(() => {
-    if (!hist.data || selecionadas.length === 0) return [];
+    if (dadosOrdenados.length === 0 || selecionadas.length === 0) return [];
     const byTs = new Map<number, Record<string, number | string>>();
-    for (const r of hist.data) {
+    for (const r of dadosOrdenados) {
       if (!selecionadas.includes(r.tag_nome)) continue;
       if (r.valor_num == null) continue;
       const t = new Date(r.registrado_em).getTime();
@@ -85,13 +99,13 @@ export function TagsMonitoramento({
       byTs.get(t)![r.tag_nome] = Number(r.valor_num);
     }
     return Array.from(byTs.values()).sort((a, b) => (a.t as number) - (b.t as number));
-  }, [hist.data, selecionadas]);
+  }, [dadosOrdenados, selecionadas]);
 
-  // Estatísticas por tag selecionada
+  // Estatísticas por tag selecionada (considera a janela visível)
   const stats = useMemo(() => {
     const m = new Map<string, { min: number; max: number; avg: number; last: number; n: number }>();
     for (const nome of selecionadas) {
-      const vals = (hist.data ?? [])
+      const vals = dadosOrdenados
         .filter((r) => r.tag_nome === nome && r.valor_num != null)
         .map((r) => Number(r.valor_num));
       if (vals.length === 0) continue;
@@ -104,13 +118,22 @@ export function TagsMonitoramento({
       });
     }
     return m;
-  }, [hist.data, selecionadas]);
+  }, [dadosOrdenados, selecionadas]);
 
   const toggle = (nome: string) => {
     setSelecionadas((cur) =>
       cur.includes(nome) ? cur.filter((n) => n !== nome) : [...cur, nome],
     );
   };
+
+  const totalVisivel = dadosOrdenados.length;
+  // Existem dados anteriores se a página atual está completa (sabemos que há mais após ela).
+  const podeAnteriores = hist.data && hist.data.length === PAGE_SIZE;
+  // Existem dados mais recentes se estamos afastados do início (offset > 0).
+  const podeProximos = offset > 0;
+
+  const inicioJanela = totalVisivel > 0 ? dadosOrdenados[0].registrado_em : null;
+  const fimJanela = totalVisivel > 0 ? dadosOrdenados[dadosOrdenados.length - 1].registrado_em : null;
 
   if (!tagNomes || tagNomes.length === 0) return null;
 
@@ -121,9 +144,17 @@ export function TagsMonitoramento({
           <LineChartIcon className="h-4 w-4 text-primary" />
           Monitoramento das tags
         </CardTitle>
-        <span className="text-xs text-muted-foreground">
-          {ativa ? "Gravando histórico (a cada ~10s)" : "Histórico desta produção"}
-        </span>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>
+            {ativa ? "Gravando histórico (a cada ~10s)" : "Histórico desta produção"}
+          </span>
+          <span className="hidden sm:inline">·</span>
+          <span className="hidden sm:inline">
+            {offset === 0
+              ? `últimos ${totalVisivel} registros`
+              : `registros ${offset + 1} a ${offset + totalVisivel}`}
+          </span>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {/* Seletor de tags */}
@@ -159,8 +190,8 @@ export function TagsMonitoramento({
           )}
         </div>
 
-        {/* Gráfico único combinado */}
-        <div className="h-80 w-full">
+        {/* Gráfico único combinado com Brush para zoom/pan */}
+        <div className="h-96 w-full">
           {selecionadas.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               Selecione ao menos uma tag para visualizar.
@@ -171,7 +202,7 @@ export function TagsMonitoramento({
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+              <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 24, left: 0 }}>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="t"
@@ -217,9 +248,56 @@ export function TagsMonitoramento({
                     connectNulls
                   />
                 ))}
+                <Brush
+                  dataKey="t"
+                  height={24}
+                  stroke="hsl(var(--primary))"
+                  travellerWidth={8}
+                  tickFormatter={(t) =>
+                    new Date(t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
+                  }
+                />
               </LineChart>
             </ResponsiveContainer>
           )}
+        </div>
+
+        {/* Controles de navegação entre janelas de histórico */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="text-xs text-muted-foreground">
+            <span className="font-mono text-foreground">{totalVisivel}</span> pontos
+            {inicioJanela && fimJanela ? (
+              <span className="ml-2 hidden sm:inline">
+                ({new Date(inicioJanela).toLocaleString("pt-BR")} → {new Date(fimJanela).toLocaleString("pt-BR")})
+              </span>
+            ) : null}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setOffset((o) => o + PAGE_SIZE)}
+              disabled={!podeAnteriores || hist.isLoading}
+            >
+              <ChevronLeft className="mr-1 h-4 w-4" /> Anteriores
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setOffset(0)}
+              disabled={offset === 0 || hist.isLoading}
+            >
+              <RotateCcw className="mr-1 h-4 w-4" /> Mais recentes
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
+              disabled={!podeProximos || hist.isLoading}
+            >
+              Próximos <ChevronRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         {/* Estatísticas resumidas */}
@@ -254,3 +332,5 @@ export function TagsMonitoramento({
     </Card>
   );
 }
+
+

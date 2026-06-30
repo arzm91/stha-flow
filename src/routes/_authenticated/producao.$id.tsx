@@ -88,12 +88,6 @@ function OPPage() {
     },
   });
 
-  if (op.isLoading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
-  if (!op.data) return <div className="text-sm text-muted-foreground">Ordem não encontrada.</div>;
-
-  const isFinal = op.data.status === "finalizada";
-  const tagNomes = ((op.data.equipamento as any)?.tag_nomes ?? []) as string[];
-
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFs, setIsFs] = useState(false);
   useEffect(() => {
@@ -109,6 +103,12 @@ function OPPage() {
       toast.error("Tela cheia indisponível: " + (err as Error).message);
     }
   };
+
+  if (op.isLoading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
+  if (!op.data) return <div className="text-sm text-muted-foreground">Ordem não encontrada.</div>;
+
+  const isFinal = op.data.status === "finalizada";
+  const tagNomes = ((op.data.equipamento as any)?.tag_nomes ?? []) as string[];
 
   return (
     <div ref={containerRef} className={isFs ? "h-screen w-screen overflow-auto bg-background p-6" : undefined}>
