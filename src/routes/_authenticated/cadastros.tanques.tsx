@@ -40,10 +40,12 @@ function TanquesPage() {
   return (
     <CrudTable
       table="tanques"
+      resourceType="tanque"
       title="Locais de armazenamento"
       description="Tanques, containers, pallets e outros locais físicos de estoque."
       initialValues={{ codigo: "", nome: "", tipo: "tanque", capacidade: "", unidade: "", produto_id: "", tag_nivel_nome: "", tag_nivel_modo: "percent", cor: "" }}
       searchKeys={["nome", "codigo"]}
+
       fields={[
         { key: "codigo", label: "Código", required: true },
         { key: "nome", label: "Nome", required: true },

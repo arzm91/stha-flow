@@ -26,6 +26,8 @@ import { toast } from "sonner";
 import { Plus, Trash2, Table as TableIcon, Pencil } from "lucide-react";
 import type { SheetColumn, ColumnType } from "@/lib/tabelas/types";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { useResourcePermissions } from "@/hooks/useResourcePermissions";
+
 
 export const Route = createFileRoute("/_authenticated/tabelas/")({
   component: TabelasIndex,
@@ -42,7 +44,9 @@ type SheetRow = {
 function TabelasIndex() {
   const qc = useQueryClient();
   const { canEdit } = usePagePermissions();
+  const resPerms = useResourcePermissions();
   const editable = canEdit("tabelas");
+
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<SheetRow | null>(null);
 

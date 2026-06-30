@@ -14,6 +14,8 @@ import {
 import { Pencil, Plus, Trash2, Search, ChevronDown, ChevronRight, ListChecks } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
+import { useResourcePermissions } from "@/hooks/useResourcePermissions";
+
 
 export const Route = createFileRoute("/_authenticated/cadastros/produtos")({
   component: ProdutosPage,
@@ -102,11 +104,14 @@ function ProdutosPage() {
     },
   });
 
-  const filtered = (list.data ?? []).filter((r) => {
+  const resPerms = useResourcePermissions();
+  const visible = resPerms.filter("produto", list.data);
+  const filtered = visible.filter((r) => {
     if (!search) return true;
     const s = search.toLowerCase();
     return [r.nome, r.codigo, r.categoria ?? ""].some((v) => v.toLowerCase().includes(s));
   });
+
 
   const openCreate = () => {
     setEditing(null);
