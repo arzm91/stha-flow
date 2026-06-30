@@ -157,6 +157,18 @@ export function TagsMonitoramento({
 
   const [selecionadas, setSelecionadas] = useState<string[]>([]);
   const [busca, setBusca] = useState("");
+  const selectorRef = useRef<HTMLDivElement>(null);
+
+  // Fecha as sugestões ao clicar fora do seletor.
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (selectorRef.current && !selectorRef.current.contains(e.target as Node)) {
+        setBusca("");
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
 
   // seleciona automaticamente até 3 tags na primeira carga
   useEffect(() => {
@@ -177,11 +189,12 @@ export function TagsMonitoramento({
     return m;
   }, [tagsDisponiveis]);
 
-  const tagsFiltradas = useMemo(() => {
+  // Sugestões de tags não selecionadas enquanto o usuário digita.
+  const sugestoes = useMemo(() => {
     const q = busca.trim().toLowerCase();
-    if (!q) return tagsDisponiveis;
-    return tagsDisponiveis.filter((n) => n.toLowerCase().includes(q));
-  }, [tagsDisponiveis, busca]);
+    if (!q) return [];
+    return tagsDisponiveis.filter((n) => !selecionadas.includes(n) && n.toLowerCase().includes(q));
+  }, [tagsDisponiveis, selecionadas, busca]);
 
 
 
