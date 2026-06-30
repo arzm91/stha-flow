@@ -80,6 +80,35 @@ export function TagsMonitoramento({
     refetchInterval: ativa && offset === 0 ? 5_000 : false,
   });
 
+  // Eventos da produção (registros que serão sobrepostos ao gráfico)
+  const eventosQuery = useQuery({
+    queryKey: ["producao-eventos-grafico", ordemId],
+    queryFn: async () => {
+      const [params, anls, obs, etps] = await Promise.all([
+        supabase.from("parametros_registrados")
+          .select("id,valor,registrado_em,parametro:parametro_id(nome,unidade)").eq("ordem_id", ordemId),
+        supabase.from("analises_registradas")
+          .select("id,resultado,registrado_em,analise:analise_id(nome,unidade)").eq("ordem_id", ordemId),
+        supabase.from("observacoes_producao")
+          .select("id,texto,registrado_em").eq("ordem_id", ordemId),
+        supabase.from("ordem_etapas")
+          .select("id,tipo,processo_nome,atividade_descricao,iniciado_em,finalizado_em,observacao,motivo_atraso")
+          .eq("ordem_id", ordemId),
+      ]);
+      return {
+        parametros: params.data ?? [],
+        analises: anls.data ?? [],
+        observacoes: obs.data ?? [],
+        etapas: etps.data ?? [],
+      };
+    },
+    refetchInterval: ativa ? 10_000 : false,
+  });
+
+  const [evtAtivos, setEvtAtivos] = useState<Record<string, boolean>>({
+    parametro: true, analise: true, observacao: true, tag_captura: true, processo: true,
+  });
+
   // Dados em ordem cronológica (do mais antigo para o mais recente) para o gráfico.
   const dadosOrdenados = useMemo(() => {
     return [...(hist.data ?? [])].reverse();
