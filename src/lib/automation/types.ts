@@ -1,4 +1,4 @@
-export type TriggerType = "tag_value" | "tag_stale" | "production_event" | "schedule";
+export type TriggerType = "tag_value" | "tag_stale" | "tag_stabilization" | "production_event" | "schedule";
 
 export type ActionType =
   | "movimentacao_estoque"

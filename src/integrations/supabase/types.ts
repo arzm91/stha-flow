@@ -260,6 +260,53 @@ export type Database = {
           },
         ]
       }
+      automation_flow_estab_state: {
+        Row: {
+          amostras: Json
+          atualizado_em: string
+          estavel_desde: string | null
+          fase: string
+          flow_id: string
+          owner_id: string
+          tag_nome: string
+          ultimo_disparo_em: string | null
+          ultimo_evento: string | null
+          valor_inicio: number | null
+        }
+        Insert: {
+          amostras?: Json
+          atualizado_em?: string
+          estavel_desde?: string | null
+          fase?: string
+          flow_id: string
+          owner_id: string
+          tag_nome: string
+          ultimo_disparo_em?: string | null
+          ultimo_evento?: string | null
+          valor_inicio?: number | null
+        }
+        Update: {
+          amostras?: Json
+          atualizado_em?: string
+          estavel_desde?: string | null
+          fase?: string
+          flow_id?: string
+          owner_id?: string
+          tag_nome?: string
+          ultimo_disparo_em?: string | null
+          ultimo_evento?: string | null
+          valor_inicio?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "automation_flow_estab_state_flow_id_fkey"
+            columns: ["flow_id"]
+            isOneToOne: true
+            referencedRelation: "automation_flows"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       automation_flows: {
         Row: {
           ativo: boolean

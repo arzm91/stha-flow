@@ -928,6 +928,11 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
   return (
     <div className="mt-4 grid gap-4 lg:grid-cols-3">
       <div className="space-y-3 lg:col-span-2">
+        <Card>
+          <CardContent className="p-3 text-xs text-muted-foreground">
+            Os processos abaixo iniciam e finalizam automaticamente conforme tarefas, tempos e tags configurados em <span className="font-medium text-foreground">Cadastros &gt; Produtos</span>. Sem intervenção do operador.
+          </CardContent>
+        </Card>
         {processos.isLoading ? <p className="text-sm text-muted-foreground">Carregando...</p> : null}
         {processos.data && processos.data.length === 0 ? (
           <Card><CardContent className="p-4 text-sm text-muted-foreground">Nenhum processo cadastrado para este produto.</CardContent></Card>
@@ -951,17 +956,12 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
                   const durSeg = Math.floor((now - new Date(procAberta.iniciado_em).getTime()) / 1000);
                   const excedido = p.tempo_limite_min != null && durSeg > p.tempo_limite_min * 60;
                   return (
-                    <Button size="sm" variant={excedido ? "destructive" : "outline"} onClick={() => tentarFinalizarProcesso(procAberta, p)} disabled={disabled}>
-                      <Square className="mr-1 h-3.5 w-3.5" /> Finalizar processo
-                      <span className={`ml-2 font-mono text-xs ${excedido ? "" : "text-muted-foreground"}`}>
-                        {formatDuracao(durSeg)}
-                      </span>
-                    </Button>
+                    <Badge variant="outline" className={excedido ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-primary/40 bg-primary/5 text-primary"}>
+                      em andamento · <span className="ml-1 font-mono">{formatDuracao(durSeg)}</span>
+                    </Badge>
                   );
                 })() : (
-                  <Button size="sm" onClick={() => iniciar({ processoId: p.id, processoNome: p.nome, ordemProcesso: p.ordem })} disabled={disabled}>
-                    <Play className="mr-1 h-3.5 w-3.5" /> Iniciar processo
-                  </Button>
+                  <Badge variant="outline" className="text-[10px]">automático</Badge>
                 )}
               </CardHeader>
               <CardContent className="space-y-2">
@@ -988,26 +988,12 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
                           {a.tempo_estimado_min != null ? <span>~{a.tempo_estimado_min} min</span> : null}
                         </div>
                       </div>
-                      {isTag ? (
-                        <Button size="sm" variant="outline" onClick={() => capturarTag(p, a)} disabled={disabled || !a.tag_nome}>
-                          <Activity className="mr-1 h-3.5 w-3.5" /> Registrar leitura
-                        </Button>
-                      ) : aberta ? (
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-xs text-primary">
-                            {formatDuracao(Math.floor((now - new Date(aberta.iniciado_em).getTime()) / 1000))}
-                          </span>
-                          <Button size="sm" variant="outline" onClick={() => finalizar(aberta.id, aberta.iniciado_em)} disabled={disabled}>
-                            <Square className="mr-1 h-3.5 w-3.5" /> Finalizar
-                          </Button>
-                        </div>
+                      {aberta ? (
+                        <span className="font-mono text-xs text-primary">
+                          {formatDuracao(Math.floor((now - new Date(aberta.iniciado_em).getTime()) / 1000))}
+                        </span>
                       ) : (
-                        <Button size="sm" variant="ghost" onClick={() => iniciar({
-                          processoId: p.id, processoNome: p.nome, ordemProcesso: p.ordem,
-                          atividadeId: a.id, descricao: a.descricao, tipo: a.tipo, ordemAtividade: a.ordem,
-                        })} disabled={disabled}>
-                          <Play className="mr-1 h-3.5 w-3.5" /> Iniciar
-                        </Button>
+                        <Badge variant="outline" className="text-[10px] text-muted-foreground">aguardando</Badge>
                       )}
                     </div>
                   );
@@ -1017,6 +1003,7 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
           );
         })}
       </div>
+
 
       <Card className="lg:col-span-1">
         <CardHeader className="pb-2">
