@@ -331,6 +331,10 @@ function ProdutosPage() {
                   valor: e.captura_operador === "change" || e.captura_valor === "" ? null : Number(e.captura_valor),
                 }
               : null,
+          estab_enabled: e.tipo === "materia_prima" && e.qtd_modo === "tag_diferenca" ? !!e.estab_enabled : false,
+          estab_pct: e.estab_pct === "" ? "2" : String(Number(e.estab_pct)),
+          estab_janela_seg: e.estab_janela_seg === "" ? "30" : String(Math.max(5, Number(e.estab_janela_seg))),
+          estab_min_estavel_seg: e.estab_min_estavel_seg === "" ? "30" : String(Math.max(5, Number(e.estab_min_estavel_seg))),
         };
       });
 
