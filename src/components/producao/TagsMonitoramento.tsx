@@ -3,8 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Brush, ReferenceLine, ReferenceArea } from "recharts";
-import { LineChart as LineChartIcon, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon } from "lucide-react";
+import { LineChart as LineChartIcon, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon, Search, X } from "lucide-react";
 import { formatNumber, formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -146,13 +147,16 @@ export function TagsMonitoramento({
     }
     // garante todas as tags do equipamento, mesmo sem pontos ainda
     for (const n of tagNomes ?? []) if (!map.has(n)) map.set(n, null);
+    // ordenação alfabética estável para evitar reordenação visual
+    const nomes = Array.from(map.keys()).sort((a, b) => a.localeCompare(b));
     return {
-      tagsDisponiveis: Array.from(map.keys()),
+      tagsDisponiveis: nomes,
       unidades: map,
     };
   }, [dadosOrdenados, tagNomes]);
 
   const [selecionadas, setSelecionadas] = useState<string[]>([]);
+  const [busca, setBusca] = useState("");
 
   // seleciona automaticamente até 3 tags na primeira carga
   useEffect(() => {
@@ -161,11 +165,26 @@ export function TagsMonitoramento({
     }
   }, [tagsDisponiveis, selecionadas.length]);
 
+  // Cor estável por nome da tag (hash determinístico → não depende da ordem nem dos dados carregados)
   const corPorTag = useMemo(() => {
+    const hash = (s: string) => {
+      let h = 0;
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+      return Math.abs(h);
+    };
     const m = new Map<string, string>();
-    tagsDisponiveis.forEach((n, i) => m.set(n, PALETTE[i % PALETTE.length]));
+    for (const n of tagsDisponiveis) m.set(n, PALETTE[hash(n) % PALETTE.length]);
     return m;
   }, [tagsDisponiveis]);
+
+  const tagsFiltradas = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    if (!q) return tagsDisponiveis;
+    return tagsDisponiveis.filter((n) => n.toLowerCase().includes(q));
+  }, [tagsDisponiveis, busca]);
+
+
+
 
   // Constrói dataset combinado: cada timestamp vira uma linha com colunas por tag
   const chartData = useMemo(() => {
@@ -307,38 +326,116 @@ export function TagsMonitoramento({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        {/* Seletor de tags */}
-        <div className="flex flex-wrap gap-2">
+        {/* Seletor de tags — busca + chips selecionadas + lista compacta */}
+        <div className="space-y-2">
           {tagsDisponiveis.length === 0 ? (
             <span className="text-xs text-muted-foreground">
               Nenhuma tag disponível para esta ordem.
             </span>
           ) : (
-            tagsDisponiveis.map((nome) => {
-              const ativo = selecionadas.includes(nome);
-              const cor = corPorTag.get(nome)!;
-              const u = unidades.get(nome);
-              return (
-                <Button
-                  key={nome}
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => toggle(nome)}
-                  className={cn(
-                    "h-7 gap-2 font-mono text-xs",
-                    ativo ? "border-2" : "opacity-60 hover:opacity-100",
-                  )}
-                  style={ativo ? { borderColor: cor, color: cor } : undefined}
-                >
-                  <span className="inline-block h-2 w-2 rounded-full" style={{ background: cor }} />
-                  {nome}
-                  {u ? <span className="text-muted-foreground">({u})</span> : null}
-                </Button>
-              );
-            })
+            <>
+              {/* Cabeçalho: busca + contadores + limpar */}
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="relative flex-1 min-w-[180px] max-w-xs">
+                  <Search className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    value={busca}
+                    onChange={(e) => setBusca(e.target.value)}
+                    placeholder="Buscar tag..."
+                    className="h-7 pl-7 pr-7 text-xs"
+                  />
+                  {busca ? (
+                    <button
+                      type="button"
+                      onClick={() => setBusca("")}
+                      className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground"
+                      aria-label="Limpar busca"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  ) : null}
+                </div>
+                <span className="text-[11px] text-muted-foreground">
+                  <span className="font-mono text-foreground">{selecionadas.length}</span> de{" "}
+                  <span className="font-mono text-foreground">{tagsDisponiveis.length}</span> selecionada(s)
+                </span>
+                {selecionadas.length > 0 ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelecionadas([])}
+                    className="h-6 px-2 text-[11px]"
+                  >
+                    Limpar seleção
+                  </Button>
+                ) : null}
+              </div>
+
+              {/* Chips das tags selecionadas (sempre visíveis no topo) */}
+              {selecionadas.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 rounded-md border border-border bg-muted/20 p-1.5">
+                  {selecionadas.map((nome) => {
+                    const cor = corPorTag.get(nome)!;
+                    const u = unidades.get(nome);
+                    return (
+                      <button
+                        key={nome}
+                        type="button"
+                        onClick={() => toggle(nome)}
+                        className="group inline-flex h-6 items-center gap-1.5 rounded border-2 bg-background px-2 font-mono text-[11px]"
+                        style={{ borderColor: cor, color: cor }}
+                        title="Clique para remover"
+                      >
+                        <span className="inline-block h-2 w-2 rounded-full" style={{ background: cor }} />
+                        {nome}
+                        {u ? <span className="text-muted-foreground">({u})</span> : null}
+                        <X className="h-3 w-3 opacity-50 group-hover:opacity-100" />
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
+
+              {/* Grade compacta com todas as tags filtradas (rolagem se necessário) */}
+              <div className="max-h-32 overflow-y-auto rounded-md border border-border p-1.5">
+                {tagsFiltradas.length === 0 ? (
+                  <div className="px-1 py-1 text-[11px] text-muted-foreground">
+                    Nenhuma tag corresponde a "{busca}".
+                  </div>
+                ) : (
+                  <div className="grid gap-1 [grid-template-columns:repeat(auto-fill,minmax(180px,1fr))]">
+                    {tagsFiltradas.map((nome) => {
+                      const ativo = selecionadas.includes(nome);
+                      const cor = corPorTag.get(nome)!;
+                      const u = unidades.get(nome);
+                      return (
+                        <button
+                          key={nome}
+                          type="button"
+                          onClick={() => toggle(nome)}
+                          className={cn(
+                            "inline-flex h-6 items-center gap-1.5 truncate rounded border px-2 text-left font-mono text-[11px] transition",
+                            ativo
+                              ? "border-2 bg-background"
+                              : "border-border opacity-60 hover:opacity-100",
+                          )}
+                          style={ativo ? { borderColor: cor, color: cor } : undefined}
+                          title={nome}
+                        >
+                          <span className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: cor }} />
+                          <span className="truncate">{nome}</span>
+                          {u ? <span className="shrink-0 text-muted-foreground">({u})</span> : null}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </>
           )}
         </div>
+
 
         {/* Seletor de tipos de eventos sobrepostos ao gráfico */}
         <div className="flex flex-wrap items-center gap-1.5 border-t border-border pt-2">
