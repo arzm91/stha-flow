@@ -34,8 +34,9 @@ export function TagsMonitoramento({
 }) {
   const [offset, setOffset] = useState(0);
 
-  // Busca sempre os dados mais recentes da janela atual (offset = 0 → últimos 200).
-  // Dados ordenados do mais recente para o mais antigo; invertemos no gráfico.
+  // Busca a janela atual do histórico ordenada do mais recente para o mais antigo.
+  // offset = 0 → últimos PAGE_SIZE registros. offset = PAGE_SIZE → 200 registros anteriores.
+  // Invertemos a lista para renderizar o gráfico em ordem cronológica.
   const hist = useQuery({
     queryKey: ["producao-tag-historico", ordemId, offset],
     queryFn: async () => {
@@ -126,11 +127,13 @@ export function TagsMonitoramento({
   };
 
   const totalVisivel = dadosOrdenados.length;
-  const podeVoltar = offset > 0;
-  const podeAvancar = hist.data && hist.data.length === PAGE_SIZE;
-  const tituloJanela = offset === 0
-    ? `últimos ${totalVisivel} registros`
-    : `registros ${offset + 1} a ${offset + totalVisivel}`;
+  // Existem dados anteriores se a página atual está completa (sabemos que há mais após ela).
+  const podeAnteriores = hist.data && hist.data.length === PAGE_SIZE;
+  // Existem dados mais recentes se estamos afastados do início (offset > 0).
+  const podeProximos = offset > 0;
+
+  const inicioJanela = totalVisivel > 0 ? dadosOrdenados[0].registrado_em : null;
+  const fimJanela = totalVisivel > 0 ? dadosOrdenados[dadosOrdenados.length - 1].registrado_em : null;
 
   if (!tagNomes || tagNomes.length === 0) return null;
 
@@ -146,7 +149,11 @@ export function TagsMonitoramento({
             {ativa ? "Gravando histórico (a cada ~10s)" : "Histórico desta produção"}
           </span>
           <span className="hidden sm:inline">·</span>
-          <span className="hidden sm:inline">{tituloJanela}</span>
+          <span className="hidden sm:inline">
+            {offset === 0
+              ? `últimos ${totalVisivel} registros`
+              : `registros ${offset + 1} a ${offset + totalVisivel}`}
+          </span>
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -183,7 +190,7 @@ export function TagsMonitoramento({
           )}
         </div>
 
-        {/* Gráfico único combinado com navegação por página e Brush */}
+        {/* Gráfico único combinado com Brush para zoom/pan */}
         <div className="h-96 w-full">
           {selecionadas.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -258,14 +265,19 @@ export function TagsMonitoramento({
         {/* Controles de navegação entre janelas de histórico */}
         <div className="flex items-center justify-between gap-2">
           <div className="text-xs text-muted-foreground">
-            Exibindo <span className="font-mono text-foreground">{totalVisivel}</span> pontos
+            <span className="font-mono text-foreground">{totalVisivel}</span> pontos
+            {inicioJanela && fimJanela ? (
+              <span className="ml-2 hidden sm:inline">
+                ({new Date(inicioJanela).toLocaleString("pt-BR")} → {new Date(fimJanela).toLocaleString("pt-BR")})
+              </span>
+            ) : null}
           </div>
           <div className="flex items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
-              disabled={!podeVoltar || hist.isLoading}
+              onClick={() => setOffset((o) => o + PAGE_SIZE)}
+              disabled={!podeAnteriores || hist.isLoading}
             >
               <ChevronLeft className="mr-1 h-4 w-4" /> Anteriores
             </Button>
@@ -280,8 +292,8 @@ export function TagsMonitoramento({
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setOffset((o) => o + PAGE_SIZE)}
-              disabled={!podeAvancar || hist.isLoading}
+              onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
+              disabled={!podeProximos || hist.isLoading}
             >
               Próximos <ChevronRight className="ml-1 h-4 w-4" />
             </Button>
@@ -320,4 +332,5 @@ export function TagsMonitoramento({
     </Card>
   );
 }
+
 
