@@ -435,7 +435,7 @@ export function TagsMonitoramento({
                     name={nome}
                     stroke={corPorTag.get(nome)}
                     strokeWidth={2}
-                    dot={false}
+                    dot={{ r: 2 }}
                     isAnimationActive={false}
                     connectNulls
                   />
