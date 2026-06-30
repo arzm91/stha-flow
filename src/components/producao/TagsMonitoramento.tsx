@@ -64,25 +64,24 @@ export function TagsMonitoramento({
   tagNomes: string[];
   ativa: boolean;
 }) {
-  const [offset, setOffset] = useState(0);
+  const [horas, setHoras] = useState<number>(1);
 
-  // Busca a janela atual do histórico ordenada do mais recente para o mais antigo.
-  // offset = 0 → últimos PAGE_SIZE registros. offset = PAGE_SIZE → 200 registros anteriores.
-  // Invertemos a lista para renderizar o gráfico em ordem cronológica.
+  // Busca o histórico das últimas N horas para a ordem.
   const hist = useQuery({
-    queryKey: ["producao-tag-historico", ordemId, offset],
+    queryKey: ["producao-tag-historico", ordemId, horas],
     queryFn: async () => {
+      const desde = new Date(Date.now() - horas * 3600_000).toISOString();
       const { data, error } = await supabase
         .from("producao_tag_historico")
         .select("id,tag_nome,valor_num,unidade,registrado_em")
         .eq("ordem_id", ordemId)
+        .gte("registrado_em", desde)
         .order("registrado_em", { ascending: false })
-        .range(offset, offset + PAGE_SIZE - 1);
+        .limit(5000);
       if (error) throw error;
       return (data ?? []) as Row[];
     },
-    // Atualiza automaticamente apenas quando estamos vendo os dados mais recentes.
-    refetchInterval: ativa && offset === 0 ? 5_000 : false,
+    refetchInterval: ativa ? 5_000 : false,
   });
 
   // Eventos da produção (registros que serão sobrepostos ao gráfico)
