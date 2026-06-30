@@ -1697,6 +1697,7 @@ export type Database = {
       ingest_tags: { Args: { payload: Json }; Returns: number }
       poll_tag_endpoints_fire: { Args: never; Returns: number }
       poll_tag_endpoints_process: { Args: never; Returns: number }
+      server_now: { Args: never; Returns: string }
       sync_tag_endpoint_now: { Args: { p_endpoint_id: string }; Returns: Json }
     }
     Enums: {
