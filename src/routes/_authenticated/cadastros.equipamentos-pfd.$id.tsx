@@ -48,7 +48,19 @@ export const Route = createFileRoute("/_authenticated/cadastros/equipamentos-pfd
 // ---------- Tipos ----------
 type SymbolKind =
   | "tanque" | "bomba" | "trocador" | "valvula" | "reator"
-  | "coluna" | "compressor" | "filtro" | "vaso" | "misturador";
+  | "coluna" | "compressor" | "filtro" | "vaso" | "misturador"
+  // formas genéricas
+  | "retangulo" | "circulo" | "elipse" | "triangulo" | "losango"
+  | "hexagono" | "estrela" | "seta" | "nuvem" | "paralelogramo";
+
+const ISA_SYMBOLS: SymbolKind[] = [
+  "tanque","bomba","trocador","valvula","reator",
+  "coluna","compressor","filtro","vaso","misturador",
+];
+const SHAPE_SYMBOLS: SymbolKind[] = [
+  "retangulo","circulo","elipse","triangulo","losango",
+  "hexagono","estrela","seta","nuvem","paralelogramo",
+];
 
 type EquipNodeData = {
   kind: "equip";
