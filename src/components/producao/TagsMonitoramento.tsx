@@ -284,8 +284,8 @@ export function TagsMonitoramento({
 
   const totalVisivel = dadosOrdenados.length;
 
-  const inicioJanela = totalVisivel > 0 ? dadosOrdenados[0].registrado_em : null;
-  const fimJanela = totalVisivel > 0 ? dadosOrdenados[dadosOrdenados.length - 1].registrado_em : null;
+  const inicioJanela = new Date(janela.min).toISOString();
+  const fimJanela = new Date(janela.max).toISOString();
 
   if (!tagNomes || tagNomes.length === 0) return null;
 
