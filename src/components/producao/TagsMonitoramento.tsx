@@ -3,10 +3,37 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Brush } from "recharts";
-import { LineChart as LineChartIcon, ChevronLeft, ChevronRight, RotateCcw } from "lucide-react";
-import { formatNumber } from "@/lib/format";
+import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Brush, ReferenceLine, ReferenceArea } from "recharts";
+import { LineChart as LineChartIcon, ChevronLeft, ChevronRight, RotateCcw, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon } from "lucide-react";
+import { formatNumber, formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+type EventoPonto = {
+  key: string;
+  tipo: "parametro" | "analise" | "observacao" | "tag_captura";
+  when: number; // epoch ms
+  titulo: string;
+  detalhe?: string;
+  cor: string;
+};
+type EventoFaixa = {
+  key: string;
+  tipo: "processo";
+  inicio: number;
+  fim: number; // epoch ms (now() se em curso)
+  titulo: string;
+  detalhe?: string;
+  emCurso: boolean;
+  cor: string;
+};
+
+const EVT_CORES = {
+  parametro: "#3b82f6",
+  analise: "#a855f7",
+  observacao: "#64748b",
+  tag_captura: "#14b8a6",
+  processo: "#f59e0b",
+} as const;
 
 type Row = {
   id: string;
