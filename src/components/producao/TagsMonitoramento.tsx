@@ -412,6 +412,44 @@ export function TagsMonitoramento({
                     connectNulls
                   />
                 ))}
+                {/* Faixas de processos (duração) */}
+                {faixasVisiveis.map((f) => (
+                  <ReferenceArea
+                    key={f.key}
+                    x1={f.inicio}
+                    x2={f.fim}
+                    fill={f.cor}
+                    fillOpacity={f.emCurso ? 0.08 : 0.14}
+                    stroke={f.cor}
+                    strokeOpacity={0.5}
+                    strokeDasharray={f.emCurso ? "4 3" : undefined}
+                    ifOverflow="hidden"
+                    label={{
+                      value: f.titulo,
+                      position: "insideTop",
+                      fill: f.cor,
+                      fontSize: 10,
+                      fontWeight: 600,
+                    }}
+                  />
+                ))}
+                {/* Eventos pontuais */}
+                {pontosVisiveis.map((p) => (
+                  <ReferenceLine
+                    key={p.key}
+                    x={p.when}
+                    stroke={p.cor}
+                    strokeDasharray="2 2"
+                    ifOverflow="hidden"
+                    label={{
+                      value: `● ${p.titulo}${p.detalhe ? ` ${p.detalhe}` : ""}`,
+                      position: "top",
+                      fill: p.cor,
+                      fontSize: 9,
+                      angle: -35,
+                    }}
+                  />
+                ))}
                 <Brush
                   dataKey="t"
                   height={24}
