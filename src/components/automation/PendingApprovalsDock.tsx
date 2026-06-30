@@ -205,8 +205,16 @@ export function PendingApprovalsDock() {
                       </ul>
                     )}
                     <div className="mt-3 flex gap-1">
-                      <Button size="sm" className="flex-1" onClick={() => handleApprove(r.id)} disabled={busy === r.id}>
-                        <Check className="mr-1 size-3" /> Aprovar
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={() =>
+                          runNeedsApprovalDialog(r) ? openApprovalFor(r) : handleApprove(r.id)
+                        }
+                        disabled={busy === r.id}
+                      >
+                        <Check className="mr-1 size-3" />
+                        {runNeedsApprovalDialog(r) ? "Configurar e aprovar" : "Aprovar"}
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => handleSnooze(r.id)} disabled={busy === r.id}>
                         <Clock className="size-3" />
@@ -222,6 +230,17 @@ export function PendingApprovalsDock() {
           )}
         </Card>
       </div>
+      {dialogRun && (
+        <ApprovalDialog
+          open={!!dialogRun}
+          onOpenChange={(o) => !o && setDialogRun(null)}
+          flowName={dialogRun.flow?.nome ?? "Fluxo"}
+          qtdSugerida={dialogQtd}
+          needsDestinos={true}
+          busy={busy === dialogRun.id}
+          onConfirm={(payload) => handleApprove(dialogRun.id, payload)}
+        />
+      )}
     </div>
   );
 }
