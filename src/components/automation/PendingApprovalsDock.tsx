@@ -7,15 +7,21 @@ import { useServerFn } from "@tanstack/react-start";
 import { approveRun, executeRun, rejectRun, snoozeRun } from "@/lib/automation/runs.functions";
 import { Bell, Check, X, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
+import { ApprovalDialog, type ApprovalPayload } from "./ApprovalDialog";
 
+type ActionNode = {
+  id?: string;
+  type?: string;
+  data?: { label?: string; config?: Record<string, unknown> };
+};
 type Run = {
   id: string;
   flow_id: string;
   status: string;
   trigger_context: Record<string, unknown> | null;
   planned_actions:
-    | Array<{ id?: string; type?: string; data?: { label?: string; config?: Record<string, unknown> } }>
-    | { nodes?: Array<{ id?: string; type?: string; data?: { label?: string; config?: Record<string, unknown> } }>; edges?: unknown }
+    | Array<ActionNode>
+    | { nodes?: Array<ActionNode>; edges?: unknown }
     | null;
   created_at: string;
   flow?: { nome: string } | null;
