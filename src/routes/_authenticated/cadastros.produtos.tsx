@@ -718,7 +718,7 @@ function ProdutosPage() {
                                         <option value="">— tag —</option>
                                         {(tagsList.data ?? []).map((t) => (
                                           <option key={t.nome} value={t.nome}>
-                                            {t.nome}{t.unidade ? ` · ${t.unidade}` : ""}
+                                            {tagLabel(t)}
                                           </option>
                                         ))}
                                       </select>
