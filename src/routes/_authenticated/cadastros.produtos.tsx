@@ -195,7 +195,7 @@ function ProdutosPage() {
     const { data: ativs } = procIds.length
       ? await supabase
           .from("produto_atividades")
-          .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min, tag_nome, gatilhos")
+          .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min, tag_nome, gatilhos, qtd_modo, qtd_tag_nome, captura_modo, captura_gatilho")
           .in("processo_id", procIds)
           .order("ordem", { ascending: true })
       : { data: [] };
@@ -205,6 +205,8 @@ function ProdutosPage() {
       id: string; processo_id: string; descricao: string; tipo: string | null;
       quantidade: number | null; unidade: string | null; tempo_estimado_min: number | null;
       tag_nome: string | null; ordem: number; gatilhos: unknown;
+      qtd_modo: string | null; qtd_tag_nome: string | null;
+      captura_modo: string | null; captura_gatilho: unknown;
     }>).slice().sort((a, b) => {
       const pa = procOrder.get(a.processo_id) ?? 0;
       const pb = procOrder.get(b.processo_id) ?? 0;
@@ -221,6 +223,7 @@ function ProdutosPage() {
               valor: g.valor == null ? "" : String(g.valor),
             }))
           : [];
+        const cg = (a.captura_gatilho ?? {}) as { operador?: string; valor?: number | string | null };
         return {
           id: a.id,
           descricao: a.descricao,
@@ -230,9 +233,15 @@ function ProdutosPage() {
           tempo_estimado_min: a.tempo_estimado_min == null ? "" : String(a.tempo_estimado_min),
           tag_nome: a.tag_nome ?? "",
           gatilhos: gats,
+          qtd_modo: ((a.qtd_modo === "tag_valor" || a.qtd_modo === "tag_diferenca") ? a.qtd_modo : "fixa") as QtdModo,
+          qtd_tag_nome: a.qtd_tag_nome ?? "",
+          captura_modo: (a.captura_modo === "gatilho_valor" ? "gatilho_valor" : "na_execucao") as CapturaModo,
+          captura_operador: ((cg.operador as GatilhoOperador) ?? "gt"),
+          captura_valor: cg.valor == null ? "" : String(cg.valor),
         };
       }),
     );
+
     setOpen(true);
   };
 
