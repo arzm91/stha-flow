@@ -58,6 +58,11 @@ type Etapa = {
   // matéria-prima — origem da quantidade
   qtd_modo: QtdModo;
   qtd_tag_nome: string;
+  // matéria-prima por diferença — estabilização automática (fallback sem gatilhos)
+  estab_enabled: boolean;
+  estab_pct: string;
+  estab_janela_seg: string;
+  estab_min_estavel_seg: string;
   // tag_captura — modo da captura
   captura_modo: CapturaModo;
   captura_operador: GatilhoOperador;
@@ -93,6 +98,10 @@ function newEtapa(): Etapa {
     gatilhos: [],
     qtd_modo: "fixa",
     qtd_tag_nome: "",
+    estab_enabled: false,
+    estab_pct: "2",
+    estab_janela_seg: "30",
+    estab_min_estavel_seg: "30",
     captura_modo: "na_execucao",
     captura_operador: "gt",
     captura_valor: "",
@@ -205,7 +214,7 @@ function ProdutosPage() {
     const { data: ativs } = procIds.length
       ? await supabase
           .from("produto_atividades")
-          .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min, tag_nome, gatilhos, qtd_modo, qtd_tag_nome, captura_modo, captura_gatilho")
+          .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min, tag_nome, gatilhos, qtd_modo, qtd_tag_nome, captura_modo, captura_gatilho, estab_enabled, estab_pct, estab_janela_seg, estab_min_estavel_seg")
           .in("processo_id", procIds)
           .order("ordem", { ascending: true })
       : { data: [] };
@@ -217,6 +226,8 @@ function ProdutosPage() {
       tag_nome: string | null; ordem: number; gatilhos: unknown;
       qtd_modo: string | null; qtd_tag_nome: string | null;
       captura_modo: string | null; captura_gatilho: unknown;
+      estab_enabled: boolean | null; estab_pct: number | null;
+      estab_janela_seg: number | null; estab_min_estavel_seg: number | null;
     }>).slice().sort((a, b) => {
       const pa = procOrder.get(a.processo_id) ?? 0;
       const pb = procOrder.get(b.processo_id) ?? 0;
@@ -245,6 +256,10 @@ function ProdutosPage() {
           gatilhos: gats,
           qtd_modo: ((a.qtd_modo === "tag_valor" || a.qtd_modo === "tag_diferenca") ? a.qtd_modo : "fixa") as QtdModo,
           qtd_tag_nome: a.qtd_tag_nome ?? "",
+          estab_enabled: !!a.estab_enabled,
+          estab_pct: a.estab_pct == null ? "2" : String(a.estab_pct),
+          estab_janela_seg: a.estab_janela_seg == null ? "30" : String(a.estab_janela_seg),
+          estab_min_estavel_seg: a.estab_min_estavel_seg == null ? "30" : String(a.estab_min_estavel_seg),
           captura_modo: (a.captura_modo === "gatilho_valor" ? "gatilho_valor" : "na_execucao") as CapturaModo,
           captura_operador: ((cg.operador as GatilhoOperador) ?? "gt"),
           captura_valor: cg.valor == null ? "" : String(cg.valor),
@@ -316,6 +331,10 @@ function ProdutosPage() {
                   valor: e.captura_operador === "change" || e.captura_valor === "" ? null : Number(e.captura_valor),
                 }
               : null,
+          estab_enabled: e.tipo === "materia_prima" && e.qtd_modo === "tag_diferenca" ? !!e.estab_enabled : false,
+          estab_pct: e.estab_pct === "" ? "2" : String(Number(e.estab_pct)),
+          estab_janela_seg: e.estab_janela_seg === "" ? "30" : String(Math.max(5, Number(e.estab_janela_seg))),
+          estab_min_estavel_seg: e.estab_min_estavel_seg === "" ? "30" : String(Math.max(5, Number(e.estab_min_estavel_seg))),
         };
       });
 
@@ -591,6 +610,65 @@ function ProdutosPage() {
                                     {e.qtd_modo === "tag_diferenca"
                                       ? "O sistema lê a tag no gatilho de início, lê novamente no gatilho de fim, e registra a diferença."
                                       : "O sistema lê o valor da tag no gatilho de fim e registra como quantidade."}
+                                  </div>
+                                )}
+                                {e.qtd_modo === "tag_diferenca" && (
+                                  <div className="col-span-12 rounded-md border border-dashed border-input p-2 space-y-2">
+                                    <label className="flex items-center gap-2 text-xs font-medium">
+                                      <input
+                                        type="checkbox"
+                                        checked={e.estab_enabled}
+                                        onChange={(ev) => updateEtapa(ei, { estab_enabled: ev.target.checked })}
+                                      />
+                                      Detectar início/fim pela estabilização da tag (sem gatilhos)
+                                    </label>
+                                    {e.estab_enabled && (
+                                      <>
+                                        <div className="text-[11px] text-muted-foreground">
+                                          Quando a variação da tag ultrapassar o limite, o sistema captura o valor inicial.
+                                          Ao estabilizar novamente dentro do limite por X segundos, registra a diferença.
+                                        </div>
+                                        <div className="grid grid-cols-12 gap-2">
+                                          <div className="col-span-4">
+                                            <Input
+                                              type="number"
+                                              step="0.1"
+                                              min="0.1"
+                                              value={e.estab_pct}
+                                              onChange={(ev) => updateEtapa(ei, { estab_pct: ev.target.value })}
+                                              placeholder="% variação"
+                                              className="h-8"
+                                              title="Limite percentual de variação (ex.: 2 = 2%)"
+                                            />
+                                            <div className="text-[10px] text-muted-foreground mt-0.5">% variação</div>
+                                          </div>
+                                          <div className="col-span-4">
+                                            <Input
+                                              type="number"
+                                              min="5"
+                                              value={e.estab_janela_seg}
+                                              onChange={(ev) => updateEtapa(ei, { estab_janela_seg: ev.target.value })}
+                                              placeholder="Janela (s)"
+                                              className="h-8"
+                                              title="Janela de tempo (segundos) onde a variação é medida"
+                                            />
+                                            <div className="text-[10px] text-muted-foreground mt-0.5">janela (s)</div>
+                                          </div>
+                                          <div className="col-span-4">
+                                            <Input
+                                              type="number"
+                                              min="5"
+                                              value={e.estab_min_estavel_seg}
+                                              onChange={(ev) => updateEtapa(ei, { estab_min_estavel_seg: ev.target.value })}
+                                              placeholder="Estável por (s)"
+                                              className="h-8"
+                                              title="Tempo mínimo estável para encerrar (segundos)"
+                                            />
+                                            <div className="text-[10px] text-muted-foreground mt-0.5">estável por (s)</div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
                                   </div>
                                 )}
                               </>
