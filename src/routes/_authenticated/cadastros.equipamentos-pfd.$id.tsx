@@ -203,6 +203,26 @@ function SymbolSvg({ kind, ativo, color }: { kind: SymbolKind; ativo: boolean; c
           <path d="M28 34 L52 34 M30 42 L50 42" stroke={stroke} strokeWidth={sw} />
         </svg>
       );
+    case "retangulo":
+      return (<svg {...svgProps}><rect x="2" y="2" width="76" height="76" rx="4" {...common} /></svg>);
+    case "circulo":
+      return (<svg {...svgProps}><circle cx="40" cy="40" r="38" {...common} /></svg>);
+    case "elipse":
+      return (<svg {...svgProps}><ellipse cx="40" cy="40" rx="38" ry="26" {...common} /></svg>);
+    case "triangulo":
+      return (<svg {...svgProps}><polygon points="40,4 76,72 4,72" {...common} /></svg>);
+    case "losango":
+      return (<svg {...svgProps}><polygon points="40,4 76,40 40,76 4,40" {...common} /></svg>);
+    case "hexagono":
+      return (<svg {...svgProps}><polygon points="22,6 58,6 76,40 58,74 22,74 4,40" {...common} /></svg>);
+    case "estrela":
+      return (<svg {...svgProps}><polygon points="40,4 49,30 76,30 54,46 63,72 40,56 17,72 26,46 4,30 31,30" {...common} /></svg>);
+    case "seta":
+      return (<svg {...svgProps}><polygon points="4,28 48,28 48,12 76,40 48,68 48,52 4,52" {...common} /></svg>);
+    case "nuvem":
+      return (<svg {...svgProps}><path d="M22 60 Q6 60 6 46 Q6 34 20 32 Q22 18 38 18 Q52 18 56 30 Q72 30 72 44 Q72 60 58 60 Z" {...common} /></svg>);
+    case "paralelogramo":
+      return (<svg {...svgProps}><polygon points="20,12 76,12 60,68 4,68" {...common} /></svg>);
   }
 }
 
