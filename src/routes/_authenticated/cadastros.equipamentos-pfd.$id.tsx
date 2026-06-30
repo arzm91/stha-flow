@@ -242,33 +242,45 @@ function FourSideHandles() {
 }
 
 // ---------- Nodes ----------
+// Sem moldura: o SVG ocupa todo o nó e suas bordas correspondem à silhueta
+// do símbolo. Os handles ficam centralizados em cada lado do bounding box,
+// que agora coincide visualmente com o desenho. O rótulo flutua abaixo,
+// fora da área de conexão.
 function EquipNode({ data, selected }: NodeProps) {
   const d = data as unknown as EquipNodeData;
   return (
     <div
       className={cn(
-        "flex h-full w-full flex-col items-center rounded-md border-2 bg-card/80 px-2 py-1 shadow-sm backdrop-blur",
-        selected ? "border-primary" : "border-border",
+        "relative h-full w-full",
         !d.ativo && "opacity-60",
       )}
     >
       <NodeResizer
         isVisible={selected}
-        minWidth={70}
-        minHeight={70}
+        minWidth={50}
+        minHeight={50}
         lineClassName="!border-primary"
         handleClassName="!h-3 !w-3 !bg-primary !border-primary"
         keepAspectRatio
       />
       <FourSideHandles />
-      <div className="min-h-0 flex-1 w-full flex items-center justify-center">
+      <div
+        className={cn(
+          "h-full w-full",
+          selected && "drop-shadow-[0_0_0_2px_hsl(var(--primary))]",
+        )}
+      >
         <SymbolSvg kind={d.symbol} ativo={d.ativo} color={d.color} />
       </div>
-      <div className="mt-1 max-w-full truncate text-center text-xs font-medium">
-        {d.label || SYMBOL_LABEL[d.symbol]}
-      </div>
-      {!d.ativo && (
-        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">inativo</div>
+      {(d.label || !d.ativo) && (
+        <div className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 pt-1 text-center">
+          <div className="max-w-[160px] truncate rounded bg-background/70 px-1 text-[11px] font-medium backdrop-blur-sm">
+            {d.label || SYMBOL_LABEL[d.symbol]}
+          </div>
+          {!d.ativo && (
+            <div className="text-[9px] uppercase tracking-wide text-muted-foreground">inativo</div>
+          )}
+        </div>
       )}
     </div>
   );
