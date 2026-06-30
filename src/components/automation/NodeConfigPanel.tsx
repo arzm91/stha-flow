@@ -120,6 +120,58 @@ export function NodeConfigPanel({
               </div>
             )}
 
+            {cfg.type === "tag_stabilization" && (
+              <>
+                <div className="space-y-1">
+                  <Label>Tag a monitorar</Label>
+                  <TagPicker value={String(cfg.tag_nome ?? "")} onChange={(v) => set({ tag_nome: v })} />
+                </div>
+                <div className="space-y-1">
+                  <Label>Disparar quando</Label>
+                  <Select
+                    value={String(cfg.evento ?? "estabilizou")}
+                    onValueChange={(v) => set({ evento: v })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="inicio_consumo">Início de variação detectado</SelectItem>
+                      <SelectItem value="estabilizou">Variação estabilizou novamente</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <Label>Variação (%)</Label>
+                    <Input
+                      type="number"
+                      step="0.1"
+                      value={String(cfg.pct ?? 2)}
+                      onChange={(e) => set({ pct: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Janela (s)</Label>
+                    <Input
+                      type="number"
+                      value={String(cfg.janela_seg ?? 30)}
+                      onChange={(e) => set({ janela_seg: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label>Estável por (s)</Label>
+                    <Input
+                      type="number"
+                      value={String(cfg.min_estavel_seg ?? 30)}
+                      onChange={(e) => set({ min_estavel_seg: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Compara máx/mín da tag na janela. Se ultrapassar o %, marca início; se ficar abaixo do % pelo tempo mínimo, considera estabilizado.
+                </p>
+              </>
+            )}
+
             {cfg.type === "schedule" && (
               <div className="space-y-1">
                 <Label>Cron</Label>
