@@ -283,9 +283,14 @@ export function TagsMonitoramento({
         const fimRaw = (e as any).finalizado_em;
         const emCurso = !fimRaw;
         const fim = fimRaw ? new Date(fimRaw).getTime() : Date.now();
+        const procId = (e as any).processo_id as string | null;
+        const atividades = procId ? (q.atividadesPorProcesso?.[procId] ?? []) : [];
+        const titulo = atividades.length > 0
+          ? atividades.join(" · ")
+          : (e as any).processo_nome;
         faixas.push({
           key: `proc-${e.id}`, tipo: "processo", inicio: ini, fim,
-          titulo: (e as any).processo_nome,
+          titulo,
           detalhe: (e as any).motivo_atraso || (e as any).observacao || undefined,
           emCurso, cor: EVT_CORES.processo,
         });
