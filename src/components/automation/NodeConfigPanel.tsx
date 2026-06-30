@@ -57,7 +57,7 @@ export function NodeConfigPanel({
               <Select value={String(cfg.type ?? "")} onValueChange={(v) => set({ type: v })}>
                 <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="tag_value">Tag atinge valor (min/máx)</SelectItem>
+                  <SelectItem value="tag_value">Tag comparada a um valor</SelectItem>
                   <SelectItem value="tag_stale">Tag sem atualização</SelectItem>
                   <SelectItem value="production_event">Evento de produção</SelectItem>
                   <SelectItem value="schedule">Agendamento (cron)</SelectItem>
