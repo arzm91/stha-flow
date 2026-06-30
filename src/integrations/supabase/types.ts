@@ -959,15 +959,20 @@ export type Database = {
       }
       ordens_producao: {
         Row: {
+          auto_iniciar: boolean
           created_at: string
+          duracao_estimada_min: number | null
           equipamento_id: string
+          fila_posicao: number | null
           fim_em: string | null
           id: string
-          inicio_em: string
+          inicio_em: string | null
+          inicio_previsto: string | null
           numero: string
           obs_finais: string | null
           obs_iniciais: string | null
           owner_id: string
+          prioridade: string
           produto_id: string
           qtd_planejada: number
           qtd_produzida: number | null
@@ -976,15 +981,20 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_iniciar?: boolean
           created_at?: string
+          duracao_estimada_min?: number | null
           equipamento_id: string
+          fila_posicao?: number | null
           fim_em?: string | null
           id?: string
-          inicio_em?: string
+          inicio_em?: string | null
+          inicio_previsto?: string | null
           numero: string
           obs_finais?: string | null
           obs_iniciais?: string | null
           owner_id: string
+          prioridade?: string
           produto_id: string
           qtd_planejada: number
           qtd_produzida?: number | null
@@ -993,15 +1003,20 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_iniciar?: boolean
           created_at?: string
+          duracao_estimada_min?: number | null
           equipamento_id?: string
+          fila_posicao?: number | null
           fim_em?: string | null
           id?: string
-          inicio_em?: string
+          inicio_em?: string | null
+          inicio_previsto?: string | null
           numero?: string
           obs_finais?: string | null
           obs_iniciais?: string | null
           owner_id?: string
+          prioridade?: string
           produto_id?: string
           qtd_planejada?: number
           qtd_produzida?: number | null
