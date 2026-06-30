@@ -57,11 +57,13 @@ function EquipamentosPage() {
   return (
     <CrudTable
       table="equipamentos"
+      resourceType="equipamento"
       title="Equipamentos"
       description="Cadastro e gestão dos equipamentos da planta."
       searchKeys={["nome", "codigo", "tipo", "localizacao"]}
       initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [] }}
       fields={fields}
+
       columns={[
         { key: "codigo", label: "Código" },
         { key: "nome", label: "Nome" },

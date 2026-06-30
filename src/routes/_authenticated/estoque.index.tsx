@@ -6,16 +6,21 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
 import { Boxes, ArrowDownToLine } from "lucide-react";
 import { StorageLocationCard, type StorageLocation } from "@/components/StorageLocationCard";
+import { useResourcePermissions } from "@/hooks/useResourcePermissions";
+
 
 export const Route = createFileRoute("/_authenticated/estoque/")({
   component: EstoquePage,
 });
 
 function EstoquePage() {
+  const resPerms = useResourcePermissions();
   const tanques = useQuery({
     queryKey: ["tanques"],
     queryFn: async () => (await supabase.from("tanques").select("*").order("codigo")).data ?? [],
   });
+  const visibleTanques = resPerms.filter("tanque", tanques.data as { id: string }[] | undefined);
+
   const mov = useQuery({
     queryKey: ["movs-all"],
     queryFn: async () => (await supabase.from("movimentacoes_estoque").select("tanque_id,tipo,quantidade")).data ?? [],
@@ -48,22 +53,23 @@ function EstoquePage() {
         }
       />
 
-      {tanques.data && tanques.data.length === 0 ? (
+      {tanques.data && visibleTanques.length === 0 ? (
         <EmptyState
           icon={<Boxes className="h-6 w-6" />}
-          title="Sem locais cadastrados"
-          description="Cadastre tanques, containers, pallets ou outros locais para começar a controlar o estoque."
+          title="Sem locais visíveis"
+          description="Cadastre tanques, containers, pallets ou outros locais, ou peça ao administrador para liberar o acesso aos locais existentes."
           action={<Button asChild><Link to="/cadastros/tanques">Cadastrar local</Link></Button>}
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {(tanques.data as StorageLocation[] | undefined)?.map((t) => {
+          {(visibleTanques as unknown as StorageLocation[]).map((t) => {
             const saldo = saldosPorTanque.get(t.id) ?? 0;
             const tag = t.tag_nivel_nome ? tagByName.get(t.tag_nivel_nome) ?? null : null;
             return <StorageLocationCard key={t.id} loc={t} saldo={saldo} tag={tag} />;
           })}
         </div>
       )}
+
     </div>
   );
 }

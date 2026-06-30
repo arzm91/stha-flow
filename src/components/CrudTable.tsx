@@ -14,6 +14,7 @@ import { Pencil, Plus, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import { requireAdminPassword } from "@/components/admin-password/AdminPasswordGate";
+import { useResourcePermissions, type ResourceType } from "@/hooks/useResourcePermissions";
 
 export type FieldDef = {
   key: string;
@@ -33,6 +34,7 @@ export function CrudTable({
   searchKeys = ["nome", "codigo"],
   extraActions,
   emptyAction,
+  resourceType,
 }: {
   table: string;
   title: string;
@@ -43,12 +45,15 @@ export function CrudTable({
   searchKeys?: string[];
   extraActions?: (r: Row) => ReactNode;
   emptyAction?: ReactNode;
+  /** When set, filters list rows to those allowed for the current user. */
+  resourceType?: ResourceType;
 }) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Row | null>(null);
   const [form, setForm] = useState<Record<string, unknown>>(initialValues);
+  const resPerms = useResourcePermissions();
 
   const list = useQuery({
     queryKey: [table],
@@ -59,11 +64,13 @@ export function CrudTable({
     },
   });
 
-  const filtered = (list.data ?? []).filter((r) => {
+  const visible = resourceType ? resPerms.filter(resourceType, list.data) : (list.data ?? []);
+  const filtered = visible.filter((r) => {
     if (!search) return true;
     const s = search.toLowerCase();
     return searchKeys.some((k) => String(r[k] ?? "").toLowerCase().includes(s));
   });
+
 
   const save = useMutation({
     mutationFn: async (values: Record<string, unknown>) => {

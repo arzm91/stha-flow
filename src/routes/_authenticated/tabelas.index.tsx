@@ -26,6 +26,8 @@ import { toast } from "sonner";
 import { Plus, Trash2, Table as TableIcon, Pencil } from "lucide-react";
 import type { SheetColumn, ColumnType } from "@/lib/tabelas/types";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { useResourcePermissions } from "@/hooks/useResourcePermissions";
+
 
 export const Route = createFileRoute("/_authenticated/tabelas/")({
   component: TabelasIndex,
@@ -42,7 +44,9 @@ type SheetRow = {
 function TabelasIndex() {
   const qc = useQueryClient();
   const { canEdit } = usePagePermissions();
+  const resPerms = useResourcePermissions();
   const editable = canEdit("tabelas");
+
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<SheetRow | null>(null);
 
@@ -96,15 +100,23 @@ function TabelasIndex() {
 
       {isLoading ? (
         <p className="text-sm text-muted-foreground">Carregando...</p>
-      ) : sheets.length === 0 ? (
-        <Card>
-          <CardContent className="py-10 text-center text-sm text-muted-foreground">
-            Nenhuma tabela criada ainda.
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {sheets.map((s) => (
+      ) : (() => {
+        const visibleSheets = resPerms.filter("custom_sheet", sheets);
+        if (visibleSheets.length === 0) {
+          return (
+            <Card>
+              <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                {sheets.length === 0
+                  ? "Nenhuma tabela criada ainda."
+                  : "Nenhuma tabela liberada para você. Peça ao administrador para liberar o acesso."}
+              </CardContent>
+            </Card>
+          );
+        }
+        return (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {visibleSheets.map((s) => (
+
             <Card key={s.id} className="hover:border-primary/50 transition-colors">
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between gap-2">
@@ -151,9 +163,11 @@ function TabelasIndex() {
                 </Link>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        );
+      })()}
+
 
       {editing && (
         <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
