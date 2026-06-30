@@ -194,11 +194,12 @@ function ProdutosPage() {
       categoria: r.categoria ?? "",
       ativo: r.ativo,
     });
-    // load all existing processes + activities, flatten into a single ordered list
+    // load only the ACTIVE version of the process (older versions stay archived for running orders)
     const { data: procs } = await supabase
       .from("produto_processos")
       .select("id, ordem")
       .eq("produto_id", r.id)
+      .eq("ativo", true)
       .order("ordem", { ascending: true });
     const procIds = (procs ?? []).map((p) => p.id);
     const { data: ativs } = procIds.length
