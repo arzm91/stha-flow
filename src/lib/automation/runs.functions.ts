@@ -406,7 +406,12 @@ async function runGraph(
   return { ok: okAll, results };
 }
 
-async function executeRunInternal(supabase: any, userId: string, runId: string) {
+async function executeRunInternal(
+  supabase: any,
+  userId: string,
+  runId: string,
+  approvalPayload?: ApprovalPayload,
+) {
   const { data: run, error: e1 } = await supabase
     .from("automation_runs").select("*").eq("id", runId).maybeSingle();
   if (e1 || !run) throw new Error("Execução não encontrada");
@@ -422,7 +427,11 @@ async function executeRunInternal(supabase: any, userId: string, runId: string) 
   }).eq("id", runId);
 
   const graph = parseGraph(run.planned_actions);
-  const ctx = (run.trigger_context ?? {}) as Record<string, unknown>;
+  const ctx = {
+    ...((run.trigger_context ?? {}) as Record<string, unknown>),
+    __trigger_fired_at: run.trigger_fired_at ?? run.created_at,
+    __approval: approvalPayload ?? null,
+  };
   const result = await runGraph(supabase, userId, graph, ctx);
 
   await supabase.from("automation_runs").update({
@@ -437,21 +446,21 @@ async function executeRunInternal(supabase: any, userId: string, runId: string) 
 
 export const approveRun = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { runId: string }) => idSchema.parse(data))
+  .inputValidator((data: { runId: string; payload?: ApprovalPayload }) => idSchema.parse(data))
   .handler(async ({ data, context }) => {
-    return executeRunInternal(context.supabase, context.userId, data.runId);
+    return executeRunInternal(context.supabase, context.userId, data.runId, data.payload);
   });
 
 export const executeRun = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { runId: string }) => idSchema.parse(data))
+  .inputValidator((data: { runId: string; payload?: ApprovalPayload }) => idSchema.parse(data))
   .handler(async ({ data, context }) => {
-    return executeRunInternal(context.supabase, context.userId, data.runId);
+    return executeRunInternal(context.supabase, context.userId, data.runId, data.payload);
   });
 
 export const rejectRun = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((data: { runId: string }) => idSchema.parse(data))
+  .inputValidator((data: { runId: string }) => z.object({ runId: z.string().uuid() }).parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const { error } = await supabase.from("automation_runs").update({
