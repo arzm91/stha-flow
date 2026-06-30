@@ -93,6 +93,8 @@ export function PendingApprovalsDock() {
 
   const [dialogRun, setDialogRun] = useState<Run | null>(null);
   const [dialogQtd, setDialogQtd] = useState(0);
+  const [dialogNumero, setDialogNumero] = useState("");
+  const [dialogProdutoId, setDialogProdutoId] = useState<string | null>(null);
 
   function runNeedsApprovalDialog(r: Run): boolean {
     const pa = r.planned_actions;
@@ -103,7 +105,6 @@ export function PendingApprovalsDock() {
   }
 
   async function openApprovalFor(r: Run) {
-    // Sugerir quantidade: tenta achar a OP em andamento do equipamento da ação finalizar_op
     const pa = r.planned_actions;
     const nodesArr = Array.isArray(pa) ? pa : (pa?.nodes ?? []);
     const finalAction = nodesArr.find(
@@ -111,18 +112,24 @@ export function PendingApprovalsDock() {
     );
     const equipId = (finalAction?.data?.config?.equipamento_id as string) ?? null;
     let qtd = 0;
+    let numero = "";
+    let produtoId: string | null = null;
     if (equipId) {
       const { data: op } = await supabase
         .from("ordens_producao")
-        .select("qtd_planejada")
+        .select("qtd_planejada, numero, produto_id")
         .eq("equipamento_id", equipId)
         .eq("status", "em_andamento")
         .order("inicio_em", { ascending: false })
         .limit(1)
         .maybeSingle();
       qtd = Number(op?.qtd_planejada ?? 0);
+      numero = op?.numero ?? "";
+      produtoId = op?.produto_id ?? null;
     }
     setDialogQtd(qtd);
+    setDialogNumero(numero);
+    setDialogProdutoId(produtoId);
     setDialogRun(r);
   }
 
@@ -233,8 +240,10 @@ export function PendingApprovalsDock() {
       {dialogRun && (
         <ApprovalDialog
           open={!!dialogRun}
-          onOpenChange={(o) => !o && setDialogRun(null)}
+          onOpenChange={(o) => { if (!o) setDialogRun(null); }}
           flowName={dialogRun.flow?.nome ?? "Fluxo"}
+          opNumero={dialogNumero}
+          opProdutoId={dialogProdutoId}
           qtdSugerida={dialogQtd}
           needsDestinos={true}
           busy={busy === dialogRun.id}
