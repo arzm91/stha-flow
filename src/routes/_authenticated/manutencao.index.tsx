@@ -122,6 +122,7 @@ function ManutencaoPage() {
 
     // MTBF: tempo total de produção dividido pelo nº de falhas corretivas
     const totalProdSec = ops.reduce((a, o) => {
+      if (!o.inicio_em) return a;
       const end = o.fim_em ? new Date(o.fim_em).getTime() : Date.now();
       return a + Math.max(0, (end - new Date(o.inicio_em).getTime()) / 1000);
     }, 0);

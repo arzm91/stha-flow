@@ -211,7 +211,7 @@ function ProducaoDashboardPage() {
     for (const r of rowsFiltered) {
       planejado += Number(r.qtd_planejada) || 0;
       produzido += Number(r.qtd_produzida) || 0;
-      if (r.fim_em) { tempoMs += new Date(r.fim_em).getTime() - new Date(r.inicio_em).getTime(); tempoCount++; }
+      if (r.fim_em && r.inicio_em) { tempoMs += new Date(r.fim_em).getTime() - new Date(r.inicio_em).getTime(); tempoCount++; }
     }
     return {
       total: rowsFiltered.length,
@@ -228,8 +228,8 @@ function ProducaoDashboardPage() {
     const equipMap = new Map((equipamentosQ.data ?? []).map((e) => [e.id, e.codigo]));
     const days = new Map<string, Record<string, number>>();
     for (const r of rowsFiltered) {
-      const day = (r.inicio_em as string).slice(0, 10);
-      if (!days.has(day)) days.set(day, {});
+      const day = ((r.inicio_em ?? r.inicio_previsto ?? "") as string).slice(0, 10);
+      if (!day) continue;
       const bucket = days.get(day)!;
       const key = equipMap.get(r.equipamento_id) ?? "—";
       bucket[key] = (bucket[key] ?? 0) + (Number(r.qtd_produzida) || 0);
@@ -271,7 +271,7 @@ function ProducaoDashboardPage() {
       cur.ops += 1;
       cur.produzido += Number(r.qtd_produzida) || 0;
       cur.planejado += Number(r.qtd_planejada) || 0;
-      if (r.fim_em) { cur.tempoMs += new Date(r.fim_em).getTime() - new Date(r.inicio_em).getTime(); cur.tempoCount++; }
+      if (r.fim_em && r.inicio_em) { cur.tempoMs += new Date(r.fim_em).getTime() - new Date(r.inicio_em).getTime(); cur.tempoCount++; }
       if (r.status === "finalizada") cur.finalizadas++;
       map.set(id, cur);
     }

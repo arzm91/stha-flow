@@ -71,7 +71,7 @@ function IndicadoresPage() {
 
   const tempos = finalizadas
     .filter((r) => r.fim_em && r.inicio_em)
-    .map((r) => new Date(r.fim_em!).getTime() - new Date(r.inicio_em).getTime());
+    .map((r) => new Date(r.fim_em!).getTime() - new Date(r.inicio_em!).getTime());
   const tempoMedio = tempos.length ? tempos.reduce((a, b) => a + b, 0) / tempos.length : 0;
 
   const eficiencia = rows.length ? (finalizadas.length / rows.length) * 100 : 0;

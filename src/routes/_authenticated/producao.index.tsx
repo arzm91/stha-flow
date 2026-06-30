@@ -104,7 +104,7 @@ function ProducaoPage() {
                     <div className="mt-3 rounded-md border border-primary/30 bg-primary/5 p-2 text-sm">
                       <div className="font-medium">OP {op.numero}</div>
                       <div className="text-xs text-muted-foreground">
-                        {(op.produto as { nome: string } | null)?.nome ?? ""} · há {durationFromNow(op.inicio_em)}
+                        {(op.produto as { nome: string } | null)?.nome ?? ""}{op.inicio_em ? ` · há ${durationFromNow(op.inicio_em)}` : ""}
                       </div>
                     </div>
                   ) : (

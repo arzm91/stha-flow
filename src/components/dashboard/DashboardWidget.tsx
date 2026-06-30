@@ -209,7 +209,7 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
             </div>
             <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
               <span>{pct.toFixed(0)}%</span>
-              <span>iniciado {new Date(o.inicio_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+              <span>iniciado {o.inicio_em ? new Date(o.inicio_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—"}</span>
             </div>
           </div>
         </div>

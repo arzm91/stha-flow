@@ -133,9 +133,9 @@ function OPPage() {
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
-        <Info label="Início" value={formatDate(op.data.inicio_em)} />
+        <Info label="Início" value={op.data.inicio_em ? formatDate(op.data.inicio_em) : "—"} />
         <Info label="Fim" value={op.data.fim_em ? formatDate(op.data.fim_em) : "—"} />
-        <Info label="Duração total" value={op.data.fim_em ? durationBetween(op.data.inicio_em, op.data.fim_em) : durationFromNow(op.data.inicio_em)} />
+        <Info label="Duração total" value={op.data.inicio_em ? (op.data.fim_em ? durationBetween(op.data.inicio_em, op.data.fim_em) : durationFromNow(op.data.inicio_em)) : "—"} />
         <Info label="Qtd. planejada / produzida" value={`${formatNumber(Number(op.data.qtd_planejada))} / ${op.data.qtd_produzida != null ? formatNumber(Number(op.data.qtd_produzida)) : "—"}`} />
         <Info label="Operador" value={operador.data?.nome ?? "—"} />
         <Info label="Equipamento" value={(op.data.equipamento as any)?.nome ?? "—"} />

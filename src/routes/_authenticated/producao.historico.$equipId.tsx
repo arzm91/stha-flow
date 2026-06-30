@@ -110,10 +110,10 @@ function HistoricoEquip() {
                       <TableCell className="font-mono">{o.numero}</TableCell>
                       <TableCell>{prod?.nome ?? "—"}</TableCell>
                       <TableCell><StatusBadge status={o.status} /></TableCell>
-                      <TableCell>{formatDate(o.inicio_em)}</TableCell>
+                      <TableCell>{o.inicio_em ? formatDate(o.inicio_em) : "—"}</TableCell>
                       <TableCell>{o.fim_em ? formatDate(o.fim_em) : "—"}</TableCell>
                       <TableCell className="font-mono text-xs">
-                        {o.fim_em ? durationBetween(o.inicio_em, o.fim_em) : durationFromNow(o.inicio_em)}
+                        {o.inicio_em ? (o.fim_em ? durationBetween(o.inicio_em, o.fim_em) : durationFromNow(o.inicio_em)) : "—"}
                       </TableCell>
                       <TableCell className="font-mono">
                         {o.qtd_produzida != null ? formatNumber(Number(o.qtd_produzida)) : "—"}
