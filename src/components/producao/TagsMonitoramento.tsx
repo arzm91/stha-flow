@@ -65,6 +65,19 @@ export function TagsMonitoramento({
   ativa: boolean;
 }) {
   const [horas, setHoras] = useState<number>(1);
+  const [agora, setAgora] = useState<number>(() => Date.now());
+
+  useEffect(() => {
+    if (!ativa) return;
+    const id = setInterval(() => setAgora(Date.now()), 5_000);
+    return () => clearInterval(id);
+  }, [ativa]);
+
+  const janelaPeriodo = useMemo(() => {
+    const fim = agora;
+    const inicio = fim - horas * 3600_000;
+    return { inicio, fim };
+  }, [agora, horas]);
 
   // Busca o histórico das últimas N horas para a ordem (paginado para passar do limite de 1000).
   const hist = useQuery({
