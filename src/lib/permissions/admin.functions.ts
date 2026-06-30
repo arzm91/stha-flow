@@ -31,11 +31,15 @@ export const listManagedUsers = createServerFn({ method: "GET" })
     if (usersErr) throw new Error(usersErr.message);
     const usersById = new Map(usersData.users.map((u) => [u.id, u]));
 
-    const [{ data: roles }, { data: perms }] = await Promise.all([
+    const [{ data: roles }, { data: perms }, { data: resPerms }] = await Promise.all([
       supabaseAdmin.from("user_roles").select("user_id, role").in("user_id", ids),
       supabaseAdmin
         .from("user_permissions")
         .select("user_id, page_key, can_view, can_edit")
+        .in("user_id", ids),
+      supabaseAdmin
+        .from("user_resource_permissions")
+        .select("user_id, resource_type, resource_id")
         .in("user_id", ids),
     ]);
 
@@ -56,10 +60,17 @@ export const listManagedUsers = createServerFn({ method: "GET" })
               can_view: p.can_view,
               can_edit: p.can_edit,
             })),
+          resource_permissions: (resPerms ?? [])
+            .filter((p) => p.user_id === id)
+            .map((p) => ({
+              resource_type: p.resource_type as string,
+              resource_id: p.resource_id as string,
+            })),
         };
       })
       .filter((x): x is NonNullable<typeof x> => x !== null);
   });
+
 
 async function assertOwnsUser(
   ctx: { userId: string },
