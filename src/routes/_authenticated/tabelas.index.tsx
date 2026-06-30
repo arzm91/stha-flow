@@ -163,9 +163,11 @@ function TabelasIndex() {
                 </Link>
               </CardContent>
             </Card>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        );
+      })()}
+
 
       {editing && (
         <Dialog open={!!editing} onOpenChange={(o) => !o && setEditing(null)}>
