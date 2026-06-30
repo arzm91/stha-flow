@@ -4,9 +4,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Brush, ReferenceLine, ReferenceArea } from "recharts";
-import { LineChart as LineChartIcon, ChevronLeft, ChevronRight, RotateCcw, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon } from "lucide-react";
+import { LineChart as LineChartIcon, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon } from "lucide-react";
 import { formatNumber, formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
+
+const PERIODOS = [
+  { k: "1h", label: "1 hora", ms: 60 * 60 * 1000 },
+  { k: "6h", label: "6 horas", ms: 6 * 60 * 60 * 1000 },
+  { k: "12h", label: "12 horas", ms: 12 * 60 * 60 * 1000 },
+  { k: "24h", label: "24 horas", ms: 24 * 60 * 60 * 1000 },
+] as const;
+type PeriodoKey = (typeof PERIODOS)[number]["k"];
+
 
 type EventoPonto = {
   key: string;
