@@ -484,43 +484,41 @@ export function TagsMonitoramento({
           )}
         </div>
 
-        {/* Controles de navegação entre janelas de histórico */}
-        <div className="flex items-center justify-between gap-2">
+        {/* Seletor de período de visualização */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-[11px] uppercase tracking-wide text-muted-foreground mr-1">
+              Período:
+            </span>
+            {PERIODOS.map((p) => {
+              const on = periodo === p.k;
+              return (
+                <Button
+                  key={p.k}
+                  type="button"
+                  variant={on ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setPeriodo(p.k)}
+                  className="h-7 text-xs"
+                >
+                  {p.label}
+                </Button>
+              );
+            })}
+          </div>
           <div className="text-xs text-muted-foreground">
             <span className="font-mono text-foreground">{totalVisivel}</span> pontos
             {inicioJanela && fimJanela ? (
               <span className="ml-2 hidden sm:inline">
-                ({new Date(inicioJanela).toLocaleString("pt-BR")} → {new Date(fimJanela).toLocaleString("pt-BR")})
+                ({new Date(inicioJanela).toLocaleTimeString("pt-BR")} → {new Date(fimJanela).toLocaleTimeString("pt-BR")})
               </span>
             ) : null}
-          </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setOffset((o) => o + PAGE_SIZE)}
-              disabled={!podeAnteriores || hist.isLoading}
-            >
-              <ChevronLeft className="mr-1 h-4 w-4" /> Anteriores
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setOffset(0)}
-              disabled={offset === 0 || hist.isLoading}
-            >
-              <RotateCcw className="mr-1 h-4 w-4" /> Mais recentes
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
-              disabled={!podeProximos || hist.isLoading}
-            >
-              Próximos <ChevronRight className="ml-1 h-4 w-4" />
-            </Button>
+            {limiteAtingido ? (
+              <span className="ml-2 text-warning">· limite de {MAX_ROWS} pontos atingido</span>
+            ) : null}
           </div>
         </div>
+
 
         {/* Estatísticas resumidas */}
         {stats.size > 0 ? (
