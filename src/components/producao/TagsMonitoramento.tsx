@@ -376,10 +376,6 @@ export function TagsMonitoramento({
             <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
               Selecione ao menos uma tag para visualizar.
             </div>
-          ) : chartData.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              {hist.isLoading ? "Carregando histórico..." : "Aguardando pontos do histórico..."}
-            </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 8, right: 16, bottom: 24, left: 0 }}>
@@ -387,7 +383,8 @@ export function TagsMonitoramento({
                 <XAxis
                   dataKey="t"
                   type="number"
-                  domain={["dataMin", "dataMax"]}
+                  domain={[janela.min, janela.max]}
+                  allowDataOverflow
                   scale="time"
                   tickFormatter={(t) =>
                     new Date(t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
