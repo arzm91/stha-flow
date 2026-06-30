@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useServerFn } from "@tanstack/react-start";
-import { approveRun, rejectRun, snoozeRun } from "@/lib/automation/runs.functions";
+import { approveRun, executeRun, rejectRun, snoozeRun } from "@/lib/automation/runs.functions";
 import { Bell, Check, X, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 
