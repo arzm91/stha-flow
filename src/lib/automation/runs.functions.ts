@@ -2,7 +2,27 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
-const idSchema = z.object({ runId: z.string().uuid() });
+const destinoSchema = z.object({
+  tanque_id: z.string().uuid(),
+  quantidade: z.number().positive(),
+});
+const analiseSchema = z.object({
+  analise_id: z.string().uuid(),
+  resultado: z.number(),
+});
+const approvalPayloadSchema = z
+  .object({
+    destinos: z.array(destinoSchema).optional(),
+    analises: z.array(analiseSchema).optional(),
+  })
+  .optional();
+
+const idSchema = z.object({
+  runId: z.string().uuid(),
+  payload: approvalPayloadSchema,
+});
+
+type ApprovalPayload = z.infer<typeof approvalPayloadSchema>;
 
 type GraphNode = {
   id: string;
