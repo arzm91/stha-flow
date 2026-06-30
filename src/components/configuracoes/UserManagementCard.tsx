@@ -152,11 +152,16 @@ export function UserManagementCard() {
         <PermissionsDialog
           user={editingUser}
           onClose={() => setEditingUser(null)}
-          onSave={async (permissions) => {
+          onSave={async ({ permissions, resources }) => {
             try {
               const { requireAdminPassword } = await import("@/components/admin-password/AdminPasswordGate");
               if (!(await requireAdminPassword(`alterar permissões de ${editingUser.email}`))) return;
               await setPermFn({ data: { user_id: editingUser.id, permissions } });
+              await Promise.all(
+                (Object.keys(resources) as Array<keyof typeof resources>).map((rt) =>
+                  setResFn({ data: { user_id: editingUser.id, resource_type: rt as never, resource_ids: resources[rt] } })
+                ),
+              );
               toast.success("Permissões atualizadas");
               setEditingUser(null);
               qc.invalidateQueries({ queryKey: ["managed-users"] });
@@ -166,6 +171,7 @@ export function UserManagementCard() {
           }}
         />
       )}
+
     </Card>
   );
 }
@@ -228,6 +234,15 @@ function CreateUserDialog({
   );
 }
 
+type ResourceKind = "equipamento" | "tanque" | "produto" | "custom_sheet";
+
+const RESOURCE_TABS: { key: ResourceKind; label: string; table: string; labelField: string; codeField?: string }[] = [
+  { key: "equipamento", label: "Equipamentos", table: "equipamentos", labelField: "nome", codeField: "codigo" },
+  { key: "tanque", label: "Locais (tanques)", table: "tanques", labelField: "nome", codeField: "codigo" },
+  { key: "produto", label: "Produtos", table: "produtos", labelField: "nome", codeField: "codigo" },
+  { key: "custom_sheet", label: "Tabelas", table: "custom_sheets", labelField: "nome" },
+];
+
 function PermissionsDialog({
   user,
   onClose,
@@ -235,9 +250,10 @@ function PermissionsDialog({
 }: {
   user: ManagedUser;
   onClose: () => void;
-  onSave: (
-    perms: { page_key: string; can_view: boolean; can_edit: boolean }[],
-  ) => void;
+  onSave: (payload: {
+    permissions: { page_key: string; can_view: boolean; can_edit: boolean }[];
+    resources: Record<ResourceKind, string[]>;
+  }) => void;
 }) {
   const [state, setState] = useState(() =>
     MANAGED_PAGES.map((p) => {
@@ -251,6 +267,20 @@ function PermissionsDialog({
     }),
   );
 
+  const [resState, setResState] = useState<Record<ResourceKind, Set<string>>>(() => {
+    const base: Record<ResourceKind, Set<string>> = {
+      equipamento: new Set(),
+      tanque: new Set(),
+      produto: new Set(),
+      custom_sheet: new Set(),
+    };
+    for (const rp of user.resource_permissions ?? []) {
+      const k = rp.resource_type as ResourceKind;
+      if (base[k]) base[k].add(rp.resource_id);
+    }
+    return base;
+  });
+
   const toggle = (key: string, field: "can_view" | "can_edit", value: boolean) => {
     setState((s) =>
       s.map((row) =>
@@ -258,7 +288,6 @@ function PermissionsDialog({
           ? {
               ...row,
               [field]: value,
-              // editing implies viewing
               ...(field === "can_edit" && value ? { can_view: true } : {}),
               ...(field === "can_view" && !value ? { can_edit: false } : {}),
             }
@@ -267,52 +296,90 @@ function PermissionsDialog({
     );
   };
 
+  const toggleResource = (kind: ResourceKind, id: string) => {
+    setResState((s) => {
+      const next = new Set(s[kind]);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return { ...s, [kind]: next };
+    });
+  };
+
+  const setAllResources = (kind: ResourceKind, ids: string[], allChecked: boolean) => {
+    setResState((s) => ({ ...s, [kind]: new Set(allChecked ? [] : ids) }));
+  };
+
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Permissões — {user.nome || user.email}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-1">
-          <div className="grid grid-cols-[1fr_auto_auto] gap-3 px-2 pb-2 text-xs font-medium text-muted-foreground">
-            <span>Página</span>
-            <span className="w-16 text-center">Ver</span>
-            <span className="w-16 text-center">Editar</span>
-          </div>
-          {state.map((row) => (
-            <div
-              key={row.page_key}
-              className="grid grid-cols-[1fr_auto_auto] items-center gap-3 rounded-md px-2 py-1.5 hover:bg-muted/50"
-            >
-              <span className="text-sm">{row.label}</span>
-              <div className="flex w-16 justify-center">
-                <Checkbox
-                  checked={row.can_view}
-                  onCheckedChange={(v) => toggle(row.page_key, "can_view", !!v)}
-                />
+
+        <Tabs defaultValue="pages" className="w-full">
+          <TabsList className="grid w-full grid-cols-5">
+            <TabsTrigger value="pages">Páginas</TabsTrigger>
+            {RESOURCE_TABS.map((t) => (
+              <TabsTrigger key={t.key} value={t.key}>{t.label}</TabsTrigger>
+            ))}
+          </TabsList>
+
+          <TabsContent value="pages" className="mt-3">
+            <div className="space-y-1">
+              <div className="grid grid-cols-[1fr_auto_auto] gap-3 px-2 pb-2 text-xs font-medium text-muted-foreground">
+                <span>Página</span>
+                <span className="w-16 text-center">Ver</span>
+                <span className="w-16 text-center">Editar</span>
               </div>
-              <div className="flex w-16 justify-center">
-                <Checkbox
-                  checked={row.can_edit}
-                  onCheckedChange={(v) => toggle(row.page_key, "can_edit", !!v)}
-                />
-              </div>
+              {state.map((row) => (
+                <div
+                  key={row.page_key}
+                  className="grid grid-cols-[1fr_auto_auto] items-center gap-3 rounded-md px-2 py-1.5 hover:bg-muted/50"
+                >
+                  <span className="text-sm">{row.label}</span>
+                  <div className="flex w-16 justify-center">
+                    <Checkbox checked={row.can_view} onCheckedChange={(v) => toggle(row.page_key, "can_view", !!v)} />
+                  </div>
+                  <div className="flex w-16 justify-center">
+                    <Checkbox checked={row.can_edit} onCheckedChange={(v) => toggle(row.page_key, "can_edit", !!v)} />
+                  </div>
+                </div>
+              ))}
             </div>
+          </TabsContent>
+
+          {RESOURCE_TABS.map((t) => (
+            <TabsContent key={t.key} value={t.key} className="mt-3">
+              <ResourcePicker
+                kind={t.key}
+                table={t.table}
+                labelField={t.labelField}
+                codeField={t.codeField}
+                selected={resState[t.key]}
+                onToggle={(id) => toggleResource(t.key, id)}
+                onSetAll={(ids, allChecked) => setAllResources(t.key, ids, allChecked)}
+              />
+            </TabsContent>
           ))}
-        </div>
+        </Tabs>
+
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose}>
-            Cancelar
-          </Button>
+          <Button variant="ghost" onClick={onClose}>Cancelar</Button>
           <Button
             onClick={() =>
-              onSave(
-                state.map((s) => ({
+              onSave({
+                permissions: state.map((s) => ({
                   page_key: s.page_key,
                   can_view: s.can_view,
                   can_edit: s.can_edit,
                 })),
-              )
+                resources: {
+                  equipamento: Array.from(resState.equipamento),
+                  tanque: Array.from(resState.tanque),
+                  produto: Array.from(resState.produto),
+                  custom_sheet: Array.from(resState.custom_sheet),
+                },
+              })
             }
           >
             Salvar permissões
@@ -322,3 +389,97 @@ function PermissionsDialog({
     </Dialog>
   );
 }
+
+function ResourcePicker({
+  kind,
+  table,
+  labelField,
+  codeField,
+  selected,
+  onToggle,
+  onSetAll,
+}: {
+  kind: ResourceKind;
+  table: string;
+  labelField: string;
+  codeField?: string;
+  selected: Set<string>;
+  onToggle: (id: string) => void;
+  onSetAll: (ids: string[], allChecked: boolean) => void;
+}) {
+  const [rows, setRows] = useState<{ id: string; label: string; code?: string }[] | null>(null);
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const cols = ["id", labelField, codeField].filter(Boolean).join(",");
+      const { data, error } = await supabase.from(table as never).select(cols).order(labelField);
+      if (cancelled) return;
+      if (error) {
+        setRows([]);
+        return;
+      }
+      setRows(
+        (data as unknown as Array<Record<string, string>>).map((r) => ({
+          id: r.id,
+          label: (r[labelField] as string) ?? "—",
+          code: codeField ? (r[codeField] as string) : undefined,
+        })),
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [table, labelField, codeField]);
+
+  if (rows === null) {
+    return <p className="text-sm text-muted-foreground py-6">Carregando...</p>;
+  }
+  if (rows.length === 0) {
+    return <p className="text-sm text-muted-foreground py-6">Nenhum item cadastrado.</p>;
+  }
+
+  const q = search.trim().toLowerCase();
+  const filtered = q
+    ? rows.filter((r) => r.label.toLowerCase().includes(q) || (r.code ?? "").toLowerCase().includes(q))
+    : rows;
+  const ids = filtered.map((r) => r.id);
+  const allChecked = ids.length > 0 && ids.every((id) => selected.has(id));
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Input
+          placeholder="Pesquisar..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="h-8"
+        />
+        <Button type="button" variant="outline" size="sm" onClick={() => onSetAll(ids, allChecked)}>
+          {allChecked ? "Desmarcar todos" : "Selecionar todos"}
+        </Button>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Marque os itens que este usuário poderá visualizar e editar. Sem nenhum marcado, ele não verá nada deste recurso.
+      </p>
+      <div className="max-h-64 overflow-y-auto rounded-md border">
+        {filtered.map((r) => (
+          <label
+            key={r.id}
+            className="flex cursor-pointer items-center gap-2 px-2 py-1.5 text-sm hover:bg-muted/50"
+          >
+            <Checkbox checked={selected.has(r.id)} onCheckedChange={() => onToggle(r.id)} />
+            {r.code ? <span className="font-mono text-xs text-muted-foreground">{r.code}</span> : null}
+            <span className="flex-1 truncate">{r.label}</span>
+          </label>
+        ))}
+        {filtered.length === 0 ? (
+          <p className="p-3 text-xs text-muted-foreground">Nenhum item encontrado.</p>
+        ) : null}
+      </div>
+      <p className="text-xs text-muted-foreground">{selected.size} selecionado(s)</p>
+    </div>
+  );
+}
+
