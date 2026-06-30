@@ -43,6 +43,9 @@ type Gatilho = {
   valor: string; // string for the form; converted to number on save (or null when change)
 };
 
+type QtdModo = "fixa" | "tag_valor" | "tag_diferenca";
+type CapturaModo = "na_execucao" | "gatilho_valor";
+
 type Etapa = {
   id?: string;
   descricao: string;
@@ -52,6 +55,13 @@ type Etapa = {
   tempo_estimado_min: string;
   tag_nome: string; // used by tag_captura
   gatilhos: Gatilho[]; // only for materia_prima
+  // matéria-prima — origem da quantidade
+  qtd_modo: QtdModo;
+  qtd_tag_nome: string;
+  // tag_captura — modo da captura
+  captura_modo: CapturaModo;
+  captura_operador: GatilhoOperador;
+  captura_valor: string;
 };
 
 const TIPO_LABEL: Record<TipoEtapa, string> = {
@@ -81,12 +91,27 @@ function newEtapa(): Etapa {
     tempo_estimado_min: "",
     tag_nome: "",
     gatilhos: [],
+    qtd_modo: "fixa",
+    qtd_tag_nome: "",
+    captura_modo: "na_execucao",
+    captura_operador: "gt",
+    captura_valor: "",
   };
 }
 
 function newGatilho(tipo: GatilhoTipo): Gatilho {
   return { tipo, tag_nome: "", operador: "gt", valor: "" };
 }
+
+function tagLabel(t: { nome: string; nome_amigavel?: string | null; grupo?: string | null; unidade?: string | null }): string {
+  const main = t.nome_amigavel?.trim() ? t.nome_amigavel : t.nome;
+  const tech = t.nome_amigavel?.trim() ? ` · ${t.nome}` : "";
+  const grp = t.grupo ? ` (${t.grupo})` : "";
+  const un = t.unidade ? ` · ${t.unidade}` : "";
+  return `${main}${grp}${un}${tech}`;
+}
+
+
 
 function normalizeTipo(raw: string | null | undefined): TipoEtapa {
   if (raw === "materia_prima" || raw === "tag_captura") return raw;
@@ -135,12 +160,13 @@ function ProdutosPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tags_live")
-        .select("nome, grupo, unidade")
+        .select("nome, nome_amigavel, grupo, unidade")
         .order("nome", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as Array<{ nome: string; grupo: string | null; unidade: string | null }>;
+      return (data ?? []) as Array<{ nome: string; nome_amigavel: string | null; grupo: string | null; unidade: string | null }>;
     },
   });
+
 
   const resPerms = useResourcePermissions();
   const visible = resPerms.filter("produto", list.data);
@@ -178,7 +204,7 @@ function ProdutosPage() {
     const { data: ativs } = procIds.length
       ? await supabase
           .from("produto_atividades")
-          .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min, tag_nome, gatilhos")
+          .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min, tag_nome, gatilhos, qtd_modo, qtd_tag_nome, captura_modo, captura_gatilho")
           .in("processo_id", procIds)
           .order("ordem", { ascending: true })
       : { data: [] };
@@ -188,6 +214,8 @@ function ProdutosPage() {
       id: string; processo_id: string; descricao: string; tipo: string | null;
       quantidade: number | null; unidade: string | null; tempo_estimado_min: number | null;
       tag_nome: string | null; ordem: number; gatilhos: unknown;
+      qtd_modo: string | null; qtd_tag_nome: string | null;
+      captura_modo: string | null; captura_gatilho: unknown;
     }>).slice().sort((a, b) => {
       const pa = procOrder.get(a.processo_id) ?? 0;
       const pb = procOrder.get(b.processo_id) ?? 0;
@@ -204,6 +232,7 @@ function ProdutosPage() {
               valor: g.valor == null ? "" : String(g.valor),
             }))
           : [];
+        const cg = (a.captura_gatilho ?? {}) as { operador?: string; valor?: number | string | null };
         return {
           id: a.id,
           descricao: a.descricao,
@@ -213,9 +242,15 @@ function ProdutosPage() {
           tempo_estimado_min: a.tempo_estimado_min == null ? "" : String(a.tempo_estimado_min),
           tag_nome: a.tag_nome ?? "",
           gatilhos: gats,
+          qtd_modo: ((a.qtd_modo === "tag_valor" || a.qtd_modo === "tag_diferenca") ? a.qtd_modo : "fixa") as QtdModo,
+          qtd_tag_nome: a.qtd_tag_nome ?? "",
+          captura_modo: (a.captura_modo === "gatilho_valor" ? "gatilho_valor" : "na_execucao") as CapturaModo,
+          captura_operador: ((cg.operador as GatilhoOperador) ?? "gt"),
+          captura_valor: cg.valor == null ? "" : String(cg.valor),
         };
       }),
     );
+
     setOpen(true);
   };
 
@@ -283,12 +318,23 @@ function ProdutosPage() {
           descricao: e.descricao.trim(),
           ordem: idx,
           tipo: e.tipo,
-          quantidade: e.tipo === "materia_prima" && e.quantidade !== "" ? Number(e.quantidade) : null,
+          quantidade: e.tipo === "materia_prima" && e.qtd_modo === "fixa" && e.quantidade !== "" ? Number(e.quantidade) : null,
           unidade: e.tipo === "tag_captura" ? (e.unidade || null) : e.tipo === "materia_prima" ? (e.unidade || null) : null,
           tempo_estimado_min: e.tempo_estimado_min === "" ? null : Number(e.tempo_estimado_min),
           tag_nome: e.tipo === "tag_captura" ? (e.tag_nome || null) : null,
           gatilhos,
+          qtd_modo: e.tipo === "materia_prima" ? e.qtd_modo : "fixa",
+          qtd_tag_nome: e.tipo === "materia_prima" && e.qtd_modo !== "fixa" ? (e.qtd_tag_nome || null) : null,
+          captura_modo: e.tipo === "tag_captura" ? e.captura_modo : "na_execucao",
+          captura_gatilho:
+            e.tipo === "tag_captura" && e.captura_modo === "gatilho_valor"
+              ? {
+                  operador: e.captura_operador,
+                  valor: e.captura_operador === "change" || e.captura_valor === "" ? null : Number(e.captura_valor),
+                }
+              : null,
         };
+
       });
       const { error: ativErr } = await supabase.from("produto_atividades").insert(toInsert);
       if (ativErr) throw ativErr;
@@ -475,38 +521,80 @@ function ProdutosPage() {
                           <div className="mt-2 grid grid-cols-12 gap-2">
                             {e.tipo === "materia_prima" ? (
                               <>
-                                <div className="col-span-4 sm:col-span-3">
-                                  <Input
-                                    type="number"
-                                    step="0.001"
-                                    value={e.quantidade}
-                                    onChange={(ev) => updateEtapa(ei, { quantidade: ev.target.value })}
-                                    placeholder="Quantidade"
-                                    className="h-8"
-                                  />
+                                <div className="col-span-12 sm:col-span-4">
+                                  <select
+                                    value={e.qtd_modo}
+                                    onChange={(ev) => updateEtapa(ei, { qtd_modo: ev.target.value as QtdModo })}
+                                    className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                                    title="Origem da quantidade carregada"
+                                  >
+                                    <option value="fixa">Quantidade fixa</option>
+                                    <option value="tag_valor">Valor da tag (no fim)</option>
+                                    <option value="tag_diferenca">Diferença da tag (fim − início)</option>
+                                  </select>
                                 </div>
-                                <div className="col-span-4 sm:col-span-2">
+                                {e.qtd_modo === "fixa" ? (
+                                  <div className="col-span-6 sm:col-span-3">
+                                    <Input
+                                      type="number"
+                                      step="0.001"
+                                      value={e.quantidade}
+                                      onChange={(ev) => updateEtapa(ei, { quantidade: ev.target.value })}
+                                      placeholder="Quantidade"
+                                      className="h-8"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="col-span-12 sm:col-span-3">
+                                    <select
+                                      value={e.qtd_tag_nome}
+                                      onChange={(ev) => {
+                                        const sel = (tagsList.data ?? []).find((t) => t.nome === ev.target.value);
+                                        updateEtapa(ei, {
+                                          qtd_tag_nome: ev.target.value,
+                                          unidade: sel?.unidade ?? e.unidade,
+                                        });
+                                      }}
+                                      className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                                    >
+                                      <option value="">— tag de origem —</option>
+                                      {(tagsList.data ?? []).map((t) => (
+                                        <option key={t.nome} value={t.nome}>
+                                          {tagLabel(t)}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                )}
+                                <div className="col-span-3 sm:col-span-2">
                                   <Input
                                     value={e.unidade}
                                     onChange={(ev) => updateEtapa(ei, { unidade: ev.target.value })}
-                                    placeholder="un (kg, L...)"
+                                    placeholder="un"
                                     className="h-8"
                                   />
                                 </div>
-                                <div className="col-span-4 sm:col-span-3">
+                                <div className="col-span-3 sm:col-span-3">
                                   <Input
                                     type="number"
                                     value={e.tempo_estimado_min}
                                     onChange={(ev) => updateEtapa(ei, { tempo_estimado_min: ev.target.value })}
-                                    placeholder="Tempo de adição (min)"
+                                    placeholder="Tempo (min)"
                                     className="h-8"
-                                    title="Tempo previsto de dosagem em minutos (primário). Os gatilhos abaixo são opcionais."
+                                    title="Tempo previsto de dosagem (fallback quando não houver gatilho de fim)."
                                   />
                                 </div>
+                                {e.qtd_modo !== "fixa" && (
+                                  <div className="col-span-12 text-[11px] text-muted-foreground">
+                                    {e.qtd_modo === "tag_diferenca"
+                                      ? "O sistema lê a tag no gatilho de início, lê novamente no gatilho de fim, e registra a diferença."
+                                      : "O sistema lê o valor da tag no gatilho de fim e registra como quantidade."}
+                                  </div>
+                                )}
                               </>
                             ) : e.tipo === "tag_captura" ? (
                               <>
-                                <div className="col-span-12 sm:col-span-7">
+                                <div className="col-span-12 sm:col-span-6">
                                   <select
                                     value={e.tag_nome}
                                     onChange={(ev) => {
@@ -521,9 +609,19 @@ function ProdutosPage() {
                                     <option value="">— selecione a tag —</option>
                                     {(tagsList.data ?? []).map((t) => (
                                       <option key={t.nome} value={t.nome}>
-                                        {t.nome}{t.grupo ? ` (${t.grupo})` : ""}{t.unidade ? ` · ${t.unidade}` : ""}
+                                        {tagLabel(t)}
                                       </option>
                                     ))}
+                                  </select>
+                                </div>
+                                <div className="col-span-12 sm:col-span-3">
+                                  <select
+                                    value={e.captura_modo}
+                                    onChange={(ev) => updateEtapa(ei, { captura_modo: ev.target.value as CapturaModo })}
+                                    className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                                  >
+                                    <option value="na_execucao">Capturar no fim da etapa</option>
+                                    <option value="gatilho_valor">Capturar por condição</option>
                                   </select>
                                 </div>
                                 <div className="col-span-12 sm:col-span-3">
@@ -531,12 +629,39 @@ function ProdutosPage() {
                                     type="number"
                                     value={e.tempo_estimado_min}
                                     onChange={(ev) => updateEtapa(ei, { tempo_estimado_min: ev.target.value })}
-                                    placeholder="Tempo (min)"
+                                    placeholder="Tempo (min, fallback)"
                                     className="h-8"
                                   />
                                 </div>
+                                {e.captura_modo === "gatilho_valor" && (
+                                  <>
+                                    <div className="col-span-6 sm:col-span-4">
+                                      <select
+                                        value={e.captura_operador}
+                                        onChange={(ev) => updateEtapa(ei, { captura_operador: ev.target.value as GatilhoOperador })}
+                                        className="flex h-8 w-full rounded-md border border-input bg-background px-2 text-xs"
+                                      >
+                                        {(Object.keys(OPERADOR_LABEL) as GatilhoOperador[]).map((op) => (
+                                          <option key={op} value={op}>{OPERADOR_LABEL[op]}</option>
+                                        ))}
+                                      </select>
+                                    </div>
+                                    <div className="col-span-6 sm:col-span-3">
+                                      <Input
+                                        type="number"
+                                        value={e.captura_valor}
+                                        disabled={e.captura_operador === "change"}
+                                        onChange={(ev) => updateEtapa(ei, { captura_valor: ev.target.value })}
+                                        placeholder="Valor da condição"
+                                        className="h-8"
+                                      />
+                                    </div>
+                                  </>
+                                )}
                                 <div className="col-span-12 text-[11px] text-muted-foreground">
-                                  Captura o valor atual da tag no momento em que o operador executar a etapa.
+                                  {e.captura_modo === "gatilho_valor"
+                                    ? "Captura o valor da tag quando a condição acima for atendida."
+                                    : "Captura o valor atual da tag no fim da etapa."}
                                 </div>
                               </>
                             ) : (
@@ -551,6 +676,7 @@ function ProdutosPage() {
                               </div>
                             )}
                           </div>
+
 
                           {e.tipo === "materia_prima" ? (
                             <div className="mt-3 rounded border border-dashed border-border bg-muted/30 p-2">
@@ -592,7 +718,7 @@ function ProdutosPage() {
                                         <option value="">— tag —</option>
                                         {(tagsList.data ?? []).map((t) => (
                                           <option key={t.nome} value={t.nome}>
-                                            {t.nome}{t.unidade ? ` · ${t.unidade}` : ""}
+                                            {tagLabel(t)}
                                           </option>
                                         ))}
                                       </select>
