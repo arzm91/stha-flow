@@ -48,7 +48,19 @@ export const Route = createFileRoute("/_authenticated/cadastros/equipamentos-pfd
 // ---------- Tipos ----------
 type SymbolKind =
   | "tanque" | "bomba" | "trocador" | "valvula" | "reator"
-  | "coluna" | "compressor" | "filtro" | "vaso" | "misturador";
+  | "coluna" | "compressor" | "filtro" | "vaso" | "misturador"
+  // formas genéricas
+  | "retangulo" | "circulo" | "elipse" | "triangulo" | "losango"
+  | "hexagono" | "estrela" | "seta" | "nuvem" | "paralelogramo";
+
+const ISA_SYMBOLS: SymbolKind[] = [
+  "tanque","bomba","trocador","valvula","reator",
+  "coluna","compressor","filtro","vaso","misturador",
+];
+const SHAPE_SYMBOLS: SymbolKind[] = [
+  "retangulo","circulo","elipse","triangulo","losango",
+  "hexagono","estrela","seta","nuvem","paralelogramo",
+];
 
 type EquipNodeData = {
   kind: "equip";
@@ -97,6 +109,9 @@ const SYMBOL_LABEL: Record<SymbolKind, string> = {
   valvula: "Válvula", reator: "Reator", coluna: "Coluna",
   compressor: "Compressor", filtro: "Filtro", vaso: "Vaso",
   misturador: "Misturador",
+  retangulo: "Retângulo", circulo: "Círculo", elipse: "Elipse",
+  triangulo: "Triângulo", losango: "Losango", hexagono: "Hexágono",
+  estrela: "Estrela", seta: "Seta", nuvem: "Nuvem", paralelogramo: "Paralelogramo",
 };
 
 // ---------- Símbolos ISA (SVG) ----------
@@ -188,6 +203,26 @@ function SymbolSvg({ kind, ativo, color }: { kind: SymbolKind; ativo: boolean; c
           <path d="M28 34 L52 34 M30 42 L50 42" stroke={stroke} strokeWidth={sw} />
         </svg>
       );
+    case "retangulo":
+      return (<svg {...svgProps}><rect x="2" y="2" width="76" height="76" rx="4" {...common} /></svg>);
+    case "circulo":
+      return (<svg {...svgProps}><circle cx="40" cy="40" r="38" {...common} /></svg>);
+    case "elipse":
+      return (<svg {...svgProps}><ellipse cx="40" cy="40" rx="38" ry="26" {...common} /></svg>);
+    case "triangulo":
+      return (<svg {...svgProps}><polygon points="40,4 76,72 4,72" {...common} /></svg>);
+    case "losango":
+      return (<svg {...svgProps}><polygon points="40,4 76,40 40,76 4,40" {...common} /></svg>);
+    case "hexagono":
+      return (<svg {...svgProps}><polygon points="22,6 58,6 76,40 58,74 22,74 4,40" {...common} /></svg>);
+    case "estrela":
+      return (<svg {...svgProps}><polygon points="40,4 49,30 76,30 54,46 63,72 40,56 17,72 26,46 4,30 31,30" {...common} /></svg>);
+    case "seta":
+      return (<svg {...svgProps}><polygon points="4,28 48,28 48,12 76,40 48,68 48,52 4,52" {...common} /></svg>);
+    case "nuvem":
+      return (<svg {...svgProps}><path d="M22 60 Q6 60 6 46 Q6 34 20 32 Q22 18 38 18 Q52 18 56 30 Q72 30 72 44 Q72 60 58 60 Z" {...common} /></svg>);
+    case "paralelogramo":
+      return (<svg {...svgProps}><polygon points="20,12 76,12 60,68 4,68" {...common} /></svg>);
   }
 }
 
@@ -207,33 +242,45 @@ function FourSideHandles() {
 }
 
 // ---------- Nodes ----------
+// Sem moldura: o SVG ocupa todo o nó e suas bordas correspondem à silhueta
+// do símbolo. Os handles ficam centralizados em cada lado do bounding box,
+// que agora coincide visualmente com o desenho. O rótulo flutua abaixo,
+// fora da área de conexão.
 function EquipNode({ data, selected }: NodeProps) {
   const d = data as unknown as EquipNodeData;
   return (
     <div
       className={cn(
-        "flex h-full w-full flex-col items-center rounded-md border-2 bg-card/80 px-2 py-1 shadow-sm backdrop-blur",
-        selected ? "border-primary" : "border-border",
+        "relative h-full w-full",
         !d.ativo && "opacity-60",
       )}
     >
       <NodeResizer
         isVisible={selected}
-        minWidth={70}
-        minHeight={70}
+        minWidth={50}
+        minHeight={50}
         lineClassName="!border-primary"
         handleClassName="!h-3 !w-3 !bg-primary !border-primary"
         keepAspectRatio
       />
       <FourSideHandles />
-      <div className="min-h-0 flex-1 w-full flex items-center justify-center">
+      <div
+        className={cn(
+          "h-full w-full",
+          selected && "drop-shadow-[0_0_0_2px_hsl(var(--primary))]",
+        )}
+      >
         <SymbolSvg kind={d.symbol} ativo={d.ativo} color={d.color} />
       </div>
-      <div className="mt-1 max-w-full truncate text-center text-xs font-medium">
-        {d.label || SYMBOL_LABEL[d.symbol]}
-      </div>
-      {!d.ativo && (
-        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">inativo</div>
+      {(d.label || !d.ativo) && (
+        <div className="pointer-events-none absolute left-1/2 top-full -translate-x-1/2 pt-1 text-center">
+          <div className="max-w-[160px] truncate rounded bg-background/70 px-1 text-[11px] font-medium backdrop-blur-sm">
+            {d.label || SYMBOL_LABEL[d.symbol]}
+          </div>
+          {!d.ativo && (
+            <div className="text-[9px] uppercase tracking-wide text-muted-foreground">inativo</div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -501,19 +548,26 @@ function PfdEditor() {
   async function save() {
     setSaving(true);
     const cleanNodes = nodes.map((n) => ({
-      id: n.id, type: n.type, position: n.position, data: n.data,
+      id: n.id, type: n.type, position: n.position,
+      style: n.style ? { width: n.style.width, height: n.style.height } : undefined,
+      data: n.data,
     }));
     const cleanEdges = edges.map((e) => ({
       id: e.id, source: e.source, target: e.target,
       sourceHandle: e.sourceHandle ?? null, targetHandle: e.targetHandle ?? null,
       data: e.data ?? {},
     }));
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("equipamentos")
       .update({ pfd_graph: { nodes: cleanNodes, edges: cleanEdges } as never })
-      .eq("id", id);
+      .eq("id", id)
+      .select("id");
     setSaving(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(`Erro ao salvar: ${error.message}`); return; }
+    if (!data || data.length === 0) {
+      toast.error("Sem permissão para salvar este diagrama (nenhuma linha foi atualizada).");
+      return;
+    }
     toast.success("Diagrama salvo");
   }
 
@@ -557,14 +611,30 @@ function PfdEditor() {
           <div>
             <p className="mb-2 text-xs font-semibold text-muted-foreground">SÍMBOLOS ISA</p>
             <div className="grid grid-cols-2 gap-2">
-              {(Object.keys(SYMBOL_LABEL) as SymbolKind[]).map((k) => (
+              {ISA_SYMBOLS.map((k) => (
                 <button
                   key={k}
                   onClick={() => addEquip(k)}
                   className="flex flex-col items-center gap-1 rounded-md border bg-card p-2 text-[11px] hover:border-primary hover:bg-accent"
                   title={`Adicionar ${SYMBOL_LABEL[k]}`}
                 >
-                  <SymbolSvg kind={k} ativo={true} />
+                  <div className="h-10 w-10"><SymbolSvg kind={k} ativo={true} /></div>
+                  <span>{SYMBOL_LABEL[k]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-xs font-semibold text-muted-foreground">FORMAS</p>
+            <div className="grid grid-cols-2 gap-2">
+              {SHAPE_SYMBOLS.map((k) => (
+                <button
+                  key={k}
+                  onClick={() => addEquip(k)}
+                  className="flex flex-col items-center gap-1 rounded-md border bg-card p-2 text-[11px] hover:border-primary hover:bg-accent"
+                  title={`Adicionar ${SYMBOL_LABEL[k]}`}
+                >
+                  <div className="h-10 w-10"><SymbolSvg kind={k} ativo={true} /></div>
                   <span>{SYMBOL_LABEL[k]}</span>
                 </button>
               ))}
