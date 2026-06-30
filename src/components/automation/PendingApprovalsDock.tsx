@@ -13,7 +13,10 @@ type Run = {
   flow_id: string;
   status: string;
   trigger_context: Record<string, unknown> | null;
-  planned_actions: Array<{ id?: string; type?: string; data?: { label?: string; config?: Record<string, unknown> } }> | null;
+  planned_actions:
+    | Array<{ id?: string; type?: string; data?: { label?: string; config?: Record<string, unknown> } }>
+    | { nodes?: Array<{ id?: string; type?: string; data?: { label?: string; config?: Record<string, unknown> } }>; edges?: unknown }
+    | null;
   created_at: string;
   flow?: { nome: string } | null;
 };
