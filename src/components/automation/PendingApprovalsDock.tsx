@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useServerFn } from "@tanstack/react-start";
-import { approveRun, rejectRun, snoozeRun } from "@/lib/automation/runs.functions";
+import { approveRun, executeRun, rejectRun, snoozeRun } from "@/lib/automation/runs.functions";
 import { Bell, Check, X, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 
@@ -22,9 +22,11 @@ export function PendingApprovalsDock() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [open, setOpen] = useState(true);
   const approve = useServerFn(approveRun);
+  const execute = useServerFn(executeRun);
   const reject = useServerFn(rejectRun);
   const snooze = useServerFn(snoozeRun);
   const [busy, setBusy] = useState<string | null>(null);
+  const autoRunning = useRef(new Set<string>());
 
   async function load() {
     const { data } = await supabase
@@ -36,19 +38,48 @@ export function PendingApprovalsDock() {
     setRuns(((data as unknown) as Run[]) ?? []);
   }
 
+  async function autoRunApproved() {
+    const { data } = await supabase
+      .from("automation_runs")
+      .select("id, flow:automation_flows(nome)")
+      .eq("status", "approved")
+      .order("created_at", { ascending: true })
+      .limit(10);
+    for (const row of (data ?? []) as Array<{ id: string; flow?: { nome?: string } | null }>) {
+      if (autoRunning.current.has(row.id)) continue;
+      autoRunning.current.add(row.id);
+      try {
+        const r = await execute({ data: { runId: row.id } });
+        if (r.ok) toast.success(`Automação "${row.flow?.nome ?? "Fluxo"}" executada`);
+        else toast.error(`Automação "${row.flow?.nome ?? "Fluxo"}" falhou em parte`);
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Falha ao executar automação");
+      } finally {
+        autoRunning.current.delete(row.id);
+      }
+    }
+  }
+
   useEffect(() => {
     load();
+    autoRunApproved();
     const channel = supabase
       .channel("automation_runs_dock")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "automation_runs" },
-        () => load(),
+        () => {
+          load();
+          autoRunApproved();
+        },
       )
       .subscribe();
+    const tick = setInterval(autoRunApproved, 20_000);
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(tick);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function handleApprove(id: string) {

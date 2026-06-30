@@ -112,6 +112,9 @@ export type Database = {
         Row: {
           alerta_id: string | null
           alerta_nome: string
+          categoria: string
+          concluido_em: string | null
+          concluido_por: string | null
           contexto: Json | null
           created_at: string
           email_enviado: boolean
@@ -128,6 +131,9 @@ export type Database = {
         Insert: {
           alerta_id?: string | null
           alerta_nome: string
+          categoria?: string
+          concluido_em?: string | null
+          concluido_por?: string | null
           contexto?: Json | null
           created_at?: string
           email_enviado?: boolean
@@ -144,6 +150,9 @@ export type Database = {
         Update: {
           alerta_id?: string | null
           alerta_nome?: string
+          categoria?: string
+          concluido_em?: string | null
+          concluido_por?: string | null
           contexto?: Json | null
           created_at?: string
           email_enviado?: boolean
