@@ -302,7 +302,7 @@ export function TagsMonitoramento({
         </CardTitle>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>
-            {ativa ? "Ao vivo (atualiza a cada 5s)" : "Histórico desta produção"}
+            {ativa ? "Ao vivo (atualiza a cada 10s)" : "Histórico desta produção"}
           </span>
           <span className="hidden sm:inline">·</span>
           <span className="hidden sm:inline">
