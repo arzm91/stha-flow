@@ -66,20 +66,27 @@ export function TagsMonitoramento({
 }) {
   const [horas, setHoras] = useState<number>(1);
 
-  // Busca o histórico das últimas N horas para a ordem.
+  // Busca o histórico das últimas N horas para a ordem (paginado para passar do limite de 1000).
   const hist = useQuery({
     queryKey: ["producao-tag-historico", ordemId, horas],
     queryFn: async () => {
       const desde = new Date(Date.now() - horas * 3600_000).toISOString();
-      const { data, error } = await supabase
-        .from("producao_tag_historico")
-        .select("id,tag_nome,valor_num,unidade,registrado_em")
-        .eq("ordem_id", ordemId)
-        .gte("registrado_em", desde)
-        .order("registrado_em", { ascending: false })
-        .limit(5000);
-      if (error) throw error;
-      return (data ?? []) as Row[];
+      const CHUNK = 1000;
+      const acumulado: Row[] = [];
+      for (let from = 0; from < 50_000; from += CHUNK) {
+        const { data, error } = await supabase
+          .from("producao_tag_historico")
+          .select("id,tag_nome,valor_num,unidade,registrado_em")
+          .eq("ordem_id", ordemId)
+          .gte("registrado_em", desde)
+          .order("registrado_em", { ascending: false })
+          .range(from, from + CHUNK - 1);
+        if (error) throw error;
+        const lote = (data ?? []) as Row[];
+        acumulado.push(...lote);
+        if (lote.length < CHUNK) break;
+      }
+      return acumulado;
     },
     refetchInterval: ativa ? 5_000 : false,
   });
