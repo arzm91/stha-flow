@@ -309,12 +309,23 @@ function ProdutosPage() {
           descricao: e.descricao.trim(),
           ordem: idx,
           tipo: e.tipo,
-          quantidade: e.tipo === "materia_prima" && e.quantidade !== "" ? Number(e.quantidade) : null,
+          quantidade: e.tipo === "materia_prima" && e.qtd_modo === "fixa" && e.quantidade !== "" ? Number(e.quantidade) : null,
           unidade: e.tipo === "tag_captura" ? (e.unidade || null) : e.tipo === "materia_prima" ? (e.unidade || null) : null,
           tempo_estimado_min: e.tempo_estimado_min === "" ? null : Number(e.tempo_estimado_min),
           tag_nome: e.tipo === "tag_captura" ? (e.tag_nome || null) : null,
           gatilhos,
+          qtd_modo: e.tipo === "materia_prima" ? e.qtd_modo : "fixa",
+          qtd_tag_nome: e.tipo === "materia_prima" && e.qtd_modo !== "fixa" ? (e.qtd_tag_nome || null) : null,
+          captura_modo: e.tipo === "tag_captura" ? e.captura_modo : "na_execucao",
+          captura_gatilho:
+            e.tipo === "tag_captura" && e.captura_modo === "gatilho_valor"
+              ? {
+                  operador: e.captura_operador,
+                  valor: e.captura_operador === "change" || e.captura_valor === "" ? null : Number(e.captura_valor),
+                }
+              : null,
         };
+
       });
       const { error: ativErr } = await supabase.from("produto_atividades").insert(toInsert);
       if (ativErr) throw ativErr;
