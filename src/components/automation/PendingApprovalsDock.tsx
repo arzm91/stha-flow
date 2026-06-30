@@ -7,15 +7,21 @@ import { useServerFn } from "@tanstack/react-start";
 import { approveRun, executeRun, rejectRun, snoozeRun } from "@/lib/automation/runs.functions";
 import { Bell, Check, X, Clock, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
+import { ApprovalDialog, type ApprovalPayload } from "./ApprovalDialog";
 
+type ActionNode = {
+  id?: string;
+  type?: string;
+  data?: { label?: string; config?: Record<string, unknown> };
+};
 type Run = {
   id: string;
   flow_id: string;
   status: string;
   trigger_context: Record<string, unknown> | null;
   planned_actions:
-    | Array<{ id?: string; type?: string; data?: { label?: string; config?: Record<string, unknown> } }>
-    | { nodes?: Array<{ id?: string; type?: string; data?: { label?: string; config?: Record<string, unknown> } }>; edges?: unknown }
+    | Array<ActionNode>
+    | { nodes?: Array<ActionNode>; edges?: unknown }
     | null;
   created_at: string;
   flow?: { nome: string } | null;
@@ -85,16 +91,52 @@ export function PendingApprovalsDock() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleApprove(id: string) {
+  const [dialogRun, setDialogRun] = useState<Run | null>(null);
+  const [dialogQtd, setDialogQtd] = useState(0);
+
+  function runNeedsApprovalDialog(r: Run): boolean {
+    const pa = r.planned_actions;
+    const nodesArr = Array.isArray(pa) ? pa : (pa?.nodes ?? []);
+    return nodesArr.some(
+      (n) => n.type === "action" && (n.data?.config?.type === "finalizar_op"),
+    );
+  }
+
+  async function openApprovalFor(r: Run) {
+    // Sugerir quantidade: tenta achar a OP em andamento do equipamento da ação finalizar_op
+    const pa = r.planned_actions;
+    const nodesArr = Array.isArray(pa) ? pa : (pa?.nodes ?? []);
+    const finalAction = nodesArr.find(
+      (n) => n.type === "action" && n.data?.config?.type === "finalizar_op",
+    );
+    const equipId = (finalAction?.data?.config?.equipamento_id as string) ?? null;
+    let qtd = 0;
+    if (equipId) {
+      const { data: op } = await supabase
+        .from("ordens_producao")
+        .select("qtd_planejada")
+        .eq("equipamento_id", equipId)
+        .eq("status", "em_andamento")
+        .order("inicio_em", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      qtd = Number(op?.qtd_planejada ?? 0);
+    }
+    setDialogQtd(qtd);
+    setDialogRun(r);
+  }
+
+  async function handleApprove(id: string, payload?: ApprovalPayload) {
     setBusy(id);
     try {
-      const r = await approve({ data: { runId: id } });
+      const r = await approve({ data: { runId: id, payload } });
       if (r.ok) toast.success("Ações executadas");
       else toast.error("Falha em ao menos uma ação");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro");
     }
     setBusy(null);
+    setDialogRun(null);
     load();
   }
   async function handleReject(id: string) {
@@ -163,8 +205,16 @@ export function PendingApprovalsDock() {
                       </ul>
                     )}
                     <div className="mt-3 flex gap-1">
-                      <Button size="sm" className="flex-1" onClick={() => handleApprove(r.id)} disabled={busy === r.id}>
-                        <Check className="mr-1 size-3" /> Aprovar
+                      <Button
+                        size="sm"
+                        className="flex-1"
+                        onClick={() =>
+                          runNeedsApprovalDialog(r) ? openApprovalFor(r) : handleApprove(r.id)
+                        }
+                        disabled={busy === r.id}
+                      >
+                        <Check className="mr-1 size-3" />
+                        {runNeedsApprovalDialog(r) ? "Configurar e aprovar" : "Aprovar"}
                       </Button>
                       <Button size="sm" variant="outline" onClick={() => handleSnooze(r.id)} disabled={busy === r.id}>
                         <Clock className="size-3" />
@@ -180,6 +230,17 @@ export function PendingApprovalsDock() {
           )}
         </Card>
       </div>
+      {dialogRun && (
+        <ApprovalDialog
+          open={!!dialogRun}
+          onOpenChange={(o) => !o && setDialogRun(null)}
+          flowName={dialogRun.flow?.nome ?? "Fluxo"}
+          qtdSugerida={dialogQtd}
+          needsDestinos={true}
+          busy={busy === dialogRun.id}
+          onConfirm={(payload) => handleApprove(dialogRun.id, payload)}
+        />
+      )}
     </div>
   );
 }
