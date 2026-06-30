@@ -324,6 +324,36 @@ export function TagsMonitoramento({
           )}
         </div>
 
+        {/* Seletor de tipos de eventos sobrepostos ao gráfico */}
+        <div className="flex flex-wrap items-center gap-1.5 border-t border-border pt-2">
+          <span className="text-[11px] uppercase tracking-wide text-muted-foreground mr-1">Eventos:</span>
+          {([
+            { k: "processo", label: "Processos", icon: Workflow },
+            { k: "parametro", label: "Parâmetros", icon: Activity },
+            { k: "analise", label: "Análises", icon: FlaskConical },
+            { k: "tag_captura", label: "Capturas", icon: TagIcon },
+            { k: "observacao", label: "Observações", icon: MessageSquare },
+          ] as const).map(({ k, label, icon: Icon }) => {
+            const on = evtAtivos[k];
+            const cor = EVT_CORES[k];
+            return (
+              <Button
+                key={k}
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setEvtAtivos((s) => ({ ...s, [k]: !s[k] }))}
+                className={cn("h-7 gap-1.5 text-xs", on ? "border-2" : "opacity-50 hover:opacity-100")}
+                style={on ? { borderColor: cor, color: cor } : undefined}
+              >
+                <Icon className="h-3 w-3" />
+                {label}
+              </Button>
+            );
+          })}
+        </div>
+
+
         {/* Gráfico único combinado com Brush para zoom/pan */}
         <div className="h-96 w-full">
           {selecionadas.length === 0 ? (
