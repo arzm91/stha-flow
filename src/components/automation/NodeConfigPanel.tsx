@@ -57,7 +57,7 @@ export function NodeConfigPanel({
               <Select value={String(cfg.type ?? "")} onValueChange={(v) => set({ type: v })}>
                 <SelectTrigger><SelectValue placeholder="Selecione…" /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="tag_value">Tag atinge valor (min/máx)</SelectItem>
+                  <SelectItem value="tag_value">Tag comparada a um valor</SelectItem>
                   <SelectItem value="tag_stale">Tag sem atualização</SelectItem>
                   <SelectItem value="production_event">Evento de produção</SelectItem>
                   <SelectItem value="schedule">Agendamento (cron)</SelectItem>
@@ -72,17 +72,22 @@ export function NodeConfigPanel({
                   <TagPicker value={String(cfg.tag_nome ?? "")} onChange={(v) => set({ tag_nome: v })} />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <Label>Mínimo</Label>
-                    <Input type="number" value={String(cfg.min ?? "")} onChange={(e) => set({ min: e.target.value ? Number(e.target.value) : undefined })} />
+                  <div className="space-y-1">
+                    <Label>Operador</Label>
+                    <Select value={String(cfg.operador ?? "gt")} onValueChange={(v) => set({ operador: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {COMPARADORES.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  <div>
-                    <Label>Máximo</Label>
-                    <Input type="number" value={String(cfg.max ?? "")} onChange={(e) => set({ max: e.target.value ? Number(e.target.value) : undefined })} />
+                  <div className="space-y-1">
+                    <Label>Valor</Label>
+                    <Input type="number" value={String(cfg.valor ?? "")} onChange={(e) => set({ valor: e.target.value === "" ? undefined : Number(e.target.value) })} />
                   </div>
                 </div>
                 <p className="text-[11px] text-muted-foreground">
-                  Dispara quando o valor sair da faixa (abaixo do mínimo ou acima do máximo).
+                  Dispara quando o valor da tag satisfizer a comparação selecionada.
                 </p>
               </>
             )}
