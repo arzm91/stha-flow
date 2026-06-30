@@ -54,7 +54,7 @@ export function ApprovalDialog({
     if (!open) return;
     (async () => {
       const [{ data: t }, { data: a }] = await Promise.all([
-        supabase.from("tanques").select("id,codigo,nome").eq("ativo", true).order("nome"),
+        supabase.from("tanques").select("id,codigo,nome").order("nome"),
         supabase.from("analises_cadastro").select("id,nome,unidade").order("nome"),
       ]);
       setTanques((t ?? []) as Tanque[]);
