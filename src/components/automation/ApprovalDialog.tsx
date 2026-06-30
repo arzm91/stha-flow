@@ -21,17 +21,21 @@ import {
 import { Plus, Trash2 } from "lucide-react";
 
 export type ApprovalPayload = {
-  destinos?: Array<{ tanque_id: string; quantidade: number }>;
+  numero?: string;
+  destinos?: Array<{ tanque_id: string; produto_id?: string; quantidade: number }>;
   analises?: Array<{ analise_id: string; resultado: number }>;
 };
 
 type Tanque = { id: string; codigo: string; nome: string };
 type Analise = { id: string; nome: string; unidade: string | null };
+type Produto = { id: string; codigo: string; nome: string };
 
 export function ApprovalDialog({
   open,
   onOpenChange,
   flowName,
+  opNumero,
+  opProdutoId,
   qtdSugerida,
   needsDestinos,
   onConfirm,
@@ -40,6 +44,8 @@ export function ApprovalDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   flowName: string;
+  opNumero: string;
+  opProdutoId: string | null;
   qtdSugerida: number;
   needsDestinos: boolean;
   onConfirm: (payload: ApprovalPayload) => void | Promise<void>;
@@ -47,36 +53,61 @@ export function ApprovalDialog({
 }) {
   const [tanques, setTanques] = useState<Tanque[]>([]);
   const [analisesCat, setAnalisesCat] = useState<Analise[]>([]);
-  const [destinos, setDestinos] = useState<Array<{ tanque_id: string; quantidade: string }>>([]);
+  const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [numero, setNumero] = useState("");
+  const [destinos, setDestinos] = useState<
+    Array<{ tanque_id: string; produto_id: string; quantidade: string }>
+  >([]);
   const [analises, setAnalises] = useState<Array<{ analise_id: string; resultado: string }>>([]);
 
   useEffect(() => {
     if (!open) return;
     (async () => {
-      const [{ data: t }, { data: a }] = await Promise.all([
+      const [{ data: t }, { data: a }, { data: p }] = await Promise.all([
         supabase.from("tanques").select("id,codigo,nome").order("nome"),
         supabase.from("analises_cadastro").select("id,nome,unidade").order("nome"),
+        supabase.from("produtos").select("id,codigo,nome").eq("ativo", true).order("nome"),
       ]);
       setTanques((t ?? []) as Tanque[]);
       setAnalisesCat((a ?? []) as Analise[]);
-      if (needsDestinos && destinos.length === 0) {
-        setDestinos([{ tanque_id: "", quantidade: String(qtdSugerida || "") }]);
+      setProdutos((p ?? []) as Produto[]);
+      setNumero(opNumero ?? "");
+      if (needsDestinos) {
+        setDestinos([
+          { tanque_id: "", produto_id: opProdutoId ?? "", quantidade: String(qtdSugerida || "") },
+        ]);
+      } else {
+        setDestinos([]);
       }
+      setAnalises([]);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const somaDestinos = destinos.reduce((s, d) => s + (Number(d.quantidade) || 0), 0);
+  const produtosUnicos = new Set(destinos.map((d) => d.produto_id).filter(Boolean));
+  const multiplosProdutos = produtosUnicos.size > 1;
 
   const valido =
-    !needsDestinos ||
-    destinos.every((d) => d.tanque_id && Number(d.quantidade) > 0);
+    !!numero.trim() &&
+    (!needsDestinos ||
+      destinos.every(
+        (d) =>
+          d.tanque_id &&
+          Number(d.quantidade) > 0 &&
+          (!multiplosProdutos || !!d.produto_id),
+      ));
 
   function submit() {
     const payload: ApprovalPayload = {};
+    if (numero.trim() && numero.trim() !== opNumero) payload.numero = numero.trim();
     const dest = destinos
       .filter((d) => d.tanque_id && Number(d.quantidade) > 0)
-      .map((d) => ({ tanque_id: d.tanque_id, quantidade: Number(d.quantidade) }));
+      .map((d) => ({
+        tanque_id: d.tanque_id,
+        produto_id: d.produto_id || undefined,
+        quantidade: Number(d.quantidade),
+      }));
     if (dest.length) payload.destinos = dest;
     const an = analises
       .filter((a) => a.analise_id && a.resultado !== "")
@@ -91,30 +122,67 @@ export function ApprovalDialog({
         <DialogHeader>
           <DialogTitle>Aprovar: {flowName}</DialogTitle>
           <DialogDescription>
-            Configure os destinos de armazenamento e registre análises. O horário de finalização
-            permanece o do gatilho disparado.
+            Configure produto(s), destinos de armazenamento e registre análises. O horário de
+            finalização permanece o do gatilho disparado.
           </DialogDescription>
         </DialogHeader>
 
         <div className="max-h-[60vh] space-y-6 overflow-y-auto">
+          <section className="space-y-1">
+            <Label className="text-sm font-semibold">Número da OP</Label>
+            <Input
+              value={numero}
+              onChange={(e) => setNumero(e.target.value)}
+              placeholder="OP-..."
+            />
+          </section>
+
           {needsDestinos && (
             <section className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-sm font-semibold">Locais de armazenamento</Label>
+                <Label className="text-sm font-semibold">
+                  Produtos e locais de armazenamento
+                </Label>
                 <div className="text-xs text-muted-foreground">
                   Total: {somaDestinos} {qtdSugerida ? `(sugerido ${qtdSugerida})` : ""}
                 </div>
               </div>
+              {multiplosProdutos && (
+                <div className="rounded border border-amber-500/40 bg-amber-500/5 px-2 py-1 text-xs text-amber-700 dark:text-amber-300">
+                  Mais de um produto detectado — informe produto, tanque e quantidade em cada linha.
+                </div>
+              )}
               <div className="space-y-2">
                 {destinos.map((d, i) => (
-                  <div key={i} className="flex gap-2">
+                  <div key={i} className="grid grid-cols-[1fr_1fr_120px_auto] gap-2">
+                    <Select
+                      value={d.produto_id}
+                      onValueChange={(v) =>
+                        setDestinos((arr) =>
+                          arr.map((x, j) => (j === i ? { ...x, produto_id: v } : x)),
+                        )
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Produto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {produtos.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.codigo} — {p.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Select
                       value={d.tanque_id}
                       onValueChange={(v) =>
-                        setDestinos((arr) => arr.map((x, j) => (j === i ? { ...x, tanque_id: v } : x)))
+                        setDestinos((arr) =>
+                          arr.map((x, j) => (j === i ? { ...x, tanque_id: v } : x)),
+                        )
                       }
                     >
-                      <SelectTrigger className="flex-1">
+                      <SelectTrigger>
                         <SelectValue placeholder="Tanque/Local" />
                       </SelectTrigger>
                       <SelectContent>
@@ -128,12 +196,13 @@ export function ApprovalDialog({
                     <Input
                       type="number"
                       step="any"
-                      placeholder="Quantidade"
-                      className="w-36"
+                      placeholder="Qtd"
                       value={d.quantidade}
                       onChange={(e) =>
                         setDestinos((arr) =>
-                          arr.map((x, j) => (j === i ? { ...x, quantidade: e.target.value } : x)),
+                          arr.map((x, j) =>
+                            j === i ? { ...x, quantidade: e.target.value } : x,
+                          ),
                         )
                       }
                     />
@@ -149,9 +218,14 @@ export function ApprovalDialog({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setDestinos((arr) => [...arr, { tanque_id: "", quantidade: "" }])}
+                  onClick={() =>
+                    setDestinos((arr) => [
+                      ...arr,
+                      { tanque_id: "", produto_id: opProdutoId ?? "", quantidade: "" },
+                    ])
+                  }
                 >
-                  <Plus className="mr-1 size-3" /> Adicionar destino
+                  <Plus className="mr-1 size-3" /> Adicionar produto/destino
                 </Button>
               </div>
             </section>
@@ -167,7 +241,9 @@ export function ApprovalDialog({
                     <Select
                       value={a.analise_id}
                       onValueChange={(v) =>
-                        setAnalises((arr) => arr.map((x, j) => (j === i ? { ...x, analise_id: v } : x)))
+                        setAnalises((arr) =>
+                          arr.map((x, j) => (j === i ? { ...x, analise_id: v } : x)),
+                        )
                       }
                     >
                       <SelectTrigger className="flex-1">
@@ -189,7 +265,9 @@ export function ApprovalDialog({
                       value={a.resultado}
                       onChange={(e) =>
                         setAnalises((arr) =>
-                          arr.map((x, j) => (j === i ? { ...x, resultado: e.target.value } : x)),
+                          arr.map((x, j) =>
+                            j === i ? { ...x, resultado: e.target.value } : x,
+                          ),
                         )
                       }
                     />
@@ -206,7 +284,9 @@ export function ApprovalDialog({
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setAnalises((arr) => [...arr, { analise_id: "", resultado: "" }])}
+                onClick={() =>
+                  setAnalises((arr) => [...arr, { analise_id: "", resultado: "" }])
+                }
               >
                 <Plus className="mr-1 size-3" /> Adicionar análise
               </Button>
