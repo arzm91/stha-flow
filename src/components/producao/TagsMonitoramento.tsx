@@ -117,31 +117,14 @@ export function TagsMonitoramento({
         supabase.from("observacoes_producao")
           .select("id,texto,registrado_em").eq("ordem_id", ordemId),
         supabase.from("ordem_etapas")
-          .select("id,tipo,processo_id,processo_nome,atividade_descricao,iniciado_em,finalizado_em,observacao,motivo_atraso")
+          .select("id,tipo,processo_nome,atividade_descricao,iniciado_em,finalizado_em,observacao,motivo_atraso")
           .eq("ordem_id", ordemId),
       ]);
-      const etapas = etps.data ?? [];
-      const processoIds = Array.from(
-        new Set(etapas.map((e: any) => e.processo_id).filter(Boolean)),
-      );
-      let atividadesPorProcesso: Record<string, string[]> = {};
-      if (processoIds.length > 0) {
-        const { data: ats } = await supabase
-          .from("produto_atividades")
-          .select("processo_id,descricao,ordem")
-          .in("processo_id", processoIds as string[])
-          .order("ordem", { ascending: true });
-        for (const a of (ats ?? []) as any[]) {
-          if (!a.processo_id || !a.descricao) continue;
-          (atividadesPorProcesso[a.processo_id] ||= []).push(a.descricao);
-        }
-      }
       return {
         parametros: params.data ?? [],
         analises: anls.data ?? [],
         observacoes: obs.data ?? [],
-        etapas,
-        atividadesPorProcesso,
+        etapas: etps.data ?? [],
       };
     },
     refetchInterval: ativa ? 10_000 : false,
@@ -283,14 +266,9 @@ export function TagsMonitoramento({
         const fimRaw = (e as any).finalizado_em;
         const emCurso = !fimRaw;
         const fim = fimRaw ? new Date(fimRaw).getTime() : Date.now();
-        const procId = (e as any).processo_id as string | null;
-        const atividades = procId ? (q.atividadesPorProcesso?.[procId] ?? []) : [];
-        const titulo = atividades.length > 0
-          ? atividades.join(" · ")
-          : (e as any).processo_nome;
         faixas.push({
           key: `proc-${e.id}`, tipo: "processo", inicio: ini, fim,
-          titulo,
+          titulo: (e as any).processo_nome,
           detalhe: (e as any).motivo_atraso || (e as any).observacao || undefined,
           emCurso, cor: EVT_CORES.processo,
         });
