@@ -816,6 +816,9 @@ export type Database = {
           atividade_id: string | null
           created_at: string
           duracao_seg: number | null
+          estab_amostras: Json
+          estab_estavel_desde: string | null
+          estab_fase: string | null
           finalizado_em: string | null
           id: string
           iniciado_em: string
@@ -839,6 +842,9 @@ export type Database = {
           atividade_id?: string | null
           created_at?: string
           duracao_seg?: number | null
+          estab_amostras?: Json
+          estab_estavel_desde?: string | null
+          estab_fase?: string | null
           finalizado_em?: string | null
           id?: string
           iniciado_em?: string
@@ -862,6 +868,9 @@ export type Database = {
           atividade_id?: string | null
           created_at?: string
           duracao_seg?: number | null
+          estab_amostras?: Json
+          estab_estavel_desde?: string | null
+          estab_fase?: string | null
           finalizado_em?: string | null
           id?: string
           iniciado_em?: string
@@ -1206,6 +1215,10 @@ export type Database = {
           captura_modo: string
           created_at: string
           descricao: string
+          estab_enabled: boolean
+          estab_janela_seg: number
+          estab_min_estavel_seg: number
+          estab_pct: number
           gatilhos: Json
           id: string
           ordem: number
@@ -1225,6 +1238,10 @@ export type Database = {
           captura_modo?: string
           created_at?: string
           descricao: string
+          estab_enabled?: boolean
+          estab_janela_seg?: number
+          estab_min_estavel_seg?: number
+          estab_pct?: number
           gatilhos?: Json
           id?: string
           ordem?: number
@@ -1244,6 +1261,10 @@ export type Database = {
           captura_modo?: string
           created_at?: string
           descricao?: string
+          estab_enabled?: boolean
+          estab_janela_seg?: number
+          estab_min_estavel_seg?: number
+          estab_pct?: number
           gatilhos?: Json
           id?: string
           ordem?: number
@@ -1744,6 +1765,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _estab_variacao_pct: { Args: { p_amostras: Json }; Returns: number }
       _gatilho_match: {
         Args: { p_op: string; p_ref: number; p_val: number }
         Returns: boolean
