@@ -13,7 +13,10 @@ type Run = {
   flow_id: string;
   status: string;
   trigger_context: Record<string, unknown> | null;
-  planned_actions: Array<{ id?: string; type?: string; data?: { label?: string; config?: Record<string, unknown> } }> | null;
+  planned_actions:
+    | Array<{ id?: string; type?: string; data?: { label?: string; config?: Record<string, unknown> } }>
+    | { nodes?: Array<{ id?: string; type?: string; data?: { label?: string; config?: Record<string, unknown> } }>; edges?: unknown }
+    | null;
   created_at: string;
   flow?: { nome: string } | null;
 };
@@ -136,7 +139,9 @@ export function PendingApprovalsDock() {
           {open && (
             <CardContent className="max-h-[60vh] space-y-3 overflow-y-auto">
               {runs.map((r) => {
-                const actions = (r.planned_actions ?? []).filter((n) => n.type === "action");
+                const pa = r.planned_actions;
+                const nodesArr = Array.isArray(pa) ? pa : (pa?.nodes ?? []);
+                const actions = nodesArr.filter((n) => n.type === "action");
                 return (
                   <div key={r.id} className="rounded-md border bg-card p-3">
                     <div className="mb-1 text-xs text-muted-foreground">
