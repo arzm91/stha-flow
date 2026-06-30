@@ -604,14 +604,30 @@ function PfdEditor() {
           <div>
             <p className="mb-2 text-xs font-semibold text-muted-foreground">SÍMBOLOS ISA</p>
             <div className="grid grid-cols-2 gap-2">
-              {(Object.keys(SYMBOL_LABEL) as SymbolKind[]).map((k) => (
+              {ISA_SYMBOLS.map((k) => (
                 <button
                   key={k}
                   onClick={() => addEquip(k)}
                   className="flex flex-col items-center gap-1 rounded-md border bg-card p-2 text-[11px] hover:border-primary hover:bg-accent"
                   title={`Adicionar ${SYMBOL_LABEL[k]}`}
                 >
-                  <SymbolSvg kind={k} ativo={true} />
+                  <div className="h-10 w-10"><SymbolSvg kind={k} ativo={true} /></div>
+                  <span>{SYMBOL_LABEL[k]}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="mb-2 text-xs font-semibold text-muted-foreground">FORMAS</p>
+            <div className="grid grid-cols-2 gap-2">
+              {SHAPE_SYMBOLS.map((k) => (
+                <button
+                  key={k}
+                  onClick={() => addEquip(k)}
+                  className="flex flex-col items-center gap-1 rounded-md border bg-card p-2 text-[11px] hover:border-primary hover:bg-accent"
+                  title={`Adicionar ${SYMBOL_LABEL[k]}`}
+                >
+                  <div className="h-10 w-10"><SymbolSvg kind={k} ativo={true} /></div>
                   <span>{SYMBOL_LABEL[k]}</span>
                 </button>
               ))}
