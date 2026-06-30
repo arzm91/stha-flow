@@ -43,6 +43,9 @@ type Gatilho = {
   valor: string; // string for the form; converted to number on save (or null when change)
 };
 
+type QtdModo = "fixa" | "tag_valor" | "tag_diferenca";
+type CapturaModo = "na_execucao" | "gatilho_valor";
+
 type Etapa = {
   id?: string;
   descricao: string;
@@ -52,6 +55,13 @@ type Etapa = {
   tempo_estimado_min: string;
   tag_nome: string; // used by tag_captura
   gatilhos: Gatilho[]; // only for materia_prima
+  // matéria-prima — origem da quantidade
+  qtd_modo: QtdModo;
+  qtd_tag_nome: string;
+  // tag_captura — modo da captura
+  captura_modo: CapturaModo;
+  captura_operador: GatilhoOperador;
+  captura_valor: string;
 };
 
 const TIPO_LABEL: Record<TipoEtapa, string> = {
@@ -81,12 +91,18 @@ function newEtapa(): Etapa {
     tempo_estimado_min: "",
     tag_nome: "",
     gatilhos: [],
+    qtd_modo: "fixa",
+    qtd_tag_nome: "",
+    captura_modo: "na_execucao",
+    captura_operador: "gt",
+    captura_valor: "",
   };
 }
 
 function newGatilho(tipo: GatilhoTipo): Gatilho {
   return { tipo, tag_nome: "", operador: "gt", valor: "" };
 }
+
 
 function normalizeTipo(raw: string | null | undefined): TipoEtapa {
   if (raw === "materia_prima" || raw === "tag_captura") return raw;
@@ -135,12 +151,13 @@ function ProdutosPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tags_live")
-        .select("nome, grupo, unidade")
+        .select("nome, nome_amigavel, grupo, unidade")
         .order("nome", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as Array<{ nome: string; grupo: string | null; unidade: string | null }>;
+      return (data ?? []) as Array<{ nome: string; nome_amigavel: string | null; grupo: string | null; unidade: string | null }>;
     },
   });
+
 
   const resPerms = useResourcePermissions();
   const visible = resPerms.filter("produto", list.data);
