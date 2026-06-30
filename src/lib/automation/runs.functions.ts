@@ -245,22 +245,37 @@ async function runActionNode(
 
     const finishAt = String(ctx.__trigger_fired_at ?? new Date().toISOString());
     const tanquePrincipal = destinos[0]?.tanque_id ?? null;
-    const { error } = await supabase.from("ordens_producao").update({
+    const produtoPrincipal = destinos[0]?.produto_id ?? op.produto_id;
+    const novoNumero = approval?.numero?.trim();
+
+    // Se há mais de um produto distinto entre os destinos, exige produto_id em todos.
+    const produtosDistintos = new Set(
+      destinos.map((d) => d.produto_id ?? op.produto_id).filter(Boolean),
+    );
+    if (produtosDistintos.size > 1 && destinos.some((d) => !d.produto_id)) {
+      throw new Error("Com mais de um produto, informe o produto em cada destino");
+    }
+
+    const opUpdate: Record<string, unknown> = {
       status: "finalizada",
       fim_em: finishAt,
       qtd_produzida: qtdProduzida,
       tanque_destino_id: tanquePrincipal,
-      obs_finais: `[Automação] finalização automática (${qtdOrigem})`,
-    }).eq("id", op.id);
+      produto_id: produtoPrincipal,
+      obs_finais: `[Automação] finalização automática (${qtdOrigem})${produtosDistintos.size > 1 ? ` · ${produtosDistintos.size} produtos` : ""}`,
+    };
+    if (novoNumero) opUpdate.numero = novoNumero;
+
+    const { error } = await supabase.from("ordens_producao").update(opUpdate).eq("id", op.id);
     if (error) throw new Error(error.message);
     await supabase.from("equipamentos").update({ status: "disponivel" }).eq("id", equipId);
 
-    // movimentações de estoque (uma por destino)
+    // movimentações de estoque (uma por destino, com produto próprio)
     for (const d of destinos) {
       await supabase.from("movimentacoes_estoque").insert({
         owner_id: ownerId,
         tipo: "entrada",
-        produto_id: op.produto_id,
+        produto_id: d.produto_id ?? op.produto_id,
         tanque_id: d.tanque_id,
         quantidade: d.quantidade,
         ordem_id: op.id,
