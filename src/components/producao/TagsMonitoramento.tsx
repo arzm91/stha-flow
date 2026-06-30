@@ -392,7 +392,8 @@ export function TagsMonitoramento({
                 <XAxis
                   dataKey="t"
                   type="number"
-                  domain={["dataMin", "dataMax"]}
+                  domain={[janelaInicio, janelaFim]}
+                  allowDataOverflow
                   scale="time"
                   tickFormatter={(t) =>
                     new Date(t).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
