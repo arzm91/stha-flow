@@ -3,35 +3,21 @@ export type TriggerType = "tag_value" | "tag_stale" | "production_event" | "sche
 export type ActionType =
   | "movimentacao_estoque"
   | "criar_ordem"
+  | "iniciar_op"
+  | "finalizar_op"
   | "avancar_ordem"
+  | "criar_aviso"
+  | "criar_tarefa"
   | "enviar_alerta"
-  | "webhook_http";
+  | "gerar_relatorio"
+  | "webhook_http"
+  | "aguardar";
 
-export type TriggerConfig =
-  | { type: "tag_value"; tag_nome: string; min?: number; max?: number }
-  | { type: "tag_stale"; tag_nome: string; minutos: number }
-  | { type: "production_event"; evento: string }
-  | { type: "schedule"; cron: string };
-
-export type ActionConfig =
-  | {
-      type: "movimentacao_estoque";
-      tipo: "entrada" | "saida" | "transferencia";
-      produto_id?: string;
-      tanque_id?: string;
-      quantidade: number;
-      observacao?: string;
-    }
-  | { type: "criar_ordem"; produto_id: string; quantidade: number }
-  | { type: "avancar_ordem"; ordem_id?: string; proximo_status: string }
-  | { type: "enviar_alerta"; titulo: string; mensagem: string; emails: string[] }
-  | {
-      type: "webhook_http";
-      url: string;
-      metodo: "GET" | "POST" | "PUT" | "DELETE";
-      headers?: Record<string, string>;
-      body?: string;
-    };
+export type ConditionType =
+  | "equipamento_status"
+  | "tag_comparacao"
+  | "existe_ordem_programada"
+  | "janela_horario";
 
 export type FlowNodeData = {
   label: string;
@@ -52,6 +38,15 @@ export type FlowGraph = {
 export const PRODUCTION_EVENTS = [
   { value: "ordem_criada", label: "Ordem criada" },
   { value: "ordem_status_em_andamento", label: "Ordem iniciada" },
-  { value: "ordem_status_concluida", label: "Ordem concluída" },
+  { value: "ordem_status_finalizada", label: "Ordem finalizada" },
   { value: "ordem_status_cancelada", label: "Ordem cancelada" },
+];
+
+export const COMPARADORES = [
+  { value: "gt", label: "maior que (>)" },
+  { value: "lt", label: "menor que (<)" },
+  { value: "gte", label: "maior ou igual (≥)" },
+  { value: "lte", label: "menor ou igual (≤)" },
+  { value: "eq", label: "igual (=)" },
+  { value: "neq", label: "diferente (≠)" },
 ];
