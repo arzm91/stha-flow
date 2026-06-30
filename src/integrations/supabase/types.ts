@@ -1192,6 +1192,7 @@ export type Database = {
         Row: {
           created_at: string
           descricao: string
+          gatilhos: Json
           id: string
           ordem: number
           owner_id: string
@@ -1206,6 +1207,7 @@ export type Database = {
         Insert: {
           created_at?: string
           descricao: string
+          gatilhos?: Json
           id?: string
           ordem?: number
           owner_id: string
@@ -1220,6 +1222,7 @@ export type Database = {
         Update: {
           created_at?: string
           descricao?: string
+          gatilhos?: Json
           id?: string
           ordem?: number
           owner_id?: string
