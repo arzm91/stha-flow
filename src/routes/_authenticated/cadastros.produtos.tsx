@@ -612,6 +612,65 @@ function ProdutosPage() {
                                       : "O sistema lê o valor da tag no gatilho de fim e registra como quantidade."}
                                   </div>
                                 )}
+                                {e.qtd_modo === "tag_diferenca" && (
+                                  <div className="col-span-12 rounded-md border border-dashed border-input p-2 space-y-2">
+                                    <label className="flex items-center gap-2 text-xs font-medium">
+                                      <input
+                                        type="checkbox"
+                                        checked={e.estab_enabled}
+                                        onChange={(ev) => updateEtapa(ei, { estab_enabled: ev.target.checked })}
+                                      />
+                                      Detectar início/fim pela estabilização da tag (sem gatilhos)
+                                    </label>
+                                    {e.estab_enabled && (
+                                      <>
+                                        <div className="text-[11px] text-muted-foreground">
+                                          Quando a variação da tag ultrapassar o limite, o sistema captura o valor inicial.
+                                          Ao estabilizar novamente dentro do limite por X segundos, registra a diferença.
+                                        </div>
+                                        <div className="grid grid-cols-12 gap-2">
+                                          <div className="col-span-4">
+                                            <Input
+                                              type="number"
+                                              step="0.1"
+                                              min="0.1"
+                                              value={e.estab_pct}
+                                              onChange={(ev) => updateEtapa(ei, { estab_pct: ev.target.value })}
+                                              placeholder="% variação"
+                                              className="h-8"
+                                              title="Limite percentual de variação (ex.: 2 = 2%)"
+                                            />
+                                            <div className="text-[10px] text-muted-foreground mt-0.5">% variação</div>
+                                          </div>
+                                          <div className="col-span-4">
+                                            <Input
+                                              type="number"
+                                              min="5"
+                                              value={e.estab_janela_seg}
+                                              onChange={(ev) => updateEtapa(ei, { estab_janela_seg: ev.target.value })}
+                                              placeholder="Janela (s)"
+                                              className="h-8"
+                                              title="Janela de tempo (segundos) onde a variação é medida"
+                                            />
+                                            <div className="text-[10px] text-muted-foreground mt-0.5">janela (s)</div>
+                                          </div>
+                                          <div className="col-span-4">
+                                            <Input
+                                              type="number"
+                                              min="5"
+                                              value={e.estab_min_estavel_seg}
+                                              onChange={(ev) => updateEtapa(ei, { estab_min_estavel_seg: ev.target.value })}
+                                              placeholder="Estável por (s)"
+                                              className="h-8"
+                                              title="Tempo mínimo estável para encerrar (segundos)"
+                                            />
+                                            <div className="text-[10px] text-muted-foreground mt-0.5">estável por (s)</div>
+                                          </div>
+                                        </div>
+                                      </>
+                                    )}
+                                  </div>
+                                )}
                               </>
                             ) : e.tipo === "tag_captura" ? (
                               <>
