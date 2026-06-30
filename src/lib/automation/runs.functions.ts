@@ -4,6 +4,7 @@ import { z } from "zod";
 
 const destinoSchema = z.object({
   tanque_id: z.string().uuid(),
+  produto_id: z.string().uuid().optional(),
   quantidade: z.number().positive(),
 });
 const analiseSchema = z.object({
@@ -12,6 +13,7 @@ const analiseSchema = z.object({
 });
 const approvalPayloadSchema = z
   .object({
+    numero: z.string().trim().min(1).optional(),
     destinos: z.array(destinoSchema).optional(),
     analises: z.array(analiseSchema).optional(),
   })
