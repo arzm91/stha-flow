@@ -164,7 +164,12 @@ export function TagsMonitoramento({
 
   const corPorTag = useMemo(() => {
     const m = new Map<string, string>();
-    tagsDisponiveis.forEach((n, i) => m.set(n, PALETTE[i % PALETTE.length]));
+    const hash = (s: string) => {
+      let h = 0;
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+      return Math.abs(h);
+    };
+    tagsDisponiveis.forEach((n) => m.set(n, PALETTE[hash(n) % PALETTE.length]));
     return m;
   }, [tagsDisponiveis]);
 
