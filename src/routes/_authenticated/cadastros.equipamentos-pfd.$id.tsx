@@ -548,19 +548,26 @@ function PfdEditor() {
   async function save() {
     setSaving(true);
     const cleanNodes = nodes.map((n) => ({
-      id: n.id, type: n.type, position: n.position, data: n.data,
+      id: n.id, type: n.type, position: n.position,
+      style: n.style ? { width: n.style.width, height: n.style.height } : undefined,
+      data: n.data,
     }));
     const cleanEdges = edges.map((e) => ({
       id: e.id, source: e.source, target: e.target,
       sourceHandle: e.sourceHandle ?? null, targetHandle: e.targetHandle ?? null,
       data: e.data ?? {},
     }));
-    const { error } = await supabase
+    const { data, error } = await supabase
       .from("equipamentos")
       .update({ pfd_graph: { nodes: cleanNodes, edges: cleanEdges } as never })
-      .eq("id", id);
+      .eq("id", id)
+      .select("id");
     setSaving(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(`Erro ao salvar: ${error.message}`); return; }
+    if (!data || data.length === 0) {
+      toast.error("Sem permissão para salvar este diagrama (nenhuma linha foi atualizada).");
+      return;
+    }
     toast.success("Diagrama salvo");
   }
 
