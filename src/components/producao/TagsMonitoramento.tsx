@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Brush, ReferenceLine, ReferenceArea } from "recharts";
-import { LineChart as LineChartIcon, ChevronLeft, ChevronRight, RotateCcw, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon } from "lucide-react";
+import { LineChart as LineChartIcon, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon } from "lucide-react";
 import { formatNumber, formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -48,7 +48,12 @@ const PALETTE = [
   "#ec4899", "#14b8a6", "#eab308", "#6366f1", "#f97316",
 ];
 
-const PAGE_SIZE = 200;
+const PERIODOS = [
+  { label: "1 hora", hours: 1 },
+  { label: "6 horas", hours: 6 },
+  { label: "12 horas", hours: 12 },
+  { label: "24 horas", hours: 24 },
+] as const;
 
 export function TagsMonitoramento({
   ordemId,
@@ -59,25 +64,24 @@ export function TagsMonitoramento({
   tagNomes: string[];
   ativa: boolean;
 }) {
-  const [offset, setOffset] = useState(0);
+  const [horas, setHoras] = useState<number>(1);
 
-  // Busca a janela atual do histórico ordenada do mais recente para o mais antigo.
-  // offset = 0 → últimos PAGE_SIZE registros. offset = PAGE_SIZE → 200 registros anteriores.
-  // Invertemos a lista para renderizar o gráfico em ordem cronológica.
+  // Busca o histórico das últimas N horas para a ordem.
   const hist = useQuery({
-    queryKey: ["producao-tag-historico", ordemId, offset],
+    queryKey: ["producao-tag-historico", ordemId, horas],
     queryFn: async () => {
+      const desde = new Date(Date.now() - horas * 3600_000).toISOString();
       const { data, error } = await supabase
         .from("producao_tag_historico")
         .select("id,tag_nome,valor_num,unidade,registrado_em")
         .eq("ordem_id", ordemId)
+        .gte("registrado_em", desde)
         .order("registrado_em", { ascending: false })
-        .range(offset, offset + PAGE_SIZE - 1);
+        .limit(5000);
       if (error) throw error;
       return (data ?? []) as Row[];
     },
-    // Atualiza automaticamente apenas quando estamos vendo os dados mais recentes.
-    refetchInterval: ativa && offset === 0 ? 5_000 : false,
+    refetchInterval: ativa ? 5_000 : false,
   });
 
   // Eventos da produção (registros que serão sobrepostos ao gráfico)
@@ -261,10 +265,6 @@ export function TagsMonitoramento({
   };
 
   const totalVisivel = dadosOrdenados.length;
-  // Existem dados anteriores se a página atual está completa (sabemos que há mais após ela).
-  const podeAnteriores = hist.data && hist.data.length === PAGE_SIZE;
-  // Existem dados mais recentes se estamos afastados do início (offset > 0).
-  const podeProximos = offset > 0;
 
   const inicioJanela = totalVisivel > 0 ? dadosOrdenados[0].registrado_em : null;
   const fimJanela = totalVisivel > 0 ? dadosOrdenados[dadosOrdenados.length - 1].registrado_em : null;
@@ -284,9 +284,7 @@ export function TagsMonitoramento({
           </span>
           <span className="hidden sm:inline">·</span>
           <span className="hidden sm:inline">
-            {offset === 0
-              ? `últimos ${totalVisivel} registros`
-              : `registros ${offset + 1} a ${offset + totalVisivel}`}
+            últimas {horas}h · {totalVisivel} pontos
           </span>
         </div>
       </CardHeader>
@@ -464,8 +462,8 @@ export function TagsMonitoramento({
           )}
         </div>
 
-        {/* Controles de navegação entre janelas de histórico */}
-        <div className="flex items-center justify-between gap-2">
+        {/* Filtro por período */}
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="text-xs text-muted-foreground">
             <span className="font-mono text-foreground">{totalVisivel}</span> pontos
             {inicioJanela && fimJanela ? (
@@ -474,31 +472,21 @@ export function TagsMonitoramento({
               </span>
             ) : null}
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setOffset((o) => o + PAGE_SIZE)}
-              disabled={!podeAnteriores || hist.isLoading}
-            >
-              <ChevronLeft className="mr-1 h-4 w-4" /> Anteriores
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setOffset(0)}
-              disabled={offset === 0 || hist.isLoading}
-            >
-              <RotateCcw className="mr-1 h-4 w-4" /> Mais recentes
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setOffset((o) => Math.max(0, o - PAGE_SIZE))}
-              disabled={!podeProximos || hist.isLoading}
-            >
-              Próximos <ChevronRight className="ml-1 h-4 w-4" />
-            </Button>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] uppercase tracking-wide text-muted-foreground mr-1">Última:</span>
+            {PERIODOS.map((p) => (
+              <Button
+                key={p.hours}
+                type="button"
+                variant={horas === p.hours ? "default" : "outline"}
+                size="sm"
+                onClick={() => setHoras(p.hours)}
+                disabled={hist.isLoading}
+                className="h-7 text-xs"
+              >
+                {p.label}
+              </Button>
+            ))}
           </div>
         </div>
 
