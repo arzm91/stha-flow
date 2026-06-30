@@ -100,7 +100,8 @@ export function TagsMonitoramento({
       if (error) throw error;
       return (data ?? []) as Row[];
     },
-    refetchInterval: ativa ? 5_000 : false,
+    refetchInterval: ativa ? 10_000 : false,
+    placeholderData: keepPreviousData,
   });
 
 
