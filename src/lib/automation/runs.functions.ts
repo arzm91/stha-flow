@@ -186,11 +186,9 @@ async function runActionNode(
   if (actionType === "iniciar_op") {
     const equipId = (cfg.equipamento_id as string) ?? null;
     if (!equipId) throw new Error("equipamento_id obrigatório");
-    // verifica disponibilidade
     const { data: equip } = await supabase
       .from("equipamentos").select("status").eq("id", equipId).maybeSingle();
     if (equip?.status === "ocupado") throw new Error("equipamento ocupado");
-    // próxima programada
     const { data: prox } = await supabase
       .from("ordens_producao")
       .select("id, numero")
@@ -199,13 +197,13 @@ async function runActionNode(
       .order("inicio_previsto", { ascending: true, nullsFirst: false })
       .limit(1).maybeSingle();
     if (!prox) throw new Error("nenhuma OP programada na fila");
-    const { data: nowRes } = await supabase.rpc("server_now");
+    const startAt = String(ctx.__trigger_fired_at ?? new Date().toISOString());
     const { error } = await supabase.from("ordens_producao")
-      .update({ status: "em_andamento", inicio_em: nowRes, fila_posicao: null })
+      .update({ status: "em_andamento", inicio_em: startAt, fila_posicao: null })
       .eq("id", prox.id);
     if (error) throw new Error(error.message);
     await supabase.from("equipamentos").update({ status: "ocupado" }).eq("id", equipId);
-    return { info: `OP ${prox.numero} iniciada` };
+    return { info: `OP ${prox.numero} iniciada às ${startAt}` };
   }
 
   if (actionType === "finalizar_op") {
@@ -213,12 +211,11 @@ async function runActionNode(
     if (!equipId) throw new Error("equipamento_id obrigatório");
     const { data: op } = await supabase
       .from("ordens_producao")
-      .select("id, numero, qtd_planejada")
+      .select("id, numero, qtd_planejada, produto_id")
       .eq("equipamento_id", equipId).eq("status", "em_andamento")
       .order("inicio_em", { ascending: false }).limit(1).maybeSingle();
     if (!op) throw new Error("nenhuma OP em andamento neste equipamento");
 
-    // Quantidade produzida: vem da tag (se configurada e existir), senão usa planejada.
     let qtdProduzida: number = Number(op.qtd_planejada ?? 0);
     let qtdOrigem = "planejada";
     const tagQtd = (cfg.qtd_produzida_tag as string) ?? "";
@@ -232,17 +229,55 @@ async function runActionNode(
       }
     }
 
-    const { data: nowRes } = await supabase.rpc("server_now");
+    // Aprovação pode trazer destinos (1+ tanques com quantidades) e análises.
+    const approval = (ctx.__approval ?? {}) as ApprovalPayload;
+    const destinos = approval?.destinos ?? [];
+    const analises = approval?.analises ?? [];
+    if (destinos.length) {
+      const somaDestinos = destinos.reduce((s, d) => s + Number(d.quantidade ?? 0), 0);
+      if (somaDestinos > 0) {
+        qtdProduzida = somaDestinos;
+        qtdOrigem = `destinos (${destinos.length})`;
+      }
+    }
+
+    const finishAt = String(ctx.__trigger_fired_at ?? new Date().toISOString());
+    const tanquePrincipal = destinos[0]?.tanque_id ?? null;
     const { error } = await supabase.from("ordens_producao").update({
       status: "finalizada",
-      fim_em: nowRes,
+      fim_em: finishAt,
       qtd_produzida: qtdProduzida,
+      tanque_destino_id: tanquePrincipal,
       obs_finais: `[Automação] finalização automática (${qtdOrigem})`,
     }).eq("id", op.id);
     if (error) throw new Error(error.message);
     await supabase.from("equipamentos").update({ status: "disponivel" }).eq("id", equipId);
 
-    // promove próxima programada com auto_iniciar
+    // movimentações de estoque (uma por destino)
+    for (const d of destinos) {
+      await supabase.from("movimentacoes_estoque").insert({
+        owner_id: ownerId,
+        tipo: "entrada",
+        produto_id: op.produto_id,
+        tanque_id: d.tanque_id,
+        quantidade: d.quantidade,
+        ordem_id: op.id,
+        ocorrido_em: finishAt,
+        destino: "producao",
+      });
+    }
+    // análises
+    for (const a of analises) {
+      await supabase.from("analises_registradas").insert({
+        owner_id: ownerId,
+        ordem_id: op.id,
+        analise_id: a.analise_id,
+        resultado: a.resultado,
+        registrado_em: finishAt,
+      });
+    }
+
+    // promove próxima programada com auto_iniciar — mesmo horário do gatilho
     const { data: prox } = await supabase
       .from("ordens_producao")
       .select("id")
@@ -251,12 +286,13 @@ async function runActionNode(
       .limit(1).maybeSingle();
     if (prox?.id) {
       await supabase.from("ordens_producao")
-        .update({ status: "em_andamento", inicio_em: nowRes, fila_posicao: null })
+        .update({ status: "em_andamento", inicio_em: finishAt, fila_posicao: null })
         .eq("id", prox.id);
       await supabase.from("equipamentos").update({ status: "ocupado" }).eq("id", equipId);
     }
-    return { info: `OP ${op.numero} finalizada (${qtdProduzida} ${qtdOrigem})` };
+    return { info: `OP ${op.numero} finalizada (${qtdProduzida} ${qtdOrigem}) · ${destinos.length} destino(s) · ${analises.length} análise(s)` };
   }
+
 
   if (actionType === "avancar_ordem") {
     const ordemId = (cfg.ordem_id as string) ?? (ctx.ordem_id as string);
