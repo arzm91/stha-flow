@@ -228,8 +228,9 @@ function ProducaoDashboardPage() {
     const equipMap = new Map((equipamentosQ.data ?? []).map((e) => [e.id, e.codigo]));
     const days = new Map<string, Record<string, number>>();
     for (const r of rowsFiltered) {
-      const day = ((r.inicio_em ?? r.inicio_previsto ?? "") as string).slice(0, 10);
+      const day = (r.inicio_em ?? "").slice(0, 10);
       if (!day) continue;
+      if (!days.has(day)) days.set(day, {});
       const bucket = days.get(day)!;
       const key = equipMap.get(r.equipamento_id) ?? "—";
       bucket[key] = (bucket[key] ?? 0) + (Number(r.qtd_produzida) || 0);
