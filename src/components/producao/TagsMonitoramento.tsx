@@ -284,10 +284,8 @@ export function TagsMonitoramento({
   };
 
   const totalVisivel = dadosOrdenados.length;
-  // Existem dados anteriores se a página atual está completa (sabemos que há mais após ela).
-  const podeAnteriores = hist.data && hist.data.length === PAGE_SIZE;
-  // Existem dados mais recentes se estamos afastados do início (offset > 0).
-  const podeProximos = offset > 0;
+  const periodoLabel = PERIODOS.find((p) => p.k === periodo)!.label;
+  const limiteAtingido = (hist.data?.length ?? 0) >= MAX_ROWS;
 
   const inicioJanela = totalVisivel > 0 ? dadosOrdenados[0].registrado_em : null;
   const fimJanela = totalVisivel > 0 ? dadosOrdenados[dadosOrdenados.length - 1].registrado_em : null;
@@ -303,16 +301,15 @@ export function TagsMonitoramento({
         </CardTitle>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>
-            {ativa ? "Gravando histórico (a cada ~10s)" : "Histórico desta produção"}
+            {ativa ? "Ao vivo (atualiza a cada 5s)" : "Histórico desta produção"}
           </span>
           <span className="hidden sm:inline">·</span>
           <span className="hidden sm:inline">
-            {offset === 0
-              ? `últimos ${totalVisivel} registros`
-              : `registros ${offset + 1} a ${offset + totalVisivel}`}
+            últimas {periodoLabel} · {totalVisivel} pontos
           </span>
         </div>
       </CardHeader>
+
       <CardContent className="space-y-3">
         {/* Seletor de tags */}
         <div className="flex flex-wrap gap-2">
