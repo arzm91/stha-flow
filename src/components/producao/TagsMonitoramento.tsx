@@ -57,7 +57,7 @@ const PALETTE = [
   "#ec4899", "#14b8a6", "#eab308", "#6366f1", "#f97316",
 ];
 
-const PAGE_SIZE = 200;
+const MAX_ROWS = 5000;
 
 export function TagsMonitoramento({
   ordemId,
@@ -68,26 +68,40 @@ export function TagsMonitoramento({
   tagNomes: string[];
   ativa: boolean;
 }) {
-  const [offset, setOffset] = useState(0);
+  const [periodo, setPeriodo] = useState<PeriodoKey>("1h");
+  const periodoMs = useMemo(
+    () => PERIODOS.find((p) => p.k === periodo)!.ms,
+    [periodo],
+  );
 
-  // Busca a janela atual do histórico ordenada do mais recente para o mais antigo.
-  // offset = 0 → últimos PAGE_SIZE registros. offset = PAGE_SIZE → 200 registros anteriores.
-  // Invertemos a lista para renderizar o gráfico em ordem cronológica.
+  // Tick para recalcular a janela de tempo de forma "ao vivo".
+  const [nowTick, setNowTick] = useState(() => Date.now());
+  useEffect(() => {
+    if (!ativa) return;
+    const id = setInterval(() => setNowTick(Date.now()), 5_000);
+    return () => clearInterval(id);
+  }, [ativa]);
+
+  // Bucket de 30s para estabilizar a queryKey (evita refetch a cada render).
+  const desdeBucket = Math.floor((nowTick - periodoMs) / 30_000) * 30_000;
+  const desdeIso = new Date(desdeBucket).toISOString();
+
   const hist = useQuery({
-    queryKey: ["producao-tag-historico", ordemId, offset],
+    queryKey: ["producao-tag-historico", ordemId, periodo, desdeBucket],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("producao_tag_historico")
         .select("id,tag_nome,valor_num,unidade,registrado_em")
         .eq("ordem_id", ordemId)
+        .gte("registrado_em", desdeIso)
         .order("registrado_em", { ascending: false })
-        .range(offset, offset + PAGE_SIZE - 1);
+        .limit(MAX_ROWS);
       if (error) throw error;
       return (data ?? []) as Row[];
     },
-    // Atualiza automaticamente apenas quando estamos vendo os dados mais recentes.
-    refetchInterval: ativa && offset === 0 ? 5_000 : false,
+    refetchInterval: ativa ? 5_000 : false,
   });
+
 
   // Eventos da produção (registros que serão sobrepostos ao gráfico)
   const eventosQuery = useQuery({
