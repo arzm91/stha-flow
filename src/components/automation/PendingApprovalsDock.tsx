@@ -240,8 +240,10 @@ export function PendingApprovalsDock() {
       {dialogRun && (
         <ApprovalDialog
           open={!!dialogRun}
-          onOpenChange={(o) => !o && setDialogRun(null)}
+          onOpenChange={(o) => { if (!o) setDialogRun(null); }}
           flowName={dialogRun.flow?.nome ?? "Fluxo"}
+          opNumero={dialogNumero}
+          opProdutoId={dialogProdutoId}
           qtdSugerida={dialogQtd}
           needsDestinos={true}
           busy={busy === dialogRun.id}
