@@ -828,7 +828,11 @@ export type Database = {
           processo_id: string | null
           processo_nome: string
           tipo: string | null
+          unidade: string | null
           updated_at: string
+          valor_capturado: number | null
+          valor_fim: number | null
+          valor_inicio: number | null
         }
         Insert: {
           atividade_descricao?: string | null
@@ -847,7 +851,11 @@ export type Database = {
           processo_id?: string | null
           processo_nome: string
           tipo?: string | null
+          unidade?: string | null
           updated_at?: string
+          valor_capturado?: number | null
+          valor_fim?: number | null
+          valor_inicio?: number | null
         }
         Update: {
           atividade_descricao?: string | null
@@ -866,7 +874,11 @@ export type Database = {
           processo_id?: string | null
           processo_nome?: string
           tipo?: string | null
+          unidade?: string | null
           updated_at?: string
+          valor_capturado?: number | null
+          valor_fim?: number | null
+          valor_inicio?: number | null
         }
         Relationships: [
           {
@@ -1190,6 +1202,8 @@ export type Database = {
       }
       produto_atividades: {
         Row: {
+          captura_gatilho: Json | null
+          captura_modo: string
           created_at: string
           descricao: string
           gatilhos: Json
@@ -1197,6 +1211,8 @@ export type Database = {
           ordem: number
           owner_id: string
           processo_id: string
+          qtd_modo: string
+          qtd_tag_nome: string | null
           quantidade: number | null
           tag_nome: string | null
           tempo_estimado_min: number | null
@@ -1205,6 +1221,8 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          captura_gatilho?: Json | null
+          captura_modo?: string
           created_at?: string
           descricao: string
           gatilhos?: Json
@@ -1212,6 +1230,8 @@ export type Database = {
           ordem?: number
           owner_id: string
           processo_id: string
+          qtd_modo?: string
+          qtd_tag_nome?: string | null
           quantidade?: number | null
           tag_nome?: string | null
           tempo_estimado_min?: number | null
@@ -1220,6 +1240,8 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          captura_gatilho?: Json | null
+          captura_modo?: string
           created_at?: string
           descricao?: string
           gatilhos?: Json
@@ -1227,6 +1249,8 @@ export type Database = {
           ordem?: number
           owner_id?: string
           processo_id?: string
+          qtd_modo?: string
+          qtd_tag_nome?: string | null
           quantidade?: number | null
           tag_nome?: string | null
           tempo_estimado_min?: number | null
