@@ -22,9 +22,11 @@ export function PendingApprovalsDock() {
   const [runs, setRuns] = useState<Run[]>([]);
   const [open, setOpen] = useState(true);
   const approve = useServerFn(approveRun);
+  const execute = useServerFn(executeRun);
   const reject = useServerFn(rejectRun);
   const snooze = useServerFn(snoozeRun);
   const [busy, setBusy] = useState<string | null>(null);
+  const autoRunning = useRef(new Set<string>());
 
   async function load() {
     const { data } = await supabase
