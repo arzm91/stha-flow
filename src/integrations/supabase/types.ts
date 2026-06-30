@@ -1714,6 +1714,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _gatilho_match: {
+        Args: { p_op: string; p_ref: number; p_val: number }
+        Returns: boolean
+      }
+      auto_advance_ordens_producao: { Args: never; Returns: number }
       can_access_page: {
         Args: { _need_edit?: boolean; _page: string; _user: string }
         Returns: boolean
