@@ -139,7 +139,7 @@ function ProdutosPage() {
   const counts = useQuery({
     queryKey: ["produtos-etapas-count"],
     queryFn: async () => {
-      const { data: procs } = await supabase.from("produto_processos").select("id, produto_id");
+      const { data: procs } = await supabase.from("produto_processos").select("id, produto_id").eq("ativo", true);
       const procToProd: Record<string, string> = {};
       for (const p of (procs ?? []) as { id: string; produto_id: string }[]) procToProd[p.id] = p.produto_id;
       const ids = Object.keys(procToProd);
