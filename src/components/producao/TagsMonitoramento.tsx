@@ -598,4 +598,67 @@ export function TagsMonitoramento({
   );
 }
 
+function TagScroller({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [canLeft, setCanLeft] = useState(false);
+  const [canRight, setCanRight] = useState(false);
+
+  const update = () => {
+    const el = ref.current;
+    if (!el) return;
+    setCanLeft(el.scrollLeft > 2);
+    setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  };
+
+  useEffect(() => {
+    update();
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [children]);
+
+  const scrollBy = (dir: 1 | -1) => {
+    const el = ref.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * Math.max(160, el.clientWidth * 0.6), behavior: "smooth" });
+  };
+
+  return (
+    <div className="relative flex items-center">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={() => scrollBy(-1)}
+        disabled={!canLeft}
+        className="h-7 w-6 shrink-0"
+        aria-label="Rolar para a esquerda"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <div
+        ref={ref}
+        onScroll={update}
+        className="flex flex-1 items-center gap-2 overflow-x-auto scroll-smooth py-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {children}
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={() => scrollBy(1)}
+        disabled={!canRight}
+        className="h-7 w-6 shrink-0"
+        aria-label="Rolar para a direita"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
+
 
