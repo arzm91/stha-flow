@@ -259,11 +259,10 @@ export function TagsMonitoramento({
     return { eventosPontos: pontos, eventosFaixas: faixas };
   }, [eventosQuery.data]);
 
-  // Janela visível baseada nos dados carregados
-  const janela = useMemo(() => {
-    if (chartData.length === 0) return null;
-    return { min: chartData[0].t as number, max: chartData[chartData.length - 1].t as number };
-  }, [chartData]);
+  // Janela de visualização: período selecionado, ancorado em "agora".
+  const janelaFim = nowTick;
+  const janelaInicio = nowTick - periodoMs;
+  const janela = { min: janelaInicio, max: janelaFim };
 
   const pontosVisiveis = useMemo(() => {
     if (!janela) return [];
