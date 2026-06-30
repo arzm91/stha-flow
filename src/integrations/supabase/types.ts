@@ -1270,6 +1270,7 @@ export type Database = {
       }
       produto_processos: {
         Row: {
+          ativo: boolean
           created_at: string
           id: string
           nome: string
@@ -1278,8 +1279,10 @@ export type Database = {
           produto_id: string
           tempo_limite_min: number | null
           updated_at: string
+          versao: number
         }
         Insert: {
+          ativo?: boolean
           created_at?: string
           id?: string
           nome: string
@@ -1288,8 +1291,10 @@ export type Database = {
           produto_id: string
           tempo_limite_min?: number | null
           updated_at?: string
+          versao?: number
         }
         Update: {
+          ativo?: boolean
           created_at?: string
           id?: string
           nome?: string
@@ -1298,6 +1303,7 @@ export type Database = {
           produto_id?: string
           tempo_limite_min?: number | null
           updated_at?: string
+          versao?: number
         }
         Relationships: [
           {
@@ -1780,6 +1786,10 @@ export type Database = {
       ingest_tags: { Args: { payload: Json }; Returns: number }
       poll_tag_endpoints_fire: { Args: never; Returns: number }
       poll_tag_endpoints_process: { Args: never; Returns: number }
+      save_produto_processo: {
+        Args: { p_atividades: Json; p_nome: string; p_produto_id: string }
+        Returns: string
+      }
       server_now: { Args: never; Returns: string }
       sync_tag_endpoint_now: { Args: { p_endpoint_id: string }; Returns: Json }
     }
