@@ -58,6 +58,11 @@ type Etapa = {
   // matéria-prima — origem da quantidade
   qtd_modo: QtdModo;
   qtd_tag_nome: string;
+  // matéria-prima por diferença — estabilização automática (fallback sem gatilhos)
+  estab_enabled: boolean;
+  estab_pct: string;
+  estab_janela_seg: string;
+  estab_min_estavel_seg: string;
   // tag_captura — modo da captura
   captura_modo: CapturaModo;
   captura_operador: GatilhoOperador;
