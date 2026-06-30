@@ -265,10 +265,6 @@ export function TagsMonitoramento({
   };
 
   const totalVisivel = dadosOrdenados.length;
-  // Existem dados anteriores se a página atual está completa (sabemos que há mais após ela).
-  const podeAnteriores = hist.data && hist.data.length === PAGE_SIZE;
-  // Existem dados mais recentes se estamos afastados do início (offset > 0).
-  const podeProximos = offset > 0;
 
   const inicioJanela = totalVisivel > 0 ? dadosOrdenados[0].registrado_em : null;
   const fimJanela = totalVisivel > 0 ? dadosOrdenados[dadosOrdenados.length - 1].registrado_em : null;
@@ -288,9 +284,7 @@ export function TagsMonitoramento({
           </span>
           <span className="hidden sm:inline">·</span>
           <span className="hidden sm:inline">
-            {offset === 0
-              ? `últimos ${totalVisivel} registros`
-              : `registros ${offset + 1} a ${offset + totalVisivel}`}
+            últimas {horas}h · {totalVisivel} pontos
           </span>
         </div>
       </CardHeader>
