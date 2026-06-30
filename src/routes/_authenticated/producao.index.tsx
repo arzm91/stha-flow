@@ -71,6 +71,9 @@ function ProducaoPage() {
             <Button asChild variant="outline">
               <Link to="/producao/dashboard"><LayoutGrid className="mr-2 h-4 w-4" />Dashboard</Link>
             </Button>
+            <Button asChild variant="outline">
+              <Link to="/producao/pcp"><LayoutGrid className="mr-2 h-4 w-4" />PCP / Ordens</Link>
+            </Button>
             <Button onClick={() => openNova(undefined)}>
               <Play className="mr-2 h-4 w-4" />Nova ordem
             </Button>
