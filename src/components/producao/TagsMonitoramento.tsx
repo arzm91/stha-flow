@@ -183,20 +183,8 @@ export function TagsMonitoramento({
     return tagsDisponiveis.filter((n) => n.toLowerCase().includes(q));
   }, [tagsDisponiveis, busca]);
 
-  const [selecionadas, setSelecionadas] = useState<string[]>([]);
 
-  // seleciona automaticamente até 3 tags na primeira carga
-  useEffect(() => {
-    if (selecionadas.length === 0 && tagsDisponiveis.length > 0) {
-      setSelecionadas(tagsDisponiveis.slice(0, Math.min(3, tagsDisponiveis.length)));
-    }
-  }, [tagsDisponiveis, selecionadas.length]);
 
-  const corPorTag = useMemo(() => {
-    const m = new Map<string, string>();
-    tagsDisponiveis.forEach((n, i) => m.set(n, PALETTE[i % PALETTE.length]));
-    return m;
-  }, [tagsDisponiveis]);
 
   // Constrói dataset combinado: cada timestamp vira uma linha com colunas por tag
   const chartData = useMemo(() => {
