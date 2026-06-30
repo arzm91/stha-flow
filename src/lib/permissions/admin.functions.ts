@@ -148,6 +148,50 @@ export const setUserPermissions = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+const ALLOWED_RESOURCE_TYPES = ["equipamento", "tanque", "produto", "custom_sheet"] as const;
+type AllowedResourceType = (typeof ALLOWED_RESOURCE_TYPES)[number];
+
+export const setUserResourcePermissions = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: {
+      user_id: string;
+      resource_type: AllowedResourceType;
+      resource_ids: string[];
+    }) => {
+      if (!ALLOWED_RESOURCE_TYPES.includes(d.resource_type)) {
+        throw new Error("resource_type inválido");
+      }
+      return d;
+    },
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    await assertOwnsUser(context, supabaseAdmin, data.user_id);
+
+    await supabaseAdmin
+      .from("user_resource_permissions")
+      .delete()
+      .eq("user_id", data.user_id)
+      .eq("resource_type", data.resource_type);
+
+    const unique = Array.from(new Set(data.resource_ids.filter(Boolean)));
+    if (unique.length > 0) {
+      const rows = unique.map((rid) => ({
+        user_id: data.user_id,
+        resource_type: data.resource_type,
+        resource_id: rid,
+      }));
+      const { error } = await supabaseAdmin
+        .from("user_resource_permissions")
+        .insert(rows);
+      if (error) throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+
 export const deleteManagedUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string }) => d)
