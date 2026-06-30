@@ -317,10 +317,10 @@ export function TagsMonitoramento({
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {/* Seletor de tags */}
-        <div className="flex flex-wrap gap-2">
+        {/* Seletor de tags — linha única com scroll horizontal e setas */}
+        <TagScroller>
           {tagsDisponiveis.length === 0 ? (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground px-2">
               Nenhuma tag disponível para esta ordem.
             </span>
           ) : (
@@ -336,7 +336,7 @@ export function TagsMonitoramento({
                   size="sm"
                   onClick={() => toggle(nome)}
                   className={cn(
-                    "h-7 gap-2 font-mono text-xs",
+                    "h-7 shrink-0 gap-2 font-mono text-xs",
                     ativo ? "border-2" : "opacity-60 hover:opacity-100",
                   )}
                   style={ativo ? { borderColor: cor, color: cor } : undefined}
@@ -348,7 +348,8 @@ export function TagsMonitoramento({
               );
             })
           )}
-        </div>
+        </TagScroller>
+
 
         {/* Seletor de tipos de eventos sobrepostos ao gráfico */}
         <div className="flex flex-wrap items-center gap-1.5 border-t border-border pt-2">
