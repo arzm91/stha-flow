@@ -109,6 +109,9 @@ const SYMBOL_LABEL: Record<SymbolKind, string> = {
   valvula: "Válvula", reator: "Reator", coluna: "Coluna",
   compressor: "Compressor", filtro: "Filtro", vaso: "Vaso",
   misturador: "Misturador",
+  retangulo: "Retângulo", circulo: "Círculo", elipse: "Elipse",
+  triangulo: "Triângulo", losango: "Losango", hexagono: "Hexágono",
+  estrela: "Estrela", seta: "Seta", nuvem: "Nuvem", paralelogramo: "Paralelogramo",
 };
 
 // ---------- Símbolos ISA (SVG) ----------
