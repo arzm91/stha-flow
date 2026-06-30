@@ -29,12 +29,15 @@ import {
 import { toast } from "sonner";
 import { UserPlus, Trash2, ShieldCheck, KeyRound } from "lucide-react";
 
+type ResourcePerm = { resource_type: string; resource_id: string };
+
 type ManagedUser = {
   id: string;
   email: string;
   nome: string | null;
   roles: string[];
   permissions: { page_key: string; can_view: boolean; can_edit: boolean }[];
+  resource_permissions: ResourcePerm[];
 };
 
 export function UserManagementCard() {
@@ -42,7 +45,9 @@ export function UserManagementCard() {
   const listFn = useServerFn(listManagedUsers);
   const createFn = useServerFn(createManagedUser);
   const setPermFn = useServerFn(setUserPermissions);
+  const setResFn = useServerFn(setUserResourcePermissions);
   const deleteFn = useServerFn(deleteManagedUser);
+
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ["managed-users"],
