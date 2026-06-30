@@ -209,7 +209,7 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
             </div>
             <div className="mt-1 flex items-center justify-between text-[11px] text-muted-foreground">
               <span>{pct.toFixed(0)}%</span>
-              <span>iniciado {new Date(o.inicio_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+              <span>iniciado {o.inicio_em ? new Date(o.inicio_em).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "—"}</span>
             </div>
           </div>
         </div>
@@ -308,7 +308,7 @@ type WidgetData =
   | { kind: "list"; items: { title: string; subtitle?: string; value?: string }[] }
   | { kind: "gauge"; value: number; max: number; unit?: string; tag: string }
   | { kind: "tank"; loc: StorageLocation; saldo: number; tag: { nome: string; valor_num: number | null; valor: string | null; unidade: string | null } | null }
-  | { kind: "producao-prev"; equipamento_nome: string; ordem: { id: string; numero: string; status: string; produto_nome: string; qtd_planejada: number; qtd_produzida: number; inicio_em: string } | null }
+  | { kind: "producao-prev"; equipamento_nome: string; ordem: { id: string; numero: string; status: string; produto_nome: string; qtd_planejada: number; qtd_produzida: number; inicio_em: string | null } | null }
   | { kind: "xray-manut"; abertas: number; em_andamento: number; atrasadas: number; concluidas_30d: number; proximas: { numero: string; prioridade: string; data: string }[] }
   | { kind: "xray-qual"; conformes: number; naoconformes: number; ultimas_nc: { titulo: string; valor: string }[] };
 

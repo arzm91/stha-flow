@@ -71,6 +71,9 @@ function ProducaoPage() {
             <Button asChild variant="outline">
               <Link to="/producao/dashboard"><LayoutGrid className="mr-2 h-4 w-4" />Dashboard</Link>
             </Button>
+            <Button asChild variant="outline">
+              <Link to="/producao/pcp"><LayoutGrid className="mr-2 h-4 w-4" />PCP / Ordens</Link>
+            </Button>
             <Button onClick={() => openNova(undefined)}>
               <Play className="mr-2 h-4 w-4" />Nova ordem
             </Button>
@@ -104,7 +107,7 @@ function ProducaoPage() {
                     <div className="mt-3 rounded-md border border-primary/30 bg-primary/5 p-2 text-sm">
                       <div className="font-medium">OP {op.numero}</div>
                       <div className="text-xs text-muted-foreground">
-                        {(op.produto as { nome: string } | null)?.nome ?? ""} · há {durationFromNow(op.inicio_em)}
+                        {(op.produto as { nome: string } | null)?.nome ?? ""}{op.inicio_em ? ` · há ${durationFromNow(op.inicio_em)}` : ""}
                       </div>
                     </div>
                   ) : (

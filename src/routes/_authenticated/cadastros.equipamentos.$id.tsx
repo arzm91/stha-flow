@@ -66,9 +66,9 @@ function EquipDetail() {
                   <TableRow key={o.id}>
                     <TableCell className="font-mono">{o.numero}</TableCell>
                     <TableCell>{(o.produto as { nome: string } | null)?.nome ?? "—"}</TableCell>
-                    <TableCell>{formatDate(o.inicio_em)}</TableCell>
+                    <TableCell>{o.inicio_em ? formatDate(o.inicio_em) : "—"}</TableCell>
                     <TableCell>{o.fim_em ? formatDate(o.fim_em) : "—"}</TableCell>
-                    <TableCell>{o.fim_em ? durationBetween(o.inicio_em, o.fim_em) : durationFromNow(o.inicio_em)}</TableCell>
+                    <TableCell>{o.inicio_em ? (o.fim_em ? durationBetween(o.inicio_em, o.fim_em) : durationFromNow(o.inicio_em)) : "—"}</TableCell>
                     <TableCell>{formatNumber(o.qtd_produzida ?? 0)}</TableCell>
                     <TableCell>
                       <Button asChild size="sm" variant="ghost">

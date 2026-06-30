@@ -133,9 +133,9 @@ function OPPage() {
       />
 
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
-        <Info label="Início" value={formatDate(op.data.inicio_em)} />
+        <Info label="Início" value={op.data.inicio_em ? formatDate(op.data.inicio_em) : "—"} />
         <Info label="Fim" value={op.data.fim_em ? formatDate(op.data.fim_em) : "—"} />
-        <Info label="Duração total" value={op.data.fim_em ? durationBetween(op.data.inicio_em, op.data.fim_em) : durationFromNow(op.data.inicio_em)} />
+        <Info label="Duração total" value={op.data.inicio_em ? (op.data.fim_em ? durationBetween(op.data.inicio_em, op.data.fim_em) : durationFromNow(op.data.inicio_em)) : "—"} />
         <Info label="Qtd. planejada / produzida" value={`${formatNumber(Number(op.data.qtd_planejada))} / ${op.data.qtd_produzida != null ? formatNumber(Number(op.data.qtd_produzida)) : "—"}`} />
         <Info label="Operador" value={operador.data?.nome ?? "—"} />
         <Info label="Equipamento" value={(op.data.equipamento as any)?.nome ?? "—"} />
@@ -662,6 +662,26 @@ function FinalizarDialog({
       if (e1) throw e1;
       const { error: e2 } = await supabase.from("equipamentos").update({ status: "disponivel" }).eq("id", op.equipamento_id);
       if (e2) throw e2;
+      // PCP: promover a próxima ordem da fila com auto_iniciar=true (se existir)
+      try {
+        const { data: prox } = await supabase
+          .from("ordens_producao")
+          .select("id")
+          .eq("equipamento_id", op.equipamento_id)
+          .eq("status", "programada")
+          .eq("auto_iniciar", true)
+          .order("fila_posicao", { ascending: true, nullsFirst: false })
+          .order("inicio_previsto", { ascending: true, nullsFirst: false })
+          .limit(1)
+          .maybeSingle();
+        if (prox?.id) {
+          const { data: nowData } = await supabase.rpc("server_now");
+          const startIso = new Date(nowData as unknown as string).toISOString();
+          await supabase.from("ordens_producao").update({ status: "em_andamento", inicio_em: startIso, fila_posicao: null }).eq("id", prox.id);
+          await supabase.from("equipamentos").update({ status: "ocupado" }).eq("id", op.equipamento_id);
+          toast.info("Próxima ordem da fila iniciada automaticamente");
+        }
+      } catch { /* ignore */ }
       if (tanqueId) {
         const { error: e3 } = await supabase.from("movimentacoes_estoque").insert({
           owner_id: u.user.id,

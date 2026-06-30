@@ -1,69 +1,64 @@
-## Visão geral
+## Objetivo
 
-Vou criar um **motor de automação** com editor visual em canvas (estilo n8n) onde você desenha fluxos conectando gatilhos → condições → ações. Toda execução fica como **tarefa pendente** num popup flutuante no canto inferior direito, aguardando aprovação humana antes de movimentar estoque, criar ordem, chamar webhook ou disparar email.
+Adicionar dentro de **Produção** uma nova página **PCP / Ordens** que centraliza programação e acompanhamento das ordens de produção, com quatro visualizações da mesma lista e fluxo de iniciar/enfileirar ordens por equipamento.
 
-## O que vai ser construído
+## Mudanças no banco
 
-### 1. Página `/automacoes` (canvas drag-and-drop)
-- Lista de fluxos salvos (ativo/inativo, últimas execuções).
-- Editor visual usando **React Flow** (`@xyflow/react`) — nós conectáveis por linhas, painel lateral para configurar cada nó.
-- Tipos de nó:
-  - **Gatilho** (1 por fluxo): tag atinge valor, tag stale, evento de produção, agendamento cron.
-  - **Condição** (opcional, várias): comparações `E`/`OU` sobre valores de tags ou contexto.
-  - **Ação** (uma ou mais): movimentação estoque/tanque, criar/avançar ordem, enviar alerta, chamar webhook HTTP.
-- Botão "Testar" simula execução sem efetivar ações.
+Adicionar à tabela `ordens_producao` (sem quebrar o fluxo atual):
 
-### 2. Popup flutuante de aprovação (global)
-- Componente fixo no canto inferior direito, presente em todas as páginas autenticadas.
-- Badge com contador de pendências; ao clicar abre card com: nome do fluxo, gatilho disparado, ações propostas (com parâmetros calculados), botões **Aprovar / Rejeitar / Adiar**.
-- Realtime via Supabase channels — surge automaticamente quando uma execução pendente é criada.
+- `inicio_previsto timestamptz` — data/hora programada
+- `duracao_estimada_min integer` — duração prevista (calculada a partir dos processos do produto ao criar, editável)
+- `prioridade text` default `'media'` (`alta` | `media` | `baixa`)
+- novo valor de status: `programada` (além de `em_andamento`, `finalizada`, `cancelada`)
+- `fila_posicao integer` — ordem dentro da fila do equipamento (para enfileiramento)
 
-### 3. Motor de execução (backend)
-- Tabela de fluxos + tabela de execuções pendentes.
-- **Avaliação dos gatilhos**:
-  - *Tag atinge valor* e *tag stale*: trigger no banco em `tags_live` checa fluxos ativos relevantes.
-  - *Evento de produção*: triggers em `ordens_producao` / `ordem_etapas`.
-  - *Agendamento*: pg_cron chamando rota pública a cada minuto.
-- Quando dispara, cria linha em `automation_runs` com status `pending_approval` e snapshot dos parâmetros da ação → popup acende.
-- Ao aprovar, server function `executeAutomationRun` roda as ações em sequência (com idempotência) e marca como `completed`/`failed`.
+Nada é obrigatório: ordens antigas continuam funcionando. Índice em `(equipamento_id, status, fila_posicao)`.
 
-### 4. Email de notificação (opcional por fluxo)
-- Uso do **Lovable Emails** nativo (precisa configurar um subdomínio depois, mas a infra já fica pronta).
-- Template "Aprovação pendente" enviado para o dono do fluxo quando há nova pendência.
+## Nova rota
 
-## Estrutura técnica
+`src/routes/_authenticated/producao.pcp.tsx` (link adicionado no header de `/producao` ao lado de "Dashboard").
 
-```text
-src/routes/_authenticated/
-  automacoes.index.tsx        # lista de fluxos
-  automacoes.$id.tsx          # editor canvas (React Flow)
+Quatro abas (Tabs do shadcn) sobre a mesma query:
 
-src/components/automation/
-  FlowCanvas.tsx              # wrapper React Flow
-  nodes/{TriggerNode,ConditionNode,ActionNode}.tsx
-  NodeConfigPanel.tsx         # painel lateral de config
-  PendingApprovalsDock.tsx    # popup flutuante global (renderizado no _authenticated/route)
+1. **Kanban** — 3 colunas: Programadas · Em andamento · Finalizadas (últimas 30). Card mostra OP, produto, equipamento, prioridade, horário previsto/início, duração.
+2. **Fila por equipamento** — uma linha por equipamento ativo; chips em sequência (programadas na ordem de `fila_posicao`, depois a em andamento destacada). Botões ↑ ↓ para reordenar a fila.
+3. **Calendário** — mensal/semanal (toggle), ordens posicionadas por `inicio_previsto`, coloridas por equipamento. Clique no dia abre lista; clique na ordem abre painel lateral.
+4. **Gantt** — timeline horizontal, eixo Y = equipamentos, eixo X = tempo (zoom dia/semana). Barras com largura = `duracao_estimada_min`. Em andamento usa início real; programadas usam `inicio_previsto`.
 
-src/lib/automation/
-  types.ts                    # schemas Zod dos nós
-  evaluator.functions.ts      # createServerFn: dispatchTrigger, executeRun, approveRun, rejectRun
-  actions/{movimentacao,ordem,webhook,email}.ts
+## Programação de nova ordem
 
-supabase migrations:
-  automation_flows(id, owner_id, nome, ativo, graph jsonb, created_at, updated_at)
-  automation_runs(id, flow_id, owner_id, status, trigger_context jsonb, planned_actions jsonb, result jsonb, created_at, approved_at, approved_by)
-  triggers em tags_live / ordens_producao chamando função public.enqueue_automation_runs
-  pg_cron 1x/min para fluxos com gatilho de agendamento
-```
+Diálogo "Programar ordem" (reaproveita `NovaOPDialog` com modo `programar`):
 
-Todas as tabelas com RLS escopado por `owner_id = auth.uid()`, GRANT para `authenticated`/`service_role`.
+- Campos obrigatórios: produto, equipamento, quantidade, **data/hora prevista**, **duração estimada**, **prioridade**.
+- Duração é pré-preenchida somando `tempo_estimado_minutos` dos processos do produto, e editável.
+- Salva com `status = 'programada'` e `fila_posicao` = próximo na fila do equipamento.
 
-## Limites desta entrega
+## Ação "Iniciar produção"
 
-- Email usa Lovable Emails — vou deixar a infra pronta mas a verificação do domínio é um passo seu (te aviso quando chegar lá).
-- Nesta primeira versão **não** terei: loops, branches paralelas, retry com backoff configurável, versionamento de fluxo, ou marketplace de templates. Dá pra adicionar depois.
-- Página de **Alertas** (que você mencionou antes) vou construir num passo seguinte, reaproveitando esse motor — alerta vira só uma ação "enviar alerta" dentro de um fluxo.
+Ao clicar numa ordem programada:
 
-## Próximo passo
+- Se o equipamento está **disponível** → confirma, atualiza `status = 'em_andamento'`, grava `inicio_em` com `server_now()`, marca equipamento como `ocupado`, reordena a fila, navega para `/producao/$id`.
+- Se está **ocupado** → mostra que a ordem ficará **enfileirada** (posição N) e fica disponível um botão "Iniciar assim que liberar". Quando a OP atual é finalizada (no `finalizar` já existente em `producao.$id.tsx`), promovemos automaticamente a próxima da fila para `em_andamento` se ela tiver a flag `auto_iniciar`.
 
-Se aprovar, eu sigo nesta ordem: (1) migration do schema e triggers, (2) editor canvas + CRUD de fluxos, (3) motor de execução + dock de aprovação, (4) ações concretas (estoque, ordem, webhook), (5) email + cron de agendamento.
+## Detalhes técnicos
+
+- Reusa `supabase.rpc('server_now')` já existente para timestamps.
+- Query única `["pcp-ordens"]` com refetch 15s, alimentando as 4 visualizações via `useMemo`.
+- Kanban e Fila: drag opcional (fase 2); v1 usa botões ↑ ↓ e select de status.
+- Calendário: componente leve próprio em grid CSS (sem dependência nova) para evitar peso de react-big-calendar.
+- Gantt: SVG simples calculado a partir de min/max das datas visíveis; zoom controla escala px/minuto.
+- Painel lateral (`Sheet`) com detalhes da ordem + ações: Iniciar, Reprogramar, Cancelar, Abrir.
+- Permissões: respeita `usePagePermissions('producao', { needEdit })` para ações de escrita.
+
+## Arquivos
+
+- **Migração**: adiciona colunas, valor de status `programada`, índice.
+- **Nova rota**: `src/routes/_authenticated/producao.pcp.tsx` (página com Tabs).
+- **Novos componentes** em `src/components/producao/pcp/`: `KanbanView.tsx`, `FilaEquipamentosView.tsx`, `CalendarioView.tsx`, `GanttView.tsx`, `ProgramarOrdemDialog.tsx`, `OrdemDetalheSheet.tsx`.
+- **Editado**: `producao.index.tsx` (link "PCP / Ordens"), `producao.$id.tsx` (ao finalizar, promover próxima da fila).
+
+## Fora do escopo desta entrega
+
+- Drag-and-drop entre colunas/datas (botões e diálogo de reprogramar cobrem o caso).
+- Sugerir equipamento alternativo automaticamente.
+- Notificações push quando o equipamento libera.

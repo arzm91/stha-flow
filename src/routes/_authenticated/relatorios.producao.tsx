@@ -47,7 +47,7 @@ export const Route = createFileRoute("/_authenticated/relatorios/producao")({
       for (const r of rows) {
         planejado += Number(r.qtd_planejada) || 0;
         produzido += Number(r.qtd_produzida) || 0;
-        if (r.fim_em) {
+        if (r.fim_em && r.inicio_em) {
           tempoMs += new Date(r.fim_em).getTime() - new Date(r.inicio_em).getTime();
           tempoCount++;
         }
@@ -90,9 +90,9 @@ export const Route = createFileRoute("/_authenticated/relatorios/producao")({
           r.numero,
           (r.produto as { nome?: string } | null)?.nome ?? "—",
           (r.equipamento as { nome?: string } | null)?.nome ?? "—",
-          formatDate(r.inicio_em),
+          r.inicio_em ? formatDate(r.inicio_em) : "—",
           r.fim_em ? formatDate(r.fim_em) : "—",
-          r.fim_em ? durationBetween(r.inicio_em, r.fim_em) : "—",
+          r.fim_em && r.inicio_em ? durationBetween(r.inicio_em, r.fim_em) : "—",
           formatNumber(Number(r.qtd_planejada)),
           r.qtd_produzida != null ? formatNumber(Number(r.qtd_produzida)) : "—",
           r.status === "em_andamento" ? "Em andamento" : "Finalizada",
@@ -162,9 +162,9 @@ export const Route = createFileRoute("/_authenticated/relatorios/producao")({
                       <TableCell className="font-mono">{r.numero}</TableCell>
                       <TableCell>{(r.produto as { nome?: string } | null)?.nome ?? "—"}</TableCell>
                       <TableCell>{(r.equipamento as { nome?: string } | null)?.nome ?? "—"}</TableCell>
-                      <TableCell>{formatDate(r.inicio_em)}</TableCell>
+                      <TableCell>{r.inicio_em ? formatDate(r.inicio_em) : "—"}</TableCell>
                       <TableCell>{r.fim_em ? formatDate(r.fim_em) : "—"}</TableCell>
-                      <TableCell>{r.fim_em ? durationBetween(r.inicio_em, r.fim_em) : "—"}</TableCell>
+                      <TableCell>{r.fim_em && r.inicio_em ? durationBetween(r.inicio_em, r.fim_em) : "—"}</TableCell>
                       <TableCell className="font-mono">{formatNumber(Number(r.qtd_planejada))}</TableCell>
                       <TableCell className="font-mono">{r.qtd_produzida != null ? formatNumber(Number(r.qtd_produzida)) : "—"}</TableCell>
                       <TableCell><Badge variant="outline">{r.status === "em_andamento" ? "Em andamento" : "Finalizada"}</Badge></TableCell>
