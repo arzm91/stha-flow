@@ -1,11 +1,11 @@
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { keepPreviousData } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Brush, ReferenceLine, ReferenceArea } from "recharts";
-import { LineChart as LineChartIcon, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon } from "lucide-react";
+import { LineChart as LineChartIcon, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatNumber, formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
@@ -164,7 +164,12 @@ export function TagsMonitoramento({
 
   const corPorTag = useMemo(() => {
     const m = new Map<string, string>();
-    tagsDisponiveis.forEach((n, i) => m.set(n, PALETTE[i % PALETTE.length]));
+    const hash = (s: string) => {
+      let h = 0;
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+      return Math.abs(h);
+    };
+    tagsDisponiveis.forEach((n) => m.set(n, PALETTE[hash(n) % PALETTE.length]));
     return m;
   }, [tagsDisponiveis]);
 
@@ -312,10 +317,10 @@ export function TagsMonitoramento({
       </CardHeader>
 
       <CardContent className="space-y-3">
-        {/* Seletor de tags */}
-        <div className="flex flex-wrap gap-2">
+        {/* Seletor de tags — linha única com scroll horizontal e setas */}
+        <TagScroller>
           {tagsDisponiveis.length === 0 ? (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground px-2">
               Nenhuma tag disponível para esta ordem.
             </span>
           ) : (
@@ -331,7 +336,7 @@ export function TagsMonitoramento({
                   size="sm"
                   onClick={() => toggle(nome)}
                   className={cn(
-                    "h-7 gap-2 font-mono text-xs",
+                    "h-7 shrink-0 gap-2 font-mono text-xs",
                     ativo ? "border-2" : "opacity-60 hover:opacity-100",
                   )}
                   style={ativo ? { borderColor: cor, color: cor } : undefined}
@@ -343,7 +348,8 @@ export function TagsMonitoramento({
               );
             })
           )}
-        </div>
+        </TagScroller>
+
 
         {/* Seletor de tipos de eventos sobrepostos ao gráfico */}
         <div className="flex flex-wrap items-center gap-1.5 border-t border-border pt-2">
@@ -429,7 +435,7 @@ export function TagsMonitoramento({
                     name={nome}
                     stroke={corPorTag.get(nome)}
                     strokeWidth={2}
-                    dot={false}
+                    dot={{ r: 2 }}
                     isAnimationActive={false}
                     connectNulls
                   />
@@ -591,5 +597,68 @@ export function TagsMonitoramento({
     </Card>
   );
 }
+
+function TagScroller({ children }: { children: React.ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [canLeft, setCanLeft] = useState(false);
+  const [canRight, setCanRight] = useState(false);
+
+  const update = () => {
+    const el = ref.current;
+    if (!el) return;
+    setCanLeft(el.scrollLeft > 2);
+    setCanRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 2);
+  };
+
+  useEffect(() => {
+    update();
+    const el = ref.current;
+    if (!el) return;
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [children]);
+
+  const scrollBy = (dir: 1 | -1) => {
+    const el = ref.current;
+    if (!el) return;
+    el.scrollBy({ left: dir * Math.max(160, el.clientWidth * 0.6), behavior: "smooth" });
+  };
+
+  return (
+    <div className="relative flex items-center">
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={() => scrollBy(-1)}
+        disabled={!canLeft}
+        className="h-7 w-6 shrink-0"
+        aria-label="Rolar para a esquerda"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+      <div
+        ref={ref}
+        onScroll={update}
+        className="flex flex-1 items-center gap-2 overflow-x-auto scroll-smooth py-0.5 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+      >
+        {children}
+      </div>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        onClick={() => scrollBy(1)}
+        disabled={!canRight}
+        className="h-7 w-6 shrink-0"
+        aria-label="Rolar para a direita"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
+
 
 
