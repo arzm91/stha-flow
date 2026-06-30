@@ -530,6 +530,43 @@ export function TagsMonitoramento({
             })}
           </div>
         ) : null}
+
+        {/* Linha do tempo de eventos da janela visível */}
+        {janela && (faixasVisiveis.length > 0 || pontosVisiveis.length > 0) ? (
+          <div className="rounded-md border border-border bg-muted/10 p-2">
+            <div className="mb-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+              Linha do tempo ({faixasVisiveis.length} processos · {pontosVisiveis.length} eventos)
+            </div>
+            <div className="max-h-40 space-y-1 overflow-y-auto text-xs">
+              {[
+                ...faixasVisiveis.map((f) => ({
+                  when: f.inicio,
+                  cor: f.cor,
+                  label: `Processo: ${f.titulo}`,
+                  extra: `${formatDuration(f.fim - f.inicio)}${f.emCurso ? " (em curso)" : ""}${f.detalhe ? " — " + f.detalhe : ""}`,
+                })),
+                ...pontosVisiveis.map((p) => ({
+                  when: p.when,
+                  cor: p.cor,
+                  label: `${p.tipo === "parametro" ? "Parâmetro" : p.tipo === "analise" ? "Análise" : p.tipo === "tag_captura" ? "Captura" : "Observação"}: ${p.titulo}`,
+                  extra: p.detalhe ?? "",
+                })),
+              ]
+                .sort((a, b) => a.when - b.when)
+                .map((row, i) => (
+                  <div key={i} className="flex items-start gap-2">
+                    <span className="mt-1 inline-block h-2 w-2 shrink-0 rounded-full" style={{ background: row.cor }} />
+                    <span className="font-mono text-[10px] text-muted-foreground tabular-nums">
+                      {new Date(row.when).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                    </span>
+                    <span className="font-medium">{row.label}</span>
+                    {row.extra ? <span className="truncate text-muted-foreground">{row.extra}</span> : null}
+                  </div>
+                ))}
+            </div>
+          </div>
+        ) : null}
+
       </CardContent>
     </Card>
   );
