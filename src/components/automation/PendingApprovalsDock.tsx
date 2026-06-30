@@ -91,16 +91,52 @@ export function PendingApprovalsDock() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleApprove(id: string) {
+  const [dialogRun, setDialogRun] = useState<Run | null>(null);
+  const [dialogQtd, setDialogQtd] = useState(0);
+
+  function runNeedsApprovalDialog(r: Run): boolean {
+    const pa = r.planned_actions;
+    const nodesArr = Array.isArray(pa) ? pa : (pa?.nodes ?? []);
+    return nodesArr.some(
+      (n) => n.type === "action" && (n.data?.config?.type === "finalizar_op"),
+    );
+  }
+
+  async function openApprovalFor(r: Run) {
+    // Sugerir quantidade: tenta achar a OP em andamento do equipamento da ação finalizar_op
+    const pa = r.planned_actions;
+    const nodesArr = Array.isArray(pa) ? pa : (pa?.nodes ?? []);
+    const finalAction = nodesArr.find(
+      (n) => n.type === "action" && n.data?.config?.type === "finalizar_op",
+    );
+    const equipId = (finalAction?.data?.config?.equipamento_id as string) ?? null;
+    let qtd = 0;
+    if (equipId) {
+      const { data: op } = await supabase
+        .from("ordens_producao")
+        .select("qtd_planejada")
+        .eq("equipamento_id", equipId)
+        .eq("status", "em_andamento")
+        .order("inicio_em", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      qtd = Number(op?.qtd_planejada ?? 0);
+    }
+    setDialogQtd(qtd);
+    setDialogRun(r);
+  }
+
+  async function handleApprove(id: string, payload?: ApprovalPayload) {
     setBusy(id);
     try {
-      const r = await approve({ data: { runId: id } });
+      const r = await approve({ data: { runId: id, payload } });
       if (r.ok) toast.success("Ações executadas");
       else toast.error("Falha em ao menos uma ação");
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erro");
     }
     setBusy(null);
+    setDialogRun(null);
     load();
   }
   async function handleReject(id: string) {
