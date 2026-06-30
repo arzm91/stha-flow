@@ -147,11 +147,41 @@ export function TagsMonitoramento({
     }
     // garante todas as tags do equipamento, mesmo sem pontos ainda
     for (const n of tagNomes ?? []) if (!map.has(n)) map.set(n, null);
+    // ordenação alfabética estável para evitar reordenação visual
+    const nomes = Array.from(map.keys()).sort((a, b) => a.localeCompare(b));
     return {
-      tagsDisponiveis: Array.from(map.keys()),
+      tagsDisponiveis: nomes,
       unidades: map,
     };
   }, [dadosOrdenados, tagNomes]);
+
+  const [selecionadas, setSelecionadas] = useState<string[]>([]);
+  const [busca, setBusca] = useState("");
+
+  // seleciona automaticamente até 3 tags na primeira carga
+  useEffect(() => {
+    if (selecionadas.length === 0 && tagsDisponiveis.length > 0) {
+      setSelecionadas(tagsDisponiveis.slice(0, Math.min(3, tagsDisponiveis.length)));
+    }
+  }, [tagsDisponiveis, selecionadas.length]);
+
+  // Cor estável por nome da tag (hash determinístico → não depende da ordem nem dos dados carregados)
+  const corPorTag = useMemo(() => {
+    const hash = (s: string) => {
+      let h = 0;
+      for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+      return Math.abs(h);
+    };
+    const m = new Map<string, string>();
+    for (const n of tagsDisponiveis) m.set(n, PALETTE[hash(n) % PALETTE.length]);
+    return m;
+  }, [tagsDisponiveis]);
+
+  const tagsFiltradas = useMemo(() => {
+    const q = busca.trim().toLowerCase();
+    if (!q) return tagsDisponiveis;
+    return tagsDisponiveis.filter((n) => n.toLowerCase().includes(q));
+  }, [tagsDisponiveis, busca]);
 
   const [selecionadas, setSelecionadas] = useState<string[]>([]);
 
