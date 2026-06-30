@@ -59,6 +59,7 @@ export function NodeConfigPanel({
                 <SelectContent>
                   <SelectItem value="tag_value">Tag comparada a um valor</SelectItem>
                   <SelectItem value="tag_stale">Tag sem atualização</SelectItem>
+                  <SelectItem value="tag_stabilization">Detecção/estabilização de tag</SelectItem>
                   <SelectItem value="production_event">Evento de produção</SelectItem>
                   <SelectItem value="schedule">Agendamento (cron)</SelectItem>
                 </SelectContent>
