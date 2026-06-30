@@ -282,26 +282,10 @@ function ProdutosPage() {
       }
       if (!produtoId) throw new Error("Falha ao salvar produto");
 
-      // Single process per produto: wipe all existing processes (cascades activities), recreate one.
-      const { error: delErr } = await supabase.from("produto_processos").delete().eq("produto_id", produtoId);
-      if (delErr) throw delErr;
-
       const etapasValidas = etapas.filter((e) => e.descricao.trim());
       if (etapasValidas.length === 0) return;
 
-      const { data: procIns, error: procErr } = await supabase
-        .from("produto_processos")
-        .insert({
-          owner_id: ownerId,
-          produto_id: produtoId,
-          nome: "Processo de fabricação",
-          ordem: 0,
-        })
-        .select("id")
-        .single();
-      if (procErr) throw procErr;
-
-      const toInsert = etapasValidas.map((e, idx) => {
+      const atividadesPayload = etapasValidas.map((e, idx) => {
         const gatilhos =
           e.tipo === "materia_prima"
             ? e.gatilhos
@@ -314,18 +298,16 @@ function ProdutosPage() {
                 }))
             : [];
         return {
-          owner_id: ownerId,
-          processo_id: procIns.id,
           descricao: e.descricao.trim(),
           ordem: idx,
           tipo: e.tipo,
-          quantidade: e.tipo === "materia_prima" && e.qtd_modo === "fixa" && e.quantidade !== "" ? Number(e.quantidade) : null,
-          unidade: e.tipo === "tag_captura" ? (e.unidade || null) : e.tipo === "materia_prima" ? (e.unidade || null) : null,
-          tempo_estimado_min: e.tempo_estimado_min === "" ? null : Number(e.tempo_estimado_min),
-          tag_nome: e.tipo === "tag_captura" ? (e.tag_nome || null) : null,
+          quantidade: e.tipo === "materia_prima" && e.qtd_modo === "fixa" && e.quantidade !== "" ? String(Number(e.quantidade)) : "",
+          unidade: e.tipo === "tag_captura" ? (e.unidade || "") : e.tipo === "materia_prima" ? (e.unidade || "") : "",
+          tempo_estimado_min: e.tempo_estimado_min === "" ? "" : String(Number(e.tempo_estimado_min)),
+          tag_nome: e.tipo === "tag_captura" ? (e.tag_nome || "") : "",
           gatilhos,
           qtd_modo: e.tipo === "materia_prima" ? e.qtd_modo : "fixa",
-          qtd_tag_nome: e.tipo === "materia_prima" && e.qtd_modo !== "fixa" ? (e.qtd_tag_nome || null) : null,
+          qtd_tag_nome: e.tipo === "materia_prima" && e.qtd_modo !== "fixa" ? (e.qtd_tag_nome || "") : "",
           captura_modo: e.tipo === "tag_captura" ? e.captura_modo : "na_execucao",
           captura_gatilho:
             e.tipo === "tag_captura" && e.captura_modo === "gatilho_valor"
@@ -335,10 +317,16 @@ function ProdutosPage() {
                 }
               : null,
         };
-
       });
-      const { error: ativErr } = await supabase.from("produto_atividades").insert(toInsert);
-      if (ativErr) throw ativErr;
+
+      // Atomic save: archives previous active version and creates a new one in a single transaction.
+      // If anything fails the database is rolled back and your form data stays intact.
+      const { error: rpcErr } = await supabase.rpc("save_produto_processo", {
+        p_produto_id: produtoId,
+        p_nome: "Processo de fabricação",
+        p_atividades: atividadesPayload,
+      });
+      if (rpcErr) throw rpcErr;
     },
     onSuccess: () => {
       toast.success(editing ? "Produto atualizado" : "Produto criado");
@@ -349,9 +337,22 @@ function ProdutosPage() {
       setForm(emptyProduto);
       setEtapas([]);
     },
-    onError: async (e: Error) => {
+    onError: async (e: Error & { code?: string; details?: string; hint?: string }) => {
       const { isAdminCancelled } = await import("@/lib/security/guard-admin");
-      if (!isAdminCancelled(e)) toast.error(e.message);
+      if (isAdminCancelled(e)) return;
+      // Translate common Postgres errors into something users can act on.
+      const raw = (e?.message || "") + " " + (e?.details || "");
+      let friendly = e.message;
+      if (e.code === "23503" || /foreign key|violates|forgrei/i.test(raw)) {
+        friendly =
+          "Não foi possível salvar porque este produto está vinculado a ordens de produção, alertas ou outros registros. " +
+          "Suas alterações no formulário foram preservadas — feche, finalize/remova o vínculo apontado e tente novamente.";
+      } else if (e.code === "23505") {
+        friendly = "Já existe um registro com esse código. Use um código diferente.";
+      } else if (e.code === "23514") {
+        friendly = "Algum campo está com valor inválido. Revise os campos destacados.";
+      }
+      toast.error(friendly, { duration: 8000 });
     },
   });
 
