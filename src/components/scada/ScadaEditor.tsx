@@ -174,7 +174,7 @@ export function ScadaEditor({ doc, onChange, onSave, saving, headerRight }: Scad
           />
           <div className="mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
             <span>Clique num círculo azul da porta e depois em outro para conectar.</span>
-            <span>Arraste no vazio para pan · Roda do mouse para zoom.</span>
+            <span>Enquadramento fixo — o que você vê aqui é o que aparece no acompanhamento da produção.</span>
           </div>
         </div>
 
@@ -344,9 +344,10 @@ function ElementPanel({ el, doc, tagNames, onPatch, onBinding, onRemoveBinding, 
               <TagSelect value={el.bindings.value.tag} names={tagNames} onChange={(t) => onBinding("value", { ...el.bindings!.value!, tag: t })} />
               <div className="grid grid-cols-2 gap-2">
                 <NumberField label="Casas dec." value={el.bindings.value.decimals} onChange={(v) => onBinding("value", { ...el.bindings!.value!, decimals: Math.max(0, Math.min(4, v)) })} />
-                <div className="flex items-end gap-2">
+                <NumberField label="Fonte (px)" value={el.bindings.value.fontSize ?? 14} onChange={(v) => onBinding("value", { ...el.bindings!.value!, fontSize: Math.max(8, Math.min(96, v)) })} />
+                <div className="col-span-2 flex items-end gap-2">
                   <Switch checked={el.bindings.value.showUnit} onCheckedChange={(v) => onBinding("value", { ...el.bindings!.value!, showUnit: v })} />
-                  <Label className="text-xs">Unidade</Label>
+                  <Label className="text-xs">Mostrar unidade</Label>
                 </div>
               </div>
             </>
