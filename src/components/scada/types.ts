@@ -44,7 +44,7 @@ export type SymbolKind =
   | "shape_rect" | "shape_circle" | "shape_polygon" | "text" | "arrow";
 
 export type BindingLevel = { tag: string; min: number; max: number };
-export type BindingValue = { tag: string; decimals: number; showUnit: boolean };
+export type BindingValue = { tag: string; decimals: number; showUnit: boolean; fontSize?: number };
 export type ColorRange = { op: "<" | ">" | "between"; a: number; b?: number; color: string };
 export type BindingColor = { tag: string; ranges: ColorRange[] };
 export type BindingOnOff = { tag: string; threshold: number };
