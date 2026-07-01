@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogT
 import { ArrowLeft, CheckCircle2, Gauge, FlaskConical, MessageSquare, Activity, AlertTriangle, Play, Square, ListChecks, Clock, History, Maximize2, Minimize2 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate, formatNumber, durationFromNow, durationBetween } from "@/lib/format";
-import { PfdViewer } from "@/components/PfdViewer";
+import { ScadaViewer } from "@/components/scada/ScadaViewer";
 import { TagsMonitoramento } from "@/components/producao/TagsMonitoramento";
 import { gerarRelatorioProducaoPdf } from "@/lib/producao-pdf";
 
@@ -141,7 +141,7 @@ function OPPage() {
         <Info label="Equipamento" value={(op.data.equipamento as any)?.nome ?? "—"} />
       </div>
 
-      {op.data.equipamento_id ? <PfdViewer equipamentoId={op.data.equipamento_id as string} /> : null}
+      {op.data.equipamento_id ? <ScadaViewer equipamentoId={op.data.equipamento_id as string} /> : null}
 
       <TagsMonitoramento ordemId={id} tagNomes={tagNomes} ativa={!isFinal} />
 
