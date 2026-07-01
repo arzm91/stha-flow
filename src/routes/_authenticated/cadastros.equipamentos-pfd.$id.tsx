@@ -445,17 +445,27 @@ function PfdEditor() {
   const onNodesChange = useCallback(
     (changes: NodeChange[]) => setNodes((nds) => {
       const next = applyNodeChanges(changes, nds) as Node<AnyData>[];
-      // Persist NodeResizer dimensions into data so they survive save/reload.
+      // Persist NodeResizer dimensions into data (and mirror into style) so
+      // they survive save/reload. NodeResizer may update either n.style or
+      // n.width/n.height depending on the change type — read both.
       let touched = false;
       const synced = next.map((n) => {
-        const styleW = (n.style?.width as number | undefined) ?? undefined;
-        const styleH = (n.style?.height as number | undefined) ?? undefined;
+        const w =
+          (n.style?.width as number | undefined) ??
+          (n as { width?: number }).width;
+        const h =
+          (n.style?.height as number | undefined) ??
+          (n as { height?: number }).height;
         if (
-          styleW && styleH &&
-          ((n.data as AnyData)?.width !== styleW || (n.data as AnyData)?.height !== styleH)
+          w && h &&
+          ((n.data as AnyData)?.width !== w || (n.data as AnyData)?.height !== h)
         ) {
           touched = true;
-          return { ...n, data: { ...n.data, width: styleW, height: styleH } as AnyData };
+          return {
+            ...n,
+            style: { ...(n.style ?? {}), width: w, height: h },
+            data: { ...n.data, width: w, height: h } as AnyData,
+          };
         }
         return n;
       });
@@ -547,11 +557,23 @@ function PfdEditor() {
 
   async function save() {
     setSaving(true);
-    const cleanNodes = nodes.map((n) => ({
-      id: n.id, type: n.type, position: n.position,
-      style: n.style ? { width: n.style.width, height: n.style.height } : undefined,
-      data: n.data,
-    }));
+    const cleanNodes = nodes.map((n) => {
+      const w =
+        (n.style?.width as number | undefined) ??
+        (n as { width?: number }).width ??
+        (n.data as AnyData)?.width;
+      const h =
+        (n.style?.height as number | undefined) ??
+        (n as { height?: number }).height ??
+        (n.data as AnyData)?.height;
+      return {
+        id: n.id,
+        type: n.type,
+        position: n.position,
+        style: w && h ? { width: w, height: h } : undefined,
+        data: { ...n.data, ...(w && h ? { width: w, height: h } : {}) },
+      };
+    });
     const cleanEdges = edges.map((e) => ({
       id: e.id, source: e.source, target: e.target,
       sourceHandle: e.sourceHandle ?? null, targetHandle: e.targetHandle ?? null,
