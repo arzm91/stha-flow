@@ -557,11 +557,23 @@ function PfdEditor() {
 
   async function save() {
     setSaving(true);
-    const cleanNodes = nodes.map((n) => ({
-      id: n.id, type: n.type, position: n.position,
-      style: n.style ? { width: n.style.width, height: n.style.height } : undefined,
-      data: n.data,
-    }));
+    const cleanNodes = nodes.map((n) => {
+      const w =
+        (n.style?.width as number | undefined) ??
+        (n as { width?: number }).width ??
+        (n.data as AnyData)?.width;
+      const h =
+        (n.style?.height as number | undefined) ??
+        (n as { height?: number }).height ??
+        (n.data as AnyData)?.height;
+      return {
+        id: n.id,
+        type: n.type,
+        position: n.position,
+        style: w && h ? { width: w, height: h } : undefined,
+        data: { ...n.data, ...(w && h ? { width: w, height: h } : {}) },
+      };
+    });
     const cleanEdges = edges.map((e) => ({
       id: e.id, source: e.source, target: e.target,
       sourceHandle: e.sourceHandle ?? null, targetHandle: e.targetHandle ?? null,
