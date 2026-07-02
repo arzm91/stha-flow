@@ -603,6 +603,7 @@ function ProdutosPage() {
                   )}
                 </div>
 
+                <div className="space-y-3 rounded-md border border-border bg-muted/30 p-3">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-semibold">Processo de fabricação</h3>
