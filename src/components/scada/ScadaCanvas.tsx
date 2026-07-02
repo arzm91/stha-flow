@@ -108,19 +108,37 @@ export function ScadaCanvas({
     .sort((a, b) => ((layerZ.get(a.layerId) ?? 0) - (layerZ.get(b.layerId) ?? 0)) || a.z - b.z);
   const orderedPipes = doc.pipes.filter((p) => visibleLayers.has(p.layerId));
 
+  const [zoom, setZoom] = useState(1);
+  const canZoom = !readOnly;
+  const onWheel = (e: React.WheelEvent) => {
+    if (!canZoom || !(e.ctrlKey || e.metaKey)) return;
+    e.preventDefault();
+    setZoom((z) => Math.max(0.3, Math.min(4, z - e.deltaY * 0.0015)));
+  };
+
   return (
-    <div className={className} style={{ height, background: doc.canvas.bg, borderRadius: 8, position: "relative", overflow: "hidden" }}>
+    <div className={className} style={{ height, background: doc.canvas.bg, borderRadius: 8, position: "relative", overflow: canZoom ? "auto" : "hidden" }} onWheel={onWheel}>
+      {canZoom && (
+        <div style={{ position: "sticky", top: 8, left: 8, zIndex: 10, display: "inline-flex", gap: 4, background: "rgba(15,23,42,0.85)", padding: "4px 6px", borderRadius: 6, marginLeft: 8, marginTop: 8, width: "fit-content", alignItems: "center", fontSize: 12, color: "#e2e8f0", fontFamily: "monospace" }}>
+          <button type="button" onClick={() => setZoom((z) => Math.max(0.3, z - 0.1))} style={{ width: 22, height: 22, background: "#1e293b", color: "#e2e8f0", borderRadius: 4, border: "none", cursor: "pointer" }}>−</button>
+          <span style={{ minWidth: 40, textAlign: "center" }}>{Math.round(zoom * 100)}%</span>
+          <button type="button" onClick={() => setZoom((z) => Math.min(4, z + 0.1))} style={{ width: 22, height: 22, background: "#1e293b", color: "#e2e8f0", borderRadius: 4, border: "none", cursor: "pointer" }}>+</button>
+          <button type="button" onClick={() => setZoom(1)} style={{ height: 22, padding: "0 6px", background: "#1e293b", color: "#e2e8f0", borderRadius: 4, border: "none", cursor: "pointer" }}>reset</button>
+        </div>
+      )}
       <svg
         ref={svgRef}
-        width="100%" height="100%"
+        width={canZoom ? `${zoom * 100}%` : "100%"}
+        height={canZoom ? `${zoom * 100}%` : "100%"}
         viewBox={`0 0 ${doc.canvas.width} ${doc.canvas.height}`}
         preserveAspectRatio="xMidYMid meet"
         onMouseDown={onMouseDown}
         onMouseMove={onMouseMove}
         onMouseUp={onMouseUp}
         onMouseLeave={onMouseUp}
-        style={{ cursor: pending ? "crosshair" : "default", userSelect: "none", display: "block" }}
+        style={{ cursor: pending ? "crosshair" : "default", userSelect: "none", display: "block", marginTop: canZoom ? -30 : 0 }}
       >
+
         <defs>
           <pattern id="scada-grid" width={grid} height={grid} patternUnits="userSpaceOnUse">
             <circle cx={0.5} cy={0.5} r={0.6} fill="#334155" />
