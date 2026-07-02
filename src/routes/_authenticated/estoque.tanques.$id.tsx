@@ -43,11 +43,22 @@ function TanqueDetail() {
     queryKey: ["analises-cadastro"],
     queryFn: async () => (await supabase.from("analises_cadastro").select("id,nome,unidade,valor_min,valor_max").order("nome")).data ?? [],
   });
+  const ajustes = useQuery({
+    queryKey: ["tanque-ajustes-detail", id],
+    queryFn: async () => (await supabase.from("tanque_ajustes_saldo")
+      .select("id,saldo,ajustado_em,observacao,produto:produto_id(nome,codigo)")
+      .eq("tanque_id", id).order("ajustado_em", { ascending: false })).data ?? [],
+  });
 
-  const saldo = (mov.data ?? []).reduce(
-    (s, m) => s + (m.tipo === "entrada" ? Number(m.quantidade) : -Number(m.quantidade)),
-    0,
-  );
+  const ultimoAjuste = (ajustes.data ?? [])[0];
+  const baselineTs = ultimoAjuste ? new Date(ultimoAjuste.ajustado_em).getTime() : null;
+  const baseline = ultimoAjuste ? Number(ultimoAjuste.saldo) : 0;
+  const saldo = (mov.data ?? []).reduce((s, m) => {
+    if (baselineTs != null && new Date(m.ocorrido_em).getTime() <= baselineTs) return s;
+    return s + (m.tipo === "entrada" ? Number(m.quantidade) : -Number(m.quantidade));
+  }, baseline);
+
+  const [ajusteOpen, setAjusteOpen] = useState(false);
 
   const [open, setOpen] = useState(false);
   const [analiseId, setAnaliseId] = useState("");
