@@ -134,6 +134,8 @@ function ProdutosPage() {
   const [editing, setEditing] = useState<Produto | null>(null);
   const [form, setForm] = useState<typeof emptyProduto>(emptyProduto);
   const [etapas, setEtapas] = useState<Etapa[]>([]);
+  type ReceitaItem = { id?: string; materia_prima_id: string; percentual: string; tag_consumo_nome: string };
+  const [receita, setReceita] = useState<ReceitaItem[]>([]);
 
   const list = useQuery({
     queryKey: ["produtos"],
