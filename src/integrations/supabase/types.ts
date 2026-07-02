@@ -314,6 +314,8 @@ export type Database = {
           descricao: string | null
           graph: Json
           id: string
+          last_match_at: string | null
+          last_match_state: boolean
           last_triggered_at: string | null
           nome: string
           notify_emails: string[]
@@ -329,6 +331,8 @@ export type Database = {
           descricao?: string | null
           graph?: Json
           id?: string
+          last_match_at?: string | null
+          last_match_state?: boolean
           last_triggered_at?: string | null
           nome: string
           notify_emails?: string[]
@@ -344,6 +348,8 @@ export type Database = {
           descricao?: string | null
           graph?: Json
           id?: string
+          last_match_at?: string | null
+          last_match_state?: boolean
           last_triggered_at?: string | null
           nome?: string
           notify_emails?: string[]
