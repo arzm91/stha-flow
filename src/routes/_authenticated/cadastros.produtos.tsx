@@ -283,6 +283,17 @@ function ProdutosPage() {
       }),
     );
 
+    // Load recipe
+    const { data: rec } = await supabase.from("produto_receita")
+      .select("id, materia_prima_id, percentual, tag_consumo_nome, ordem")
+      .eq("produto_id", r.id).order("ordem");
+    setReceita(((rec ?? []) as Array<{ id: string; materia_prima_id: string; percentual: number | null; tag_consumo_nome: string | null }>).map((x) => ({
+      id: x.id,
+      materia_prima_id: x.materia_prima_id,
+      percentual: x.percentual == null ? "" : String(x.percentual),
+      tag_consumo_nome: x.tag_consumo_nome ?? "",
+    })));
+
     setOpen(true);
   };
 
