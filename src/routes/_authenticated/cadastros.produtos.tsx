@@ -205,6 +205,7 @@ function ProdutosPage() {
     setEditing(null);
     setForm(emptyProduto);
     setEtapas([]);
+    setReceita([]);
     setOpen(true);
   };
 
