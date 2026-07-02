@@ -564,8 +564,15 @@ function AvancoProducaoHeader({
             </div>
             <div className="ml-auto min-w-[180px]">
               <div className="text-xs uppercase tracking-wider text-muted-foreground">
-                Índice de produção {tagConsumo ? <>· <span className="font-mono">produção / {tagConsumo}</span></> : null}
+                Índice de produção {tagConsumo && tagVel ? <>· <span className="font-mono">{tagConsumo} / {tagVel}</span></> : null}
               </div>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className={`font-mono text-2xl font-semibold ${foraFaixa ? "text-destructive" : dentroFaixa ? "text-success" : ""}`}>
+                  {indice != null ? indice.toFixed(3) : "—"}
+                </span>
+                {cons?.unidade && vel?.unidade ? (
+                  <span className="text-xs text-muted-foreground">{cons.unidade}/{vel.unidade}</span>
+                ) : null}
               <div className="mt-1 flex items-baseline gap-2">
                 <span className={`font-mono text-2xl font-semibold ${foraFaixa ? "text-destructive" : dentroFaixa ? "text-success" : ""}`}>
                   {indice != null ? indice.toFixed(3) : "—"}
