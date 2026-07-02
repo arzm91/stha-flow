@@ -32,7 +32,7 @@ function OPPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ordens_producao")
-        .select("*, produto:produto_id(id,nome,codigo,unidade), equipamento:equipamento_id(id,codigo,nome,tag_nomes), tanque:tanque_destino_id(nome,codigo)")
+        .select("*, produto:produto_id(id,nome,codigo,unidade), equipamento:equipamento_id(id,codigo,nome,tag_nomes,tag_velocidade_producao,tag_producao_total), tanque:tanque_destino_id(nome,codigo)")
         .eq("id", id).maybeSingle();
       if (error) throw error;
       return data;
@@ -108,7 +108,11 @@ function OPPage() {
   if (!op.data) return <div className="text-sm text-muted-foreground">Ordem não encontrada.</div>;
 
   const isFinal = op.data.status === "finalizada";
-  const tagNomes = ((op.data.equipamento as any)?.tag_nomes ?? []) as string[];
+  const equip = op.data.equipamento as { tag_nomes?: string[]; tag_velocidade_producao?: string | null; tag_producao_total?: string | null; nome?: string } | null;
+  const tagNomes = (equip?.tag_nomes ?? []) as string[];
+  const tagVel = equip?.tag_velocidade_producao || null;
+  const tagTotal = equip?.tag_producao_total || null;
+  const qtdPlanejada = Number(op.data.qtd_planejada ?? 0);
 
   return (
     <div ref={containerRef} className={isFs ? "h-screen w-screen overflow-auto bg-background p-6" : undefined}>
@@ -117,7 +121,7 @@ function OPPage() {
       </Button>
       <PageHeader
         title={`OP ${op.data.numero}`}
-        description={`${(op.data.produto as any)?.nome ?? ""} · ${(op.data.equipamento as any)?.nome ?? ""}`}
+        description={`${(op.data.produto as any)?.nome ?? ""} · ${equip?.nome ?? ""}`}
         actions={
           <div className="flex items-center gap-2">
             <Badge variant="outline" className={isFinal ? "bg-success/20 text-success border-success/30" : "bg-primary/20 text-primary border-primary/30"}>
@@ -132,13 +136,17 @@ function OPPage() {
         }
       />
 
+      {(tagVel || tagTotal) ? (
+        <AvancoProducaoHeader tagVel={tagVel} tagTotal={tagTotal} qtdPlanejada={qtdPlanejada} />
+      ) : null}
+
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
         <Info label="Início" value={op.data.inicio_em ? formatDate(op.data.inicio_em) : "—"} />
         <Info label="Fim" value={op.data.fim_em ? formatDate(op.data.fim_em) : "—"} />
         <Info label="Duração total" value={op.data.inicio_em ? (op.data.fim_em ? durationBetween(op.data.inicio_em, op.data.fim_em) : durationFromNow(op.data.inicio_em)) : "—"} />
         <Info label="Qtd. planejada / produzida" value={`${formatNumber(Number(op.data.qtd_planejada))} / ${op.data.qtd_produzida != null ? formatNumber(Number(op.data.qtd_produzida)) : "—"}`} />
         <Info label="Operador" value={operador.data?.nome ?? "—"} />
-        <Info label="Equipamento" value={(op.data.equipamento as any)?.nome ?? "—"} />
+        <Info label="Equipamento" value={equip?.nome ?? "—"} />
       </div>
 
       {op.data.equipamento_id ? <ScadaViewer equipamentoId={op.data.equipamento_id as string} /> : null}
@@ -400,6 +408,79 @@ function Info({ label, value }: { label: string; value: string }) {
     </CardContent></Card>
   );
 }
+
+function AvancoProducaoHeader({
+  tagVel, tagTotal, qtdPlanejada,
+}: { tagVel: string | null; tagTotal: string | null; qtdPlanejada: number }) {
+  const nomes = [tagVel, tagTotal].filter(Boolean) as string[];
+  const q = useQuery({
+    queryKey: ["op-avanco-tags", nomes.join(",")],
+    enabled: nomes.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("tags_live")
+        .select("nome,valor,valor_num,unidade")
+        .in("nome", nomes);
+      return (data ?? []) as Array<{ nome: string; valor: string | null; valor_num: number | null; unidade: string | null }>;
+    },
+    refetchInterval: 3000,
+  });
+  const map = new Map((q.data ?? []).map((t) => [t.nome, t]));
+  const vel = tagVel ? map.get(tagVel) : null;
+  const tot = tagTotal ? map.get(tagTotal) : null;
+  const totalNum = tot?.valor_num ?? null;
+  const pct = totalNum != null && qtdPlanejada > 0
+    ? Math.max(0, Math.min(100, (totalNum / qtdPlanejada) * 100))
+    : null;
+
+  return (
+    <Card className="mb-4 border-primary/30 bg-primary/5">
+      <CardContent className="grid gap-4 p-4 md:grid-cols-3">
+        {tagTotal ? (
+          <div className="md:col-span-2">
+            <div className="flex items-baseline justify-between gap-2">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                Avanço da produção · <span className="font-mono">{tagTotal}</span>
+              </div>
+              {pct != null ? (
+                <div className="font-mono text-sm font-semibold text-primary">{pct.toFixed(1)}%</div>
+              ) : null}
+            </div>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="font-mono text-2xl font-semibold">
+                {totalNum != null ? formatNumber(totalNum) : (tot?.valor ?? "—")}
+              </span>
+              <span className="text-sm text-muted-foreground">{tot?.unidade ?? ""}</span>
+              <span className="ml-auto text-xs text-muted-foreground">
+                / {formatNumber(qtdPlanejada)} planejado
+              </span>
+            </div>
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full bg-primary transition-all"
+                style={{ width: `${pct ?? 0}%` }}
+              />
+            </div>
+          </div>
+        ) : null}
+        {tagVel ? (
+          <div>
+            <div className="text-xs uppercase tracking-wider text-muted-foreground">
+              Velocidade · <span className="font-mono">{tagVel}</span>
+            </div>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="font-mono text-2xl font-semibold text-success">
+                {vel?.valor_num != null ? formatNumber(vel.valor_num) : (vel?.valor ?? "—")}
+              </span>
+              <span className="text-sm text-muted-foreground">{vel?.unidade ?? ""}</span>
+            </div>
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 
 function TagsDoEquipamento({ tagNomes, ordemId, disabled }: { tagNomes: string[]; ordemId: string; disabled: boolean }) {
   const qc = useQueryClient();

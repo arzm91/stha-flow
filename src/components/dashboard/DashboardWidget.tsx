@@ -185,7 +185,11 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
       );
     }
     const o = data.ordem;
-    const pct = o.qtd_planejada > 0 ? Math.min(100, (o.qtd_produzida / o.qtd_planejada) * 100) : 0;
+    const totalVal = data.tag_total?.valor_num ?? null;
+    const displayVal = totalVal ?? o.qtd_produzida;
+    const displayUnit = totalVal != null ? (data.tag_total?.unidade ?? "") : "";
+    const pct = o.qtd_planejada > 0 ? Math.min(100, (displayVal / o.qtd_planejada) * 100) : 0;
+    const vel = data.tag_vel;
     return (
       <Link to="/producao/$id" params={{ id: o.id }} className="block h-full">
         <div className="flex h-full flex-col gap-2 text-sm">
@@ -199,9 +203,18 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
             </span>
           </div>
           <div className="truncate text-xs text-muted-foreground">{o.produto_nome}</div>
+          {vel ? (
+            <div className="text-[11px] text-muted-foreground">
+              Velocidade: <span className="font-mono font-semibold text-success">
+                {vel.valor_num != null ? formatNumber(vel.valor_num) : "—"}{vel.unidade ? ` ${vel.unidade}` : ""}
+              </span>
+            </div>
+          ) : null}
           <div className="mt-auto">
             <div className="flex items-baseline justify-between">
-              <span className="font-mono text-lg font-semibold">{formatNumber(o.qtd_produzida)}</span>
+              <span className="font-mono text-lg font-semibold">
+                {formatNumber(displayVal)}{displayUnit ? <span className="ml-1 text-xs text-muted-foreground">{displayUnit}</span> : null}
+              </span>
               <span className="text-xs text-muted-foreground">/ {formatNumber(o.qtd_planejada)}</span>
             </div>
             <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
@@ -308,7 +321,7 @@ type WidgetData =
   | { kind: "list"; items: { title: string; subtitle?: string; value?: string }[] }
   | { kind: "gauge"; value: number; max: number; unit?: string; tag: string }
   | { kind: "tank"; loc: StorageLocation; saldo: number; tag: { nome: string; valor_num: number | null; valor: string | null; unidade: string | null } | null }
-  | { kind: "producao-prev"; equipamento_nome: string; ordem: { id: string; numero: string; status: string; produto_nome: string; qtd_planejada: number; qtd_produzida: number; inicio_em: string | null } | null }
+  | { kind: "producao-prev"; equipamento_nome: string; ordem: { id: string; numero: string; status: string; produto_nome: string; qtd_planejada: number; qtd_produzida: number; inicio_em: string | null } | null; tag_total?: { nome: string; valor_num: number | null; unidade: string | null } | null; tag_vel?: { nome: string; valor_num: number | null; unidade: string | null } | null }
   | { kind: "xray-manut"; abertas: number; em_andamento: number; atrasadas: number; concluidas_30d: number; proximas: { numero: string; prioridade: string; data: string }[] }
   | { kind: "xray-qual"; conformes: number; naoconformes: number; ultimas_nc: { titulo: string; valor: string }[] };
 
@@ -550,7 +563,7 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
       const equipId = String(config.equipamento_id ?? "");
       if (!equipId) return { kind: "kpi", value: "—", hint: "Configure o equipamento" };
       const [{ data: eq }, { data: o }] = await Promise.all([
-        supabase.from("equipamentos").select("nome").eq("id", equipId).maybeSingle(),
+        supabase.from("equipamentos").select("nome,tag_producao_total,tag_velocidade_producao").eq("id", equipId).maybeSingle(),
         supabase.from("ordens_producao")
           .select("id,numero,status,qtd_planejada,qtd_produzida,inicio_em,produto_id")
           .eq("equipamento_id", equipId).in("status", ["em_andamento", "pausada"])
@@ -558,7 +571,14 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
       ]);
       const equipamento_nome = eq?.nome ?? "Equipamento";
       if (!o) return { kind: "producao-prev", equipamento_nome, ordem: null };
-      const { data: prod } = await supabase.from("produtos").select("nome").eq("id", o.produto_id).maybeSingle();
+      const nomes = [eq?.tag_producao_total, eq?.tag_velocidade_producao].filter(Boolean) as string[];
+      const [{ data: prod }, tagsRes] = await Promise.all([
+        supabase.from("produtos").select("nome").eq("id", o.produto_id).maybeSingle(),
+        nomes.length
+          ? supabase.from("tags_live").select("nome,valor_num,unidade").in("nome", nomes)
+          : Promise.resolve({ data: [] as Array<{ nome: string; valor_num: number | null; unidade: string | null }> }),
+      ]);
+      const tMap = new Map(((tagsRes.data ?? []) as Array<{ nome: string; valor_num: number | null; unidade: string | null }>).map((t) => [t.nome, t]));
       return {
         kind: "producao-prev",
         equipamento_nome,
@@ -569,6 +589,8 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
           qtd_produzida: Number(o.qtd_produzida ?? 0),
           inicio_em: o.inicio_em,
         },
+        tag_total: eq?.tag_producao_total ? (tMap.get(eq.tag_producao_total) ?? null) : null,
+        tag_vel: eq?.tag_velocidade_producao ? (tMap.get(eq.tag_velocidade_producao) ?? null) : null,
       };
     }
 
