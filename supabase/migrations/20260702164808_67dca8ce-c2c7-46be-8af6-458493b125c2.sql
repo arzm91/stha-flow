@@ -1,0 +1,1 @@
+ALTER TABLE public.produtos ADD COLUMN IF NOT EXISTS disponivel_como_materia_prima boolean NOT NULL DEFAULT false;
