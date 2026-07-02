@@ -305,7 +305,12 @@ function AlertasPage() {
               <Badge variant="destructive" className="ml-2">{novos} novos</Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="rotinas">Rotinas semanais</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="rotinas" className="mt-4">
+          <RotinasSemanais />
+        </TabsContent>
 
         <TabsContent value="regras" className="mt-4">
           {alertas.length === 0 ? (
