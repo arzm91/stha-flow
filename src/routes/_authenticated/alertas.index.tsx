@@ -21,6 +21,7 @@ import {
 import { PageHeader } from "@/components/PageHeader";
 import { Bell, Plus, Trash2, Check, Eye, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { RotinasSemanais } from "@/components/alertas/RotinasSemanais";
 
 export const Route = createFileRoute("/_authenticated/alertas/")({
   component: AlertasPage,
@@ -304,7 +305,12 @@ function AlertasPage() {
               <Badge variant="destructive" className="ml-2">{novos} novos</Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="rotinas">Rotinas semanais</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="rotinas" className="mt-4">
+          <RotinasSemanais />
+        </TabsContent>
 
         <TabsContent value="regras" className="mt-4">
           {alertas.length === 0 ? (
