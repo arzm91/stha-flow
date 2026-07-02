@@ -16,7 +16,7 @@ function EquipamentosPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tags_live")
-        .select("nome,unidade,grupo,valor")
+        .select("nome,nome_amigavel,unidade,grupo,valor")
         .order("nome");
       if (error) throw error;
       return data ?? [];
@@ -25,9 +25,13 @@ function EquipamentosPage() {
 
   const tagOptions = (tags.data ?? []).map((t) => ({
     value: t.nome,
-    label: t.nome,
-    hint: [t.grupo, t.unidade, t.valor != null ? `${t.valor}${t.unidade ? " " + t.unidade : ""}` : null]
-      .filter(Boolean).join(" · "),
+    label: t.nome_amigavel?.trim() || t.nome,
+    hint: [
+      t.nome_amigavel?.trim() ? t.nome : null,
+      t.grupo,
+      t.unidade,
+      t.valor != null ? `${t.valor}${t.unidade ? " " + t.unidade : ""}` : null,
+    ].filter(Boolean).join(" · "),
   }));
 
   const fields: FieldDef[] = [
