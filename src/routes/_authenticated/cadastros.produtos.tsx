@@ -403,6 +403,7 @@ function ProdutosPage() {
       setEditing(null);
       setForm(emptyProduto);
       setEtapas([]);
+      setReceita([]);
     },
     onError: async (e: Error & { code?: string; details?: string; hint?: string }) => {
       const { isAdminCancelled } = await import("@/lib/security/guard-admin");
