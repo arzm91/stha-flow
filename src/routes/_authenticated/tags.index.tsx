@@ -55,6 +55,9 @@ type TagRow = {
   nome_amigavel: string | null;
   valor: string | null;
   valor_num: number | null;
+  valor_num_bruto: number | null;
+  escala_fator: number | null;
+  escala_op: string | null;
   unidade: string | null;
   grupo: string | null;
   qualidade: string | null;
