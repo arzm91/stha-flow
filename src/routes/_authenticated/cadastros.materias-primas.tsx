@@ -41,16 +41,33 @@ function MateriasPrimasPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<MP | null>(null);
   const [form, setForm] = useState<typeof empty>(empty);
+  const [promoteOpen, setPromoteOpen] = useState(false);
+  const [promoteSearch, setPromoteSearch] = useState("");
 
   const list = useQuery({
     queryKey: ["materias-primas"],
     queryFn: async () => {
       const { data, error } = await supabase.from("produtos")
-        .select("*").eq("categoria", "materia_prima")
+        .select("*")
+        .or("categoria.eq.materia_prima,disponivel_como_materia_prima.eq.true")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return (data as MP[]) ?? [];
     },
+  });
+
+  const produtosFabricados = useQuery({
+    queryKey: ["produtos-fabricados-para-mp"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("produtos")
+        .select("*")
+        .neq("categoria", "materia_prima")
+        .eq("disponivel_como_materia_prima", false)
+        .order("nome");
+      if (error) throw error;
+      return (data as MP[]) ?? [];
+    },
+    enabled: promoteOpen,
   });
 
   const usage = useQuery({
