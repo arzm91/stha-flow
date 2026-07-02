@@ -51,6 +51,20 @@ function EquipamentosPage() {
         ? "Carregando tags ao vivo..."
         : `${tagOptions.length} tag(s) disponíveis em Tags Ao Vivo.`,
     },
+    {
+      key: "tag_velocidade_producao",
+      label: "Tag de velocidade de produção (opcional)",
+      type: "select",
+      options: [{ value: "", label: "— nenhuma —" }, ...tagOptions],
+      help: "Tag exibida como velocidade instantânea no acompanhamento.",
+    },
+    {
+      key: "tag_producao_total",
+      label: "Tag de produção total (opcional)",
+      type: "select",
+      options: [{ value: "", label: "— nenhuma —" }, ...tagOptions],
+      help: "Tag usada para calcular o % de avanço vs. a quantidade planejada.",
+    },
     { key: "ativo", label: "Ativo", type: "checkbox" },
   ];
 
