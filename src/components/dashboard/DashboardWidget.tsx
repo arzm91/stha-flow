@@ -185,7 +185,11 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
       );
     }
     const o = data.ordem;
-    const pct = o.qtd_planejada > 0 ? Math.min(100, (o.qtd_produzida / o.qtd_planejada) * 100) : 0;
+    const totalVal = data.tag_total?.valor_num ?? null;
+    const displayVal = totalVal ?? o.qtd_produzida;
+    const displayUnit = totalVal != null ? (data.tag_total?.unidade ?? "") : "";
+    const pct = o.qtd_planejada > 0 ? Math.min(100, (displayVal / o.qtd_planejada) * 100) : 0;
+    const vel = data.tag_vel;
     return (
       <Link to="/producao/$id" params={{ id: o.id }} className="block h-full">
         <div className="flex h-full flex-col gap-2 text-sm">
@@ -199,9 +203,18 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
             </span>
           </div>
           <div className="truncate text-xs text-muted-foreground">{o.produto_nome}</div>
+          {vel ? (
+            <div className="text-[11px] text-muted-foreground">
+              Velocidade: <span className="font-mono font-semibold text-success">
+                {vel.valor_num != null ? formatNumber(vel.valor_num) : "—"}{vel.unidade ? ` ${vel.unidade}` : ""}
+              </span>
+            </div>
+          ) : null}
           <div className="mt-auto">
             <div className="flex items-baseline justify-between">
-              <span className="font-mono text-lg font-semibold">{formatNumber(o.qtd_produzida)}</span>
+              <span className="font-mono text-lg font-semibold">
+                {formatNumber(displayVal)}{displayUnit ? <span className="ml-1 text-xs text-muted-foreground">{displayUnit}</span> : null}
+              </span>
               <span className="text-xs text-muted-foreground">/ {formatNumber(o.qtd_planejada)}</span>
             </div>
             <div className="mt-1 h-2 w-full overflow-hidden rounded-full bg-muted">
