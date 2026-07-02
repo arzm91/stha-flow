@@ -75,7 +75,7 @@ function EquipamentosPage() {
       title="Equipamentos"
       description="Cadastro e gestão dos equipamentos da planta."
       searchKeys={["nome", "codigo", "tipo", "localizacao"]}
-      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [] }}
+      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [], tag_velocidade_producao: "", tag_producao_total: "" }}
       fields={fields}
 
       columns={[
