@@ -1526,6 +1526,7 @@ export type Database = {
           codigo: string
           created_at: string
           descricao: string | null
+          disponivel_como_materia_prima: boolean
           id: string
           nome: string
           owner_id: string
@@ -1538,6 +1539,7 @@ export type Database = {
           codigo: string
           created_at?: string
           descricao?: string | null
+          disponivel_como_materia_prima?: boolean
           id?: string
           nome: string
           owner_id: string
@@ -1550,6 +1552,7 @@ export type Database = {
           codigo?: string
           created_at?: string
           descricao?: string | null
+          disponivel_como_materia_prima?: boolean
           id?: string
           nome?: string
           owner_id?: string
