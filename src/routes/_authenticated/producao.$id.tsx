@@ -140,6 +140,13 @@ function OPPage() {
         <AvancoProducaoHeader tagVel={tagVel} tagTotal={tagTotal} qtdPlanejada={qtdPlanejada} />
       ) : null}
 
+      {op.data.inicio_em && !isFinal ? (
+        <TempoProducaoHeader
+          inicioEm={op.data.inicio_em as string}
+          duracaoEstimadaMin={(op.data as any).duracao_estimada_min ?? null}
+        />
+      ) : null}
+
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
         <Info label="Início" value={op.data.inicio_em ? formatDate(op.data.inicio_em) : "—"} />
         <Info label="Fim" value={op.data.fim_em ? formatDate(op.data.fim_em) : "—"} />
@@ -480,6 +487,76 @@ function AvancoProducaoHeader({
     </Card>
   );
 }
+
+function TempoProducaoHeader({
+  inicioEm, duracaoEstimadaMin,
+}: { inicioEm: string; duracaoEstimadaMin: number | null }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const inicioMs = new Date(inicioEm).getTime();
+  const decorridoMs = Math.max(0, now - inicioMs);
+  const estimadoMs = duracaoEstimadaMin != null ? duracaoEstimadaMin * 60_000 : null;
+  const pct = estimadoMs && estimadoMs > 0
+    ? Math.max(0, Math.min(100, (decorridoMs / estimadoMs) * 100))
+    : null;
+  const excedido = estimadoMs != null && decorridoMs > estimadoMs;
+  const restanteMs = estimadoMs != null ? estimadoMs - decorridoMs : null;
+
+  const fmt = (ms: number) => {
+    const abs = Math.abs(ms);
+    const totalSec = Math.floor(abs / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  };
+
+  return (
+    <Card className={`mb-4 ${excedido ? "border-destructive/40 bg-destructive/5" : "border-primary/30 bg-primary/5"}`}>
+      <CardContent className="p-4">
+        <div className="flex items-baseline justify-between gap-2">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+            <Clock className="h-3.5 w-3.5" /> Tempo de produção
+            {estimadoMs == null ? (
+              <span className="ml-2 text-[10px] text-muted-foreground">(sem tempo estimado)</span>
+            ) : null}
+          </div>
+          {pct != null ? (
+            <div className={`font-mono text-sm font-semibold ${excedido ? "text-destructive" : "text-primary"}`}>
+              {pct.toFixed(1)}%{excedido ? " · excedido" : ""}
+            </div>
+          ) : null}
+        </div>
+        <div className="mt-1 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <span className="font-mono text-2xl font-semibold">{fmt(decorridoMs)}</span>
+          {estimadoMs != null ? (
+            <>
+              <span className="text-xs text-muted-foreground">
+                / {fmt(estimadoMs)} estimado
+              </span>
+              <span className="ml-auto text-xs text-muted-foreground">
+                {excedido ? "Excedido em " : "Restante "}<span className="font-mono">{fmt(restanteMs ?? 0)}</span>
+              </span>
+            </>
+          ) : null}
+        </div>
+        {pct != null ? (
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted">
+            <div
+              className={`h-full rounded-full transition-all ${excedido ? "bg-destructive" : "bg-primary"}`}
+              style={{ width: `${Math.min(100, pct)}%` }}
+            />
+          </div>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
 
 
 function TagsDoEquipamento({ tagNomes, ordemId, disabled }: { tagNomes: string[]; ordemId: string; disabled: boolean }) {
