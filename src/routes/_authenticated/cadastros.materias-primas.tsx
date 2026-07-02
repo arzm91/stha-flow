@@ -131,13 +131,32 @@ function MateriasPrimasPage() {
 
   const remove = async (r: MP) => {
     if ((usage.data ?? {})[r.id]) {
-      return toast.error("Matéria-prima está em uso em alguma receita. Remova-a das receitas antes.");
+      return toast.error("Está em uso em alguma receita. Remova-a das receitas antes.");
     }
-    if (!confirm(`Remover "${r.nome}"?`)) return;
-    const { error } = await supabase.from("produtos").delete().eq("id", r.id);
-    if (error) return toast.error(error.message);
-    toast.success("Removida");
+    const isFabricado = r.categoria !== "materia_prima";
+    if (isFabricado) {
+      if (!confirm(`"${r.nome}" é um produto fabricado. Deseja apenas removê-lo da lista de matérias-primas?`)) return;
+      const { error } = await supabase.from("produtos")
+        .update({ disponivel_como_materia_prima: false }).eq("id", r.id);
+      if (error) return toast.error(error.message);
+      toast.success("Removido das matérias-primas");
+    } else {
+      if (!confirm(`Remover "${r.nome}"?`)) return;
+      const { error } = await supabase.from("produtos").delete().eq("id", r.id);
+      if (error) return toast.error(error.message);
+      toast.success("Removida");
+    }
     qc.invalidateQueries({ queryKey: ["materias-primas"] });
+    qc.invalidateQueries({ queryKey: ["produtos-fabricados-para-mp"] });
+  };
+
+  const promote = async (id: string) => {
+    const { error } = await supabase.from("produtos")
+      .update({ disponivel_como_materia_prima: true }).eq("id", id);
+    if (error) return toast.error(error.message);
+    toast.success("Produto adicionado como matéria-prima");
+    qc.invalidateQueries({ queryKey: ["materias-primas"] });
+    qc.invalidateQueries({ queryKey: ["produtos-fabricados-para-mp"] });
   };
 
   return (
