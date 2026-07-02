@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, FlaskConical, Trash2 } from "lucide-react";
+import { ArrowLeft, FlaskConical, Trash2, SlidersHorizontal } from "lucide-react";
+import { TanqueAjusteDialog } from "@/components/TanqueAjusteDialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate, formatNumber } from "@/lib/format";
 import { Badge } from "@/components/ui/badge";
@@ -42,11 +43,22 @@ function TanqueDetail() {
     queryKey: ["analises-cadastro"],
     queryFn: async () => (await supabase.from("analises_cadastro").select("id,nome,unidade,valor_min,valor_max").order("nome")).data ?? [],
   });
+  const ajustes = useQuery({
+    queryKey: ["tanque-ajustes-detail", id],
+    queryFn: async () => (await supabase.from("tanque_ajustes_saldo")
+      .select("id,saldo,ajustado_em,observacao,produto:produto_id(nome,codigo)")
+      .eq("tanque_id", id).order("ajustado_em", { ascending: false })).data ?? [],
+  });
 
-  const saldo = (mov.data ?? []).reduce(
-    (s, m) => s + (m.tipo === "entrada" ? Number(m.quantidade) : -Number(m.quantidade)),
-    0,
-  );
+  const ultimoAjuste = (ajustes.data ?? [])[0];
+  const baselineTs = ultimoAjuste ? new Date(ultimoAjuste.ajustado_em).getTime() : null;
+  const baseline = ultimoAjuste ? Number(ultimoAjuste.saldo) : 0;
+  const saldo = (mov.data ?? []).reduce((s, m) => {
+    if (baselineTs != null && new Date(m.ocorrido_em).getTime() <= baselineTs) return s;
+    return s + (m.tipo === "entrada" ? Number(m.quantidade) : -Number(m.quantidade));
+  }, baseline);
+
+  const [ajusteOpen, setAjusteOpen] = useState(false);
 
   const [open, setOpen] = useState(false);
   const [analiseId, setAnaliseId] = useState("");
@@ -90,10 +102,15 @@ function TanqueDetail() {
       <PageHeader
         title={tanque.data?.nome ?? "Tanque"}
         description={tanque.data ? `Código ${tanque.data.codigo}` : ""}
+        actions={
+          <Button size="sm" onClick={() => setAjusteOpen(true)}>
+            <SlidersHorizontal className="mr-1 h-4 w-4" />Ajuste diário
+          </Button>
+        }
       />
 
       <Card className="mb-4">
-        <CardContent className="grid grid-cols-3 gap-4 p-4">
+        <CardContent className="grid grid-cols-4 gap-4 p-4">
           <div>
             <div className="text-xs text-muted-foreground">Saldo atual</div>
             <div className="font-mono text-2xl font-semibold text-primary">{formatNumber(saldo)}{tanque.data?.unidade ? ` ${tanque.data.unidade}` : ""}</div>
@@ -101,13 +118,45 @@ function TanqueDetail() {
           <div>
             <div className="text-xs text-muted-foreground">Capacidade</div>
             <div className="font-mono text-base">{tanque.data?.capacidade ? formatNumber(Number(tanque.data.capacidade)) : "—"}</div>
+            <div className="text-[11px] text-muted-foreground">
+              {tanque.data?.capacidade
+                ? `${((saldo / Number(tanque.data.capacidade)) * 100).toFixed(1)}% ocupado`
+                : ""}
+            </div>
           </div>
           <div>
             <div className="text-xs text-muted-foreground">Produto vinculado</div>
             <div className="text-base">{(tanque.data?.produto as any)?.nome ?? "—"}</div>
           </div>
+          <div>
+            <div className="text-xs text-muted-foreground">Último ajuste</div>
+            <div className="text-sm">
+              {ultimoAjuste
+                ? <>{formatDate(ultimoAjuste.ajustado_em)}<div className="text-[11px] text-muted-foreground">Baseline {formatNumber(Number(ultimoAjuste.saldo))}</div></>
+                : <span className="text-muted-foreground">Sem ajustes</span>}
+            </div>
+          </div>
         </CardContent>
       </Card>
+
+      <TanqueAjusteDialog
+        open={ajusteOpen}
+        onOpenChange={setAjusteOpen}
+        tanque={tanque.data ? {
+          id: tanque.data.id,
+          codigo: tanque.data.codigo,
+          nome: tanque.data.nome,
+          unidade: tanque.data.unidade,
+          capacidade: tanque.data.capacidade,
+          produto_id: tanque.data.produto_id,
+        } : null}
+        saldoAtual={saldo}
+        onSaved={() => {
+          qc.invalidateQueries({ queryKey: ["tanque", id] });
+          qc.invalidateQueries({ queryKey: ["tanque-ajustes-detail", id] });
+        }}
+      />
+
 
       <Card className="mb-4">
         <CardHeader className="flex flex-row items-center justify-between">

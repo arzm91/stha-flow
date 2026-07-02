@@ -1691,6 +1691,60 @@ export type Database = {
         }
         Relationships: []
       }
+      tanque_ajustes_saldo: {
+        Row: {
+          ajustado_em: string
+          ajustado_por: string | null
+          created_at: string
+          id: string
+          observacao: string | null
+          owner_id: string
+          produto_id: string | null
+          saldo: number
+          tanque_id: string
+          updated_at: string
+        }
+        Insert: {
+          ajustado_em?: string
+          ajustado_por?: string | null
+          created_at?: string
+          id?: string
+          observacao?: string | null
+          owner_id: string
+          produto_id?: string | null
+          saldo: number
+          tanque_id: string
+          updated_at?: string
+        }
+        Update: {
+          ajustado_em?: string
+          ajustado_por?: string | null
+          created_at?: string
+          id?: string
+          observacao?: string | null
+          owner_id?: string
+          produto_id?: string | null
+          saldo?: number
+          tanque_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tanque_ajustes_saldo_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tanque_ajustes_saldo_tanque_id_fkey"
+            columns: ["tanque_id"]
+            isOneToOne: false
+            referencedRelation: "tanques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tanque_analises: {
         Row: {
           analise_id: string
