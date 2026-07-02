@@ -373,6 +373,27 @@ function ProdutosPage() {
         p_atividades: atividadesPayload,
       });
       if (rpcErr) throw rpcErr;
+
+      // Save recipe (replace all items for this product)
+      const recValid = receita.filter((r) => r.materia_prima_id);
+      const total = recValid.reduce((s, r) => s + (Number(r.percentual) || 0), 0);
+      if (recValid.length > 0 && Math.round(total * 100) / 100 > 100.01) {
+        throw new Error(`A soma das porcentagens da receita é ${total.toFixed(2)}%. Não pode ultrapassar 100%.`);
+      }
+      const { error: delErr } = await supabase.from("produto_receita").delete().eq("produto_id", produtoId);
+      if (delErr) throw delErr;
+      if (recValid.length > 0) {
+        const rows = recValid.map((r, idx) => ({
+          produto_id: produtoId!,
+          materia_prima_id: r.materia_prima_id,
+          percentual: Number(r.percentual) || 0,
+          tag_consumo_nome: r.tag_consumo_nome.trim() || null,
+          ordem: idx,
+          owner_id: u.user.id,
+        }));
+        const { error: insErr } = await supabase.from("produto_receita").insert(rows);
+        if (insErr) throw insErr;
+      }
     },
     onSuccess: () => {
       toast.success(editing ? "Produto atualizado" : "Produto criado");
