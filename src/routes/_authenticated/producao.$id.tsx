@@ -108,7 +108,11 @@ function OPPage() {
   if (!op.data) return <div className="text-sm text-muted-foreground">Ordem não encontrada.</div>;
 
   const isFinal = op.data.status === "finalizada";
-  const tagNomes = ((op.data.equipamento as any)?.tag_nomes ?? []) as string[];
+  const equip = op.data.equipamento as { tag_nomes?: string[]; tag_velocidade_producao?: string | null; tag_producao_total?: string | null; nome?: string } | null;
+  const tagNomes = (equip?.tag_nomes ?? []) as string[];
+  const tagVel = equip?.tag_velocidade_producao || null;
+  const tagTotal = equip?.tag_producao_total || null;
+  const qtdPlanejada = Number(op.data.qtd_planejada ?? 0);
 
   return (
     <div ref={containerRef} className={isFs ? "h-screen w-screen overflow-auto bg-background p-6" : undefined}>
@@ -117,7 +121,7 @@ function OPPage() {
       </Button>
       <PageHeader
         title={`OP ${op.data.numero}`}
-        description={`${(op.data.produto as any)?.nome ?? ""} · ${(op.data.equipamento as any)?.nome ?? ""}`}
+        description={`${(op.data.produto as any)?.nome ?? ""} · ${equip?.nome ?? ""}`}
         actions={
           <div className="flex items-center gap-2">
             <Badge variant="outline" className={isFinal ? "bg-success/20 text-success border-success/30" : "bg-primary/20 text-primary border-primary/30"}>
@@ -132,13 +136,17 @@ function OPPage() {
         }
       />
 
+      {(tagVel || tagTotal) ? (
+        <AvancoProducaoHeader tagVel={tagVel} tagTotal={tagTotal} qtdPlanejada={qtdPlanejada} />
+      ) : null}
+
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
         <Info label="Início" value={op.data.inicio_em ? formatDate(op.data.inicio_em) : "—"} />
         <Info label="Fim" value={op.data.fim_em ? formatDate(op.data.fim_em) : "—"} />
         <Info label="Duração total" value={op.data.inicio_em ? (op.data.fim_em ? durationBetween(op.data.inicio_em, op.data.fim_em) : durationFromNow(op.data.inicio_em)) : "—"} />
         <Info label="Qtd. planejada / produzida" value={`${formatNumber(Number(op.data.qtd_planejada))} / ${op.data.qtd_produzida != null ? formatNumber(Number(op.data.qtd_produzida)) : "—"}`} />
         <Info label="Operador" value={operador.data?.nome ?? "—"} />
-        <Info label="Equipamento" value={(op.data.equipamento as any)?.nome ?? "—"} />
+        <Info label="Equipamento" value={equip?.nome ?? "—"} />
       </div>
 
       {op.data.equipamento_id ? <ScadaViewer equipamentoId={op.data.equipamento_id as string} /> : null}
