@@ -9,7 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type Tag = { nome: string; unidade: string | null; grupo: string | null; valor: string | null };
+type Tag = { nome: string; nome_amigavel: string | null; unidade: string | null; grupo: string | null; valor: string | null };
 
 export function TagPicker({
   value,
@@ -27,7 +27,7 @@ export function TagPicker({
     (async () => {
       const { data } = await supabase
         .from("tags_live")
-        .select("nome,unidade,grupo,valor")
+        .select("nome,nome_amigavel,unidade,grupo,valor")
         .order("grupo", { ascending: true })
         .order("nome", { ascending: true })
         .limit(500);
@@ -36,10 +36,12 @@ export function TagPicker({
   }, []);
 
   const filtered = search
-    ? tags.filter((t) =>
-        t.nome.toLowerCase().includes(search.toLowerCase()) ||
-        (t.grupo ?? "").toLowerCase().includes(search.toLowerCase()),
-      )
+    ? tags.filter((t) => {
+        const q = search.toLowerCase();
+        return t.nome.toLowerCase().includes(q) ||
+          (t.nome_amigavel ?? "").toLowerCase().includes(q) ||
+          (t.grupo ?? "").toLowerCase().includes(q);
+      })
     : tags;
 
   return (
@@ -62,9 +64,9 @@ export function TagPicker({
           {filtered.map((t) => (
             <SelectItem key={t.nome} value={t.nome}>
               <div className="flex flex-col">
-                <span className="text-sm">{t.nome}</span>
+                <span className="text-sm">{t.nome_amigavel?.trim() || t.nome}</span>
                 <span className="text-[10px] text-muted-foreground">
-                  {t.grupo ?? "—"} · {t.valor ?? "—"} {t.unidade ?? ""}
+                  {t.nome_amigavel?.trim() ? `${t.nome} · ` : ""}{t.grupo ?? "—"} · {t.valor ?? "—"} {t.unidade ?? ""}
                 </span>
               </div>
             </SelectItem>
