@@ -140,6 +140,13 @@ function OPPage() {
         <AvancoProducaoHeader tagVel={tagVel} tagTotal={tagTotal} qtdPlanejada={qtdPlanejada} />
       ) : null}
 
+      {op.data.inicio_em && !isFinal ? (
+        <TempoProducaoHeader
+          inicioEm={op.data.inicio_em as string}
+          duracaoEstimadaMin={(op.data as any).duracao_estimada_min ?? null}
+        />
+      ) : null}
+
       <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
         <Info label="Início" value={op.data.inicio_em ? formatDate(op.data.inicio_em) : "—"} />
         <Info label="Fim" value={op.data.fim_em ? formatDate(op.data.fim_em) : "—"} />
