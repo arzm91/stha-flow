@@ -540,6 +540,8 @@ export type Database = {
           pfd_graph: Json
           status: string
           tag_nomes: string[]
+          tag_producao_total: string | null
+          tag_velocidade_producao: string | null
           tipo: string | null
           updated_at: string
         }
@@ -555,6 +557,8 @@ export type Database = {
           pfd_graph?: Json
           status?: string
           tag_nomes?: string[]
+          tag_producao_total?: string | null
+          tag_velocidade_producao?: string | null
           tipo?: string | null
           updated_at?: string
         }
@@ -570,6 +574,8 @@ export type Database = {
           pfd_graph?: Json
           status?: string
           tag_nomes?: string[]
+          tag_producao_total?: string | null
+          tag_velocidade_producao?: string | null
           tipo?: string | null
           updated_at?: string
         }
