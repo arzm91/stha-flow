@@ -137,7 +137,7 @@ function OPPage() {
       />
 
       {(tagVel || tagTotal) ? (
-        <AvancoProducaoHeader tagVel={tagVel} tagTotal={tagTotal} qtdPlanejada={qtdPlanejada} />
+        <AvancoProducaoHeader ordemId={id} tagVel={tagVel} tagTotal={tagTotal} qtdPlanejada={qtdPlanejada} />
       ) : null}
 
       {op.data.inicio_em && !isFinal ? (
