@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { Card, CardContent } from "./ui/card";
 import { Button } from "./ui/button";
-import { History, Container, Package, Warehouse, Cylinder } from "lucide-react";
+import { History, Container, Package, Warehouse, Cylinder, SlidersHorizontal, FlaskConical } from "lucide-react";
+import { Badge } from "./ui/badge";
 import { formatNumber } from "@/lib/format";
 
 export type StorageLocation = {
@@ -14,9 +15,19 @@ export type StorageLocation = {
   tag_nivel_nome?: string | null;
   tag_nivel_modo?: string | null;
   cor?: string | null;
+  produto_id?: string | null;
 };
 
 type TagLive = { nome: string; valor_num: number | null; valor: string | null; unidade: string | null };
+
+export type LatestAnalise = {
+  nome: string | null;
+  resultado: number;
+  unidade: string | null;
+  valor_min: number | null;
+  valor_max: number | null;
+  registrado_em: string;
+};
 
 function pctSaldo(saldo: number, cap?: number | string | null): number | null {
   const c = cap == null ? NaN : Number(cap);
@@ -33,18 +44,29 @@ function pctTag(loc: StorageLocation, tagVal: number | null): number | null {
 }
 
 export function StorageLocationCard({
-  loc, saldo, tag,
-}: { loc: StorageLocation; saldo: number; tag?: TagLive | null }) {
+  loc, saldo, tag, latestAnalise, onAdjust,
+}: {
+  loc: StorageLocation;
+  saldo: number;
+  tag?: TagLive | null;
+  latestAnalise?: LatestAnalise | null;
+  onAdjust?: () => void;
+}) {
   const tipo = (loc.tipo as string) || "tanque";
   const cor = loc.cor || undefined;
   const saldoPct = pctSaldo(saldo, loc.capacidade);
   const tagVal = tag?.valor_num != null ? Number(tag.valor_num) : null;
   const tagPctVal = pctTag(loc, tagVal);
 
+  const analiseFora = latestAnalise
+    ? (latestAnalise.valor_min != null && latestAnalise.resultado < latestAnalise.valor_min) ||
+      (latestAnalise.valor_max != null && latestAnalise.resultado > latestAnalise.valor_max)
+    : false;
+
   return (
     <Card>
       <CardContent className="p-4">
-        <div className="mb-3 flex items-start justify-between">
+        <div className="mb-3 flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="font-mono text-xs text-muted-foreground">{loc.codigo}</div>
             <div className="truncate text-base font-semibold">{loc.nome}</div>
@@ -52,9 +74,16 @@ export function StorageLocationCard({
               {TIPO_LABEL[tipo] ?? tipo}
             </div>
           </div>
-          <Button asChild variant="ghost" size="icon">
-            <Link to="/estoque/tanques/$id" params={{ id: loc.id }}><History className="h-4 w-4" /></Link>
-          </Button>
+          <div className="flex items-center gap-0.5">
+            {onAdjust && (
+              <Button variant="ghost" size="icon" title="Ajustar saldo / produto / análises" onClick={onAdjust}>
+                <SlidersHorizontal className="h-4 w-4" />
+              </Button>
+            )}
+            <Button asChild variant="ghost" size="icon" title="Histórico">
+              <Link to="/estoque/tanques/$id" params={{ id: loc.id }}><History className="h-4 w-4" /></Link>
+            </Button>
+          </div>
         </div>
 
         {tipo === "tanque" || tipo === "container" ? (
@@ -77,6 +106,29 @@ export function StorageLocationCard({
           <GenericVisual cor={cor} saldo={saldo} unidade={loc.unidade} capacidade={loc.capacidade}
             tag={tag} hasTag={!!loc.tag_nivel_nome} />
         )}
+
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-2 text-[11px]">
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <span className="uppercase tracking-wide">Ocupação</span>
+            <span className="font-mono text-foreground">{saldoPct != null ? `${saldoPct.toFixed(1)}%` : "—"}</span>
+          </div>
+          {latestAnalise ? (
+            <div className="flex items-center gap-1">
+              <FlaskConical className="h-3 w-3 text-muted-foreground" />
+              <span className="max-w-[9rem] truncate text-muted-foreground">{latestAnalise.nome ?? "Análise"}</span>
+              <span className="font-mono">{formatNumber(latestAnalise.resultado)}{latestAnalise.unidade ? ` ${latestAnalise.unidade}` : ""}</span>
+              {(latestAnalise.valor_min != null || latestAnalise.valor_max != null) && (
+                <Badge variant="outline" className={
+                  analiseFora
+                    ? "h-4 px-1 text-[10px] bg-destructive/20 text-destructive border-destructive/30"
+                    : "h-4 px-1 text-[10px] bg-success/20 text-success border-success/30"
+                }>{analiseFora ? "Fora" : "Ok"}</Badge>
+              )}
+            </div>
+          ) : (
+            <span className="italic text-muted-foreground">Sem análise</span>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
