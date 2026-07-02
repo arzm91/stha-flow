@@ -263,6 +263,7 @@ function MateriasPrimasPage() {
               <TableRow>
                 <TableHead>Código</TableHead>
                 <TableHead>Nome</TableHead>
+                <TableHead>Origem</TableHead>
                 <TableHead>Unidade</TableHead>
                 <TableHead>Usada em</TableHead>
                 <TableHead>Status</TableHead>
@@ -270,23 +271,41 @@ function MateriasPrimasPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((r) => (
-                <TableRow key={r.id}>
-                  <TableCell className="font-mono text-xs">{r.codigo}</TableCell>
-                  <TableCell>{r.nome}</TableCell>
-                  <TableCell>{r.unidade}</TableCell>
-                  <TableCell>{(usage.data ?? {})[r.id] ?? 0} receita(s)</TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={r.ativo ? "bg-success/20 text-success border-success/30" : "bg-muted"}>
-                      {r.ativo ? "Ativa" : "Inativa"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="ghost" size="icon" onClick={() => remove(r)}><Trash2 className="h-4 w-4" /></Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filtered.map((r) => {
+                const isFabricado = r.categoria !== "materia_prima";
+                return (
+                  <TableRow key={r.id}>
+                    <TableCell className="font-mono text-xs">{r.codigo}</TableCell>
+                    <TableCell>{r.nome}</TableCell>
+                    <TableCell>
+                      {isFabricado ? (
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                          <Factory className="h-3 w-3 mr-1" />Produto fabricado
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="bg-muted">
+                          <Wheat className="h-3 w-3 mr-1" />Insumo
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>{r.unidade}</TableCell>
+                    <TableCell>{(usage.data ?? {})[r.id] ?? 0} receita(s)</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={r.ativo ? "bg-success/20 text-success border-success/30" : "bg-muted"}>
+                        {r.ativo ? "Ativa" : "Inativa"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      {!isFabricado && (
+                        <Button variant="ghost" size="icon" onClick={() => openEdit(r)}><Pencil className="h-4 w-4" /></Button>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => remove(r)} title={isFabricado ? "Remover da lista de MP" : "Excluir"}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </div>
