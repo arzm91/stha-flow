@@ -12,7 +12,7 @@ import {
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
-import { Pencil, Plus, Trash2, Search, Wheat } from "lucide-react";
+import { Pencil, Plus, Trash2, Search, Wheat, PackagePlus, Factory } from "lucide-react";
 import { toast } from "sonner";
 import { EmptyState } from "@/components/EmptyState";
 import { Badge } from "@/components/ui/badge";
