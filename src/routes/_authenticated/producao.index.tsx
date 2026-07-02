@@ -26,7 +26,7 @@ export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
 });
 
-type Equip = { id: string; codigo: string; nome: string; status: string; localizacao: string | null; tipo: string | null; ativo: boolean };
+type Equip = { id: string; codigo: string; nome: string; status: string; localizacao: string | null; tipo: string | null; ativo: boolean; tag_producao_total: string | null; tag_velocidade_producao: string | null };
 
 function ProducaoPage() {
   const [novaOpen, setNovaOpen] = useState(false);
@@ -47,7 +47,7 @@ function ProducaoPage() {
     queryFn: async () => {
       const { data } = await supabase
         .from("ordens_producao")
-        .select("id,numero,equipamento_id,inicio_em,produto:produto_id(nome,codigo)")
+        .select("id,numero,equipamento_id,inicio_em,qtd_planejada,produto:produto_id(nome,codigo)")
         .eq("status", "em_andamento");
       return data ?? [];
     },
@@ -55,6 +55,25 @@ function ProducaoPage() {
   });
 
   const opByEquip = new Map((opsAtivas.data ?? []).map((o) => [o.equipamento_id, o]));
+
+  // Tags de produção total ativas
+  const tagsAvanco = Array.from(new Set(
+    (equipamentos.data ?? [])
+      .filter((e) => e.tag_producao_total && opByEquip.has(e.id))
+      .map((e) => e.tag_producao_total as string)
+  ));
+  const tagsQuery = useQuery({
+    queryKey: ["equip-cards-tags", tagsAvanco.join(",")],
+    enabled: tagsAvanco.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase.from("tags_live")
+        .select("nome,valor_num,unidade").in("nome", tagsAvanco);
+      return (data ?? []) as Array<{ nome: string; valor_num: number | null; unidade: string | null }>;
+    },
+    refetchInterval: 5000,
+  });
+  const tagMap = new Map((tagsQuery.data ?? []).map((t) => [t.nome, t]));
+
 
   const openNova = (equipId?: string) => {
     setEquipPreset(equipId);
