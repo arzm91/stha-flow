@@ -1500,6 +1500,51 @@ export type Database = {
         }
         Relationships: []
       }
+      rotinas_atividades: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          dias_semana: number[]
+          hora: string
+          id: string
+          last_fired_at: string | null
+          nome: string
+          owner_id: string
+          severidade: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          dias_semana?: number[]
+          hora: string
+          id?: string
+          last_fired_at?: string | null
+          nome: string
+          owner_id: string
+          severidade?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          dias_semana?: number[]
+          hora?: string
+          id?: string
+          last_fired_at?: string | null
+          nome?: string
+          owner_id?: string
+          severidade?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       tag_endpoint_requests: {
         Row: {
           endpoint_id: string
@@ -1832,6 +1877,7 @@ export type Database = {
         Args: { p_context: Json; p_owner_id: string; p_trigger_type: string }
         Returns: number
       }
+      dispatch_rotinas_atividades: { Args: never; Returns: number }
       effective_owner: { Args: { _user: string }; Returns: string }
       evaluate_tag_alertas: {
         Args: {
