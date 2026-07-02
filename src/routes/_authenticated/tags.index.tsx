@@ -55,6 +55,9 @@ type TagRow = {
   nome_amigavel: string | null;
   valor: string | null;
   valor_num: number | null;
+  valor_num_bruto: number | null;
+  escala_fator: number | null;
+  escala_op: string | null;
   unidade: string | null;
   grupo: string | null;
   qualidade: string | null;
@@ -389,6 +392,8 @@ function EditTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => vo
   const [grupo, setGrupo] = useState("");
   const [vMin, setVMin] = useState("");
   const [vMax, setVMax] = useState("");
+  const [escalaOp, setEscalaOp] = useState<"multiplicar" | "dividir">("multiplicar");
+  const [escalaFator, setEscalaFator] = useState("1");
 
   useEffect(() => {
     if (tag) {
@@ -397,8 +402,18 @@ function EditTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => vo
       setGrupo(tag.grupo ?? "");
       setVMin(tag.valor_min !== null ? String(tag.valor_min) : "");
       setVMax(tag.valor_max !== null ? String(tag.valor_max) : "");
+      setEscalaOp((tag.escala_op as "multiplicar" | "dividir") ?? "multiplicar");
+      setEscalaFator(tag.escala_fator != null ? String(tag.escala_fator) : "1");
     }
   }, [tag]);
+
+  const fatorNum = Number(escalaFator);
+  const bruto = tag?.valor_num_bruto ?? null;
+  const previewValor = (() => {
+    if (bruto == null || Number.isNaN(fatorNum)) return null;
+    if (escalaOp === "dividir") return fatorNum === 0 ? bruto : bruto / fatorNum;
+    return bruto * fatorNum;
+  })();
 
   const save = useMutation({
     mutationFn: async () => {
@@ -409,6 +424,9 @@ function EditTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => vo
       if (max !== null && Number.isNaN(max)) throw new Error("Máximo inválido");
       if (min !== null && max !== null && min > max)
         throw new Error("Mínimo não pode ser maior que máximo");
+      if (Number.isNaN(fatorNum)) throw new Error("Fator de escala inválido");
+      if (escalaOp === "dividir" && fatorNum === 0)
+        throw new Error("Não é possível dividir por zero");
 
       const { error } = await supabase
         .from("tags_live" as never)
@@ -418,6 +436,8 @@ function EditTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => vo
           grupo: grupo.trim() || null,
           valor_min: min,
           valor_max: max,
+          escala_op: escalaOp,
+          escala_fator: fatorNum,
         } as never)
         .eq("nome", tag.nome);
       if (error) throw error;
@@ -436,7 +456,8 @@ function EditTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => vo
         <DialogHeader>
           <DialogTitle className="font-mono text-base">{tag?.nome}</DialogTitle>
           <DialogDescription>
-            Esses campos são locais — não são sobrescritos pelo endpoint HTTP.
+            Configurações locais desta tag — o endpoint HTTP não sobrescreve esses campos. Nome
+            amigável, unidade, limites e escala aqui são usados em todo o sistema.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
@@ -454,7 +475,7 @@ function EditTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => vo
               <Input
                 value={unidade}
                 onChange={(e) => setUnidade(e.target.value)}
-                placeholder="°C, bar, %"
+                placeholder="°C, bar, %, t, kg"
               />
             </div>
             <div>
@@ -466,9 +487,56 @@ function EditTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => vo
               />
             </div>
           </div>
-          <div className="pt-2">
+
+          <div className="rounded-md border border-primary/20 bg-primary/5 p-3">
+            <p className="mb-2 text-xs font-medium">Conversão de unidade</p>
+            <p className="mb-2 text-[11px] text-muted-foreground">
+              Aplique um fator sobre o valor recebido do endpoint para padronizar a unidade em
+              todo o sistema. Ex.: dividir por 1000 para converter kg em toneladas.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Operação</Label>
+                <Select value={escalaOp} onValueChange={(v) => setEscalaOp(v as "multiplicar" | "dividir")}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="multiplicar">Multiplicar (×)</SelectItem>
+                    <SelectItem value="dividir">Dividir (÷)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Fator</Label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={escalaFator}
+                  onChange={(e) => setEscalaFator(e.target.value)}
+                  placeholder="1"
+                />
+              </div>
+            </div>
+            <div className="mt-2 grid grid-cols-2 gap-2 text-[11px]">
+              <div>
+                <div className="text-muted-foreground">Recebido do endpoint</div>
+                <div className="font-mono">
+                  {bruto != null ? formatNumber(bruto, 4) : "—"}
+                </div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">Após conversão</div>
+                <div className="font-mono font-semibold text-primary">
+                  {previewValor != null ? formatNumber(previewValor, 4) : "—"}
+                  {unidade ? ` ${unidade}` : ""}
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-1">
             <p className="mb-2 text-xs text-muted-foreground">
-              Limites de alerta — valores fora desta faixa marcam a tag em vermelho.
+              Limites de operação — valores fora desta faixa marcam a tag em vermelho e disparam
+              alertas configurados.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div>
