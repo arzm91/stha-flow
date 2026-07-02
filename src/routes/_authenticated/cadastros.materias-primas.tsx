@@ -30,6 +30,7 @@ type MP = {
   unidade: string;
   categoria: string | null;
   ativo: boolean;
+  disponivel_como_materia_prima?: boolean;
 };
 
 const empty = { codigo: "", nome: "", descricao: "", unidade: "kg", ativo: true };
