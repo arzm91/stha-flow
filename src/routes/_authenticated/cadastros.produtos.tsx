@@ -178,11 +178,24 @@ function ProdutosPage() {
 
 
   const resPerms = useResourcePermissions();
-  const visible = resPerms.filter("produto", list.data);
+  const visible = resPerms.filter("produto", list.data).filter((p) => p.categoria !== "materia_prima");
   const filtered = visible.filter((r) => {
     if (!search) return true;
     const s = search.toLowerCase();
     return [r.nome, r.codigo, r.categoria ?? ""].some((v) => v.toLowerCase().includes(s));
+  });
+
+  // MPs available for recipe
+  const mpList = useQuery({
+    queryKey: ["materias-primas-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("produtos")
+        .select("id, codigo, nome, unidade")
+        .eq("categoria", "materia_prima").eq("ativo", true)
+        .order("nome");
+      if (error) throw error;
+      return (data ?? []) as { id: string; codigo: string; nome: string; unidade: string }[];
+    },
   });
 
 
