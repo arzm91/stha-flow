@@ -32,7 +32,7 @@ function OPPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ordens_producao")
-        .select("*, produto:produto_id(id,nome,codigo,unidade), equipamento:equipamento_id(id,codigo,nome,tag_nomes), tanque:tanque_destino_id(nome,codigo)")
+        .select("*, produto:produto_id(id,nome,codigo,unidade), equipamento:equipamento_id(id,codigo,nome,tag_nomes,tag_velocidade_producao,tag_producao_total), tanque:tanque_destino_id(nome,codigo)")
         .eq("id", id).maybeSingle();
       if (error) throw error;
       return data;
