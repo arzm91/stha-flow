@@ -573,13 +573,6 @@ function AvancoProducaoHeader({
                 {cons?.unidade && vel?.unidade ? (
                   <span className="text-xs text-muted-foreground">{cons.unidade}/{vel.unidade}</span>
                 ) : null}
-              <div className="mt-1 flex items-baseline gap-2">
-                <span className={`font-mono text-2xl font-semibold ${foraFaixa ? "text-destructive" : dentroFaixa ? "text-success" : ""}`}>
-                  {indice != null ? indice.toFixed(3) : "—"}
-                </span>
-                {cons?.unidade && tot?.unidade ? (
-                  <span className="text-xs text-muted-foreground">{tot.unidade}/{cons.unidade}</span>
-                ) : null}
                 {foraFaixa ? <AlertTriangle className="h-4 w-4 text-destructive" /> : null}
               </div>
               {tagConsumo ? (
