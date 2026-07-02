@@ -417,9 +417,23 @@ function Info({ label, value }: { label: string; value: string }) {
 }
 
 function AvancoProducaoHeader({
-  tagVel, tagTotal, qtdPlanejada,
-}: { tagVel: string | null; tagTotal: string | null; qtdPlanejada: number }) {
-  const nomes = [tagVel, tagTotal].filter(Boolean) as string[];
+  ordemId, tagVel, tagTotal, qtdPlanejada,
+}: { ordemId: string; tagVel: string | null; tagTotal: string | null; qtdPlanejada: number }) {
+  const cfgKey = `op-indice-cfg:${ordemId}`;
+  const [cfg, setCfg] = useState<{ tagConsumo: string; min: string; max: string }>(() => {
+    if (typeof window === "undefined") return { tagConsumo: "", min: "", max: "" };
+    try {
+      const raw = window.localStorage.getItem(cfgKey);
+      if (raw) return { tagConsumo: "", min: "", max: "", ...JSON.parse(raw) };
+    } catch { /* noop */ }
+    return { tagConsumo: "", min: "", max: "" };
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem(cfgKey, JSON.stringify(cfg)); } catch { /* noop */ }
+  }, [cfg, cfgKey]);
+
+  const tagConsumo = cfg.tagConsumo || null;
+  const nomes = [tagVel, tagTotal, tagConsumo].filter(Boolean) as string[];
   const q = useQuery({
     queryKey: ["op-avanco-tags", nomes.join(",")],
     enabled: nomes.length > 0,
@@ -432,13 +446,52 @@ function AvancoProducaoHeader({
     },
     refetchInterval: 3000,
   });
+  const allTagsQ = useQuery({
+    queryKey: ["op-avanco-all-tags"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("tags_live")
+        .select("nome,nome_amigavel,unidade,grupo")
+        .order("grupo").order("nome").limit(1000);
+      return (data ?? []) as Array<{ nome: string; nome_amigavel: string | null; unidade: string | null; grupo: string | null }>;
+    },
+  });
   const map = new Map((q.data ?? []).map((t) => [t.nome, t]));
   const vel = tagVel ? map.get(tagVel) : null;
   const tot = tagTotal ? map.get(tagTotal) : null;
+  const cons = tagConsumo ? map.get(tagConsumo) : null;
   const totalNum = tot?.valor_num ?? null;
+  const consumoNum = cons?.valor_num ?? null;
   const pct = totalNum != null && qtdPlanejada > 0
     ? Math.max(0, Math.min(100, (totalNum / qtdPlanejada) * 100))
     : null;
+
+  const indice = (totalNum != null && consumoNum != null && consumoNum !== 0)
+    ? totalNum / consumoNum
+    : null;
+  const minNum = cfg.min !== "" && !isNaN(Number(cfg.min)) ? Number(cfg.min) : null;
+  const maxNum = cfg.max !== "" && !isNaN(Number(cfg.max)) ? Number(cfg.max) : null;
+  const foraFaixa = indice != null && (
+    (minNum != null && indice < minNum) || (maxNum != null && indice > maxNum)
+  );
+  const dentroFaixa = indice != null && !foraFaixa && (minNum != null || maxNum != null);
+
+  const lastAlertRef = useRef<{ state: "in" | "out" | null; at: number }>({ state: null, at: 0 });
+  useEffect(() => {
+    if (indice == null || (minNum == null && maxNum == null)) return;
+    const state: "in" | "out" = foraFaixa ? "out" : "in";
+    const now = Date.now();
+    if (lastAlertRef.current.state !== state && now - lastAlertRef.current.at > 5000) {
+      lastAlertRef.current = { state, at: now };
+      if (state === "out") {
+        toast.warning(`Índice fora da faixa: ${indice.toFixed(3)}`, {
+          description: `Limites: ${minNum ?? "—"} a ${maxNum ?? "—"}`,
+        });
+      } else {
+        toast.success(`Índice dentro da faixa: ${indice.toFixed(3)}`);
+      }
+    }
+  }, [indice, foraFaixa, minNum, maxNum]);
 
   return (
     <Card className="mb-4 border-primary/30 bg-primary/5">
@@ -483,6 +536,53 @@ function AvancoProducaoHeader({
             </div>
           </div>
         ) : null}
+
+        <div className={`md:col-span-3 rounded-md border p-3 ${foraFaixa ? "border-destructive/40 bg-destructive/5" : dentroFaixa ? "border-success/40 bg-success/5" : "border-border bg-background/50"}`}>
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[220px] flex-1">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Tag de consumo</Label>
+              <select
+                className="mt-1 flex h-9 w-full items-center rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+                value={cfg.tagConsumo}
+                onChange={(e) => setCfg((c) => ({ ...c, tagConsumo: e.target.value }))}
+              >
+                <option value="">— selecione uma tag —</option>
+                {(allTagsQ.data ?? []).map((t) => (
+                  <option key={t.nome} value={t.nome}>
+                    {(t.nome_amigavel?.trim() || t.nome)}{t.grupo ? ` · ${t.grupo}` : ""}{t.unidade ? ` (${t.unidade})` : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="w-24">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Mín.</Label>
+              <Input type="number" step="any" value={cfg.min} onChange={(e) => setCfg((c) => ({ ...c, min: e.target.value }))} />
+            </div>
+            <div className="w-24">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Máx.</Label>
+              <Input type="number" step="any" value={cfg.max} onChange={(e) => setCfg((c) => ({ ...c, max: e.target.value }))} />
+            </div>
+            <div className="ml-auto min-w-[180px]">
+              <div className="text-xs uppercase tracking-wider text-muted-foreground">
+                Índice de produção {tagConsumo ? <>· <span className="font-mono">produção / {tagConsumo}</span></> : null}
+              </div>
+              <div className="mt-1 flex items-baseline gap-2">
+                <span className={`font-mono text-2xl font-semibold ${foraFaixa ? "text-destructive" : dentroFaixa ? "text-success" : ""}`}>
+                  {indice != null ? indice.toFixed(3) : "—"}
+                </span>
+                {cons?.unidade && tot?.unidade ? (
+                  <span className="text-xs text-muted-foreground">{tot.unidade}/{cons.unidade}</span>
+                ) : null}
+                {foraFaixa ? <AlertTriangle className="h-4 w-4 text-destructive" /> : null}
+              </div>
+              {tagConsumo ? (
+                <div className="text-[11px] text-muted-foreground">
+                  Consumo: <span className="font-mono">{consumoNum != null ? formatNumber(consumoNum) : (cons?.valor ?? "—")} {cons?.unidade ?? ""}</span>
+                </div>
+              ) : null}
+            </div>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
