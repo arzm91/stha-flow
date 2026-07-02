@@ -325,54 +325,54 @@ function ProdutosPage() {
       if (!produtoId) throw new Error("Falha ao salvar produto");
 
       const etapasValidas = etapas.filter((e) => e.descricao.trim());
-      if (etapasValidas.length === 0) return;
 
-      const atividadesPayload = etapasValidas.map((e, idx) => {
-        const gatilhos =
-          e.tipo === "materia_prima"
-            ? e.gatilhos
-                .filter((g) => g.tag_nome.trim())
-                .map((g) => ({
-                  tipo: g.tipo,
-                  tag_nome: g.tag_nome.trim(),
-                  operador: g.operador,
-                  valor: g.operador === "change" || g.valor === "" ? null : Number(g.valor),
-                }))
-            : [];
-        return {
-          descricao: e.descricao.trim(),
-          ordem: idx,
-          tipo: e.tipo,
-          quantidade: e.tipo === "materia_prima" && e.qtd_modo === "fixa" && e.quantidade !== "" ? String(Number(e.quantidade)) : "",
-          unidade: e.tipo === "tag_captura" ? (e.unidade || "") : e.tipo === "materia_prima" ? (e.unidade || "") : "",
-          tempo_estimado_min: e.tempo_estimado_min === "" ? "" : String(Number(e.tempo_estimado_min)),
-          tag_nome: e.tipo === "tag_captura" ? (e.tag_nome || "") : "",
-          gatilhos,
-          qtd_modo: e.tipo === "materia_prima" ? e.qtd_modo : "fixa",
-          qtd_tag_nome: e.tipo === "materia_prima" && e.qtd_modo !== "fixa" ? (e.qtd_tag_nome || "") : "",
-          captura_modo: e.tipo === "tag_captura" ? e.captura_modo : "na_execucao",
-          captura_gatilho:
-            e.tipo === "tag_captura" && e.captura_modo === "gatilho_valor"
-              ? {
-                  operador: e.captura_operador,
-                  valor: e.captura_operador === "change" || e.captura_valor === "" ? null : Number(e.captura_valor),
-                }
-              : null,
-          estab_enabled: e.tipo === "materia_prima" && e.qtd_modo === "tag_diferenca" ? !!e.estab_enabled : false,
-          estab_pct: e.estab_pct === "" ? "2" : String(Number(e.estab_pct)),
-          estab_janela_seg: e.estab_janela_seg === "" ? "30" : String(Math.max(5, Number(e.estab_janela_seg))),
-          estab_min_estavel_seg: e.estab_min_estavel_seg === "" ? "30" : String(Math.max(5, Number(e.estab_min_estavel_seg))),
-        };
-      });
+      if (etapasValidas.length > 0) {
+        const atividadesPayload = etapasValidas.map((e, idx) => {
+          const gatilhos =
+            e.tipo === "materia_prima"
+              ? e.gatilhos
+                  .filter((g) => g.tag_nome.trim())
+                  .map((g) => ({
+                    tipo: g.tipo,
+                    tag_nome: g.tag_nome.trim(),
+                    operador: g.operador,
+                    valor: g.operador === "change" || g.valor === "" ? null : Number(g.valor),
+                  }))
+              : [];
+          return {
+            descricao: e.descricao.trim(),
+            ordem: idx,
+            tipo: e.tipo,
+            quantidade: e.tipo === "materia_prima" && e.qtd_modo === "fixa" && e.quantidade !== "" ? String(Number(e.quantidade)) : "",
+            unidade: e.tipo === "tag_captura" ? (e.unidade || "") : e.tipo === "materia_prima" ? (e.unidade || "") : "",
+            tempo_estimado_min: e.tempo_estimado_min === "" ? "" : String(Number(e.tempo_estimado_min)),
+            tag_nome: e.tipo === "tag_captura" ? (e.tag_nome || "") : "",
+            gatilhos,
+            qtd_modo: e.tipo === "materia_prima" ? e.qtd_modo : "fixa",
+            qtd_tag_nome: e.tipo === "materia_prima" && e.qtd_modo !== "fixa" ? (e.qtd_tag_nome || "") : "",
+            captura_modo: e.tipo === "tag_captura" ? e.captura_modo : "na_execucao",
+            captura_gatilho:
+              e.tipo === "tag_captura" && e.captura_modo === "gatilho_valor"
+                ? {
+                    operador: e.captura_operador,
+                    valor: e.captura_operador === "change" || e.captura_valor === "" ? null : Number(e.captura_valor),
+                  }
+                : null,
+            estab_enabled: e.tipo === "materia_prima" && e.qtd_modo === "tag_diferenca" ? !!e.estab_enabled : false,
+            estab_pct: e.estab_pct === "" ? "2" : String(Number(e.estab_pct)),
+            estab_janela_seg: e.estab_janela_seg === "" ? "30" : String(Math.max(5, Number(e.estab_janela_seg))),
+            estab_min_estavel_seg: e.estab_min_estavel_seg === "" ? "30" : String(Math.max(5, Number(e.estab_min_estavel_seg))),
+          };
+        });
 
-      // Atomic save: archives previous active version and creates a new one in a single transaction.
-      // If anything fails the database is rolled back and your form data stays intact.
-      const { error: rpcErr } = await supabase.rpc("save_produto_processo", {
-        p_produto_id: produtoId,
-        p_nome: "Processo de fabricação",
-        p_atividades: atividadesPayload,
-      });
-      if (rpcErr) throw rpcErr;
+        const { error: rpcErr } = await supabase.rpc("save_produto_processo", {
+          p_produto_id: produtoId,
+          p_nome: "Processo de fabricação",
+          p_atividades: atividadesPayload,
+        });
+        if (rpcErr) throw rpcErr;
+      }
+
 
       // Save recipe (replace all items for this product)
       const recValid = receita.filter((r) => r.materia_prima_id);
