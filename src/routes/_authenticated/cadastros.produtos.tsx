@@ -533,7 +533,76 @@ function ProdutosPage() {
                   </div>
                 </div>
 
+                {/* ==== RECEITA (matérias-primas por %) ==== */}
                 <div className="space-y-3 rounded-md border border-border bg-muted/30 p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold">Receita — matérias-primas</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Defina o percentual de cada MP para 100% do produto. Opcionalmente, associe uma tag de consumo — se a tag estiver disponível na ordem, o valor real da tag é usado; caso contrário, a baixa usa o percentual informado.
+                      </p>
+                    </div>
+                    <Button
+                      type="button" size="sm" variant="outline"
+                      onClick={() => setReceita((p) => [...p, { materia_prima_id: "", percentual: "", tag_consumo_nome: "" }])}
+                    >
+                      <Plus className="mr-1 h-4 w-4" /> MP
+                    </Button>
+                  </div>
+
+                  {receita.length === 0 ? (
+                    <p className="rounded border border-dashed border-border bg-background p-4 text-center text-xs text-muted-foreground">
+                      Nenhuma matéria-prima adicionada. Cadastre as MPs em Cadastros → Matérias-primas.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {receita.map((r, ri) => (
+                        <div key={ri} className="grid grid-cols-12 gap-2 rounded-md border border-border bg-background p-2 items-center">
+                          <select
+                            value={r.materia_prima_id}
+                            onChange={(ev) => setReceita((prev) => prev.map((x, i) => i === ri ? { ...x, materia_prima_id: ev.target.value } : x))}
+                            className="col-span-5 h-9 rounded-md border border-input bg-background px-2 text-sm"
+                          >
+                            <option value="">— Selecione MP —</option>
+                            {(mpList.data ?? []).map((m) => (
+                              <option key={m.id} value={m.id}>{m.codigo} — {m.nome} ({m.unidade})</option>
+                            ))}
+                          </select>
+                          <div className="col-span-2 flex items-center gap-1">
+                            <Input
+                              type="number" step="0.01" min="0" max="100"
+                              value={r.percentual}
+                              onChange={(ev) => setReceita((prev) => prev.map((x, i) => i === ri ? { ...x, percentual: ev.target.value } : x))}
+                              placeholder="%" className="h-9"
+                            />
+                            <span className="text-xs text-muted-foreground">%</span>
+                          </div>
+                          <select
+                            value={r.tag_consumo_nome}
+                            onChange={(ev) => setReceita((prev) => prev.map((x, i) => i === ri ? { ...x, tag_consumo_nome: ev.target.value } : x))}
+                            className="col-span-4 h-9 rounded-md border border-input bg-background px-2 text-xs"
+                          >
+                            <option value="">Sem tag (usa %)</option>
+                            {(tagsList.data ?? []).map((t) => (
+                              <option key={t.nome} value={t.nome}>{t.nome_amigavel || t.nome}</option>
+                            ))}
+                          </select>
+                          <Button
+                            type="button" variant="ghost" size="icon"
+                            className="col-span-1"
+                            onClick={() => setReceita((prev) => prev.filter((_, i) => i !== ri))}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <div className="flex justify-end text-xs text-muted-foreground">
+                        Soma: {receita.reduce((s, r) => s + (Number(r.percentual) || 0), 0).toFixed(2)}% (não pode passar de 100%)
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-sm font-semibold">Processo de fabricação</h3>
