@@ -165,42 +165,83 @@ function MateriasPrimasPage() {
         title="Matérias-primas"
         description="Insumos usados nas receitas de produtos. Cada MP tem código, unidade e pode ser armazenada em tanques como um produto qualquer."
         actions={
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Nova matéria-prima</Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>{editing ? "Editar matéria-prima" : "Nova matéria-prima"}</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label>Código</Label>
-                  <Input value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value })} />
+          <div className="flex gap-2">
+            <Dialog open={promoteOpen} onOpenChange={setPromoteOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline"><PackagePlus className="mr-2 h-4 w-4" />Usar produto fabricado</Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Adicionar produto fabricado como matéria-prima</DialogTitle>
+                </DialogHeader>
+                <p className="text-sm text-muted-foreground">
+                  Selecione um produto já cadastrado para disponibilizá-lo também como insumo em receitas de outros produtos.
+                </p>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input className="pl-9" placeholder="Buscar produto"
+                    value={promoteSearch} onChange={(e) => setPromoteSearch(e.target.value)} />
                 </div>
-                <div className="space-y-1.5">
-                  <Label>Unidade</Label>
-                  <Input value={form.unidade} onChange={(e) => setForm({ ...form, unidade: e.target.value })} placeholder="kg, L, un..." />
+                <div className="max-h-72 overflow-auto rounded-md border border-border divide-y divide-border">
+                  {(produtosFabricados.data ?? [])
+                    .filter((p) => !promoteSearch || [p.nome, p.codigo].some((v) => v?.toLowerCase().includes(promoteSearch.toLowerCase())))
+                    .map((p) => (
+                      <div key={p.id} className="flex items-center justify-between p-2">
+                        <div>
+                          <div className="text-sm font-medium">{p.nome}</div>
+                          <div className="text-xs text-muted-foreground font-mono">{p.codigo} · {p.unidade}</div>
+                        </div>
+                        <Button size="sm" onClick={() => promote(p.id)}>Adicionar</Button>
+                      </div>
+                    ))}
+                  {produtosFabricados.data && produtosFabricados.data.length === 0 && (
+                    <div className="p-4 text-sm text-muted-foreground text-center">
+                      Nenhum produto fabricado disponível.
+                    </div>
+                  )}
                 </div>
-                <div className="sm:col-span-2 space-y-1.5">
-                  <Label>Nome</Label>
-                  <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+                <DialogFooter>
+                  <Button variant="ghost" onClick={() => setPromoteOpen(false)}>Fechar</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild>
+                <Button onClick={openCreate}><Plus className="mr-2 h-4 w-4" />Nova matéria-prima</Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editing ? "Editar matéria-prima" : "Nova matéria-prima"}</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label>Código</Label>
+                    <Input value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value })} />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Unidade</Label>
+                    <Input value={form.unidade} onChange={(e) => setForm({ ...form, unidade: e.target.value })} placeholder="kg, L, un..." />
+                  </div>
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <Label>Nome</Label>
+                    <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} />
+                  </div>
+                  <div className="sm:col-span-2 space-y-1.5">
+                    <Label>Descrição</Label>
+                    <Textarea value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} rows={2} />
+                  </div>
+                  <label className="sm:col-span-2 flex items-center gap-2 text-sm">
+                    <input type="checkbox" checked={form.ativo} onChange={(e) => setForm({ ...form, ativo: e.target.checked })} />
+                    Ativa
+                  </label>
                 </div>
-                <div className="sm:col-span-2 space-y-1.5">
-                  <Label>Descrição</Label>
-                  <Textarea value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} rows={2} />
-                </div>
-                <label className="sm:col-span-2 flex items-center gap-2 text-sm">
-                  <input type="checkbox" checked={form.ativo} onChange={(e) => setForm({ ...form, ativo: e.target.checked })} />
-                  Ativa
-                </label>
-              </div>
-              <DialogFooter>
-                <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
-                <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar</Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+                <DialogFooter>
+                  <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
+                  <Button onClick={() => save.mutate()} disabled={save.isPending}>Salvar</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
         }
       />
 
