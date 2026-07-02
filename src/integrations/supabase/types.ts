@@ -972,6 +972,76 @@ export type Database = {
           },
         ]
       }
+      ordem_materiais: {
+        Row: {
+          consumida: boolean
+          created_at: string
+          id: string
+          materia_prima_id: string
+          observacao: string | null
+          ordem_id: string
+          owner_id: string
+          percentual: number | null
+          quantidade_consumida: number | null
+          quantidade_prevista: number
+          tag_consumo_nome: string | null
+          tanque_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          consumida?: boolean
+          created_at?: string
+          id?: string
+          materia_prima_id: string
+          observacao?: string | null
+          ordem_id: string
+          owner_id: string
+          percentual?: number | null
+          quantidade_consumida?: number | null
+          quantidade_prevista?: number
+          tag_consumo_nome?: string | null
+          tanque_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          consumida?: boolean
+          created_at?: string
+          id?: string
+          materia_prima_id?: string
+          observacao?: string | null
+          ordem_id?: string
+          owner_id?: string
+          percentual?: number | null
+          quantidade_consumida?: number | null
+          quantidade_prevista?: number
+          tag_consumo_nome?: string | null
+          tanque_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordem_materiais_materia_prima_id_fkey"
+            columns: ["materia_prima_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordem_materiais_ordem_id_fkey"
+            columns: ["ordem_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_producao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordem_materiais_tanque_id_fkey"
+            columns: ["tanque_id"]
+            isOneToOne: false
+            referencedRelation: "tanques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ordens_manutencao: {
         Row: {
           agendada_para: string | null
@@ -1388,6 +1458,60 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "produto_processos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      produto_receita: {
+        Row: {
+          created_at: string
+          id: string
+          materia_prima_id: string
+          observacao: string | null
+          ordem: number
+          owner_id: string
+          percentual: number
+          produto_id: string
+          tag_consumo_nome: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          materia_prima_id: string
+          observacao?: string | null
+          ordem?: number
+          owner_id: string
+          percentual?: number
+          produto_id: string
+          tag_consumo_nome?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          materia_prima_id?: string
+          observacao?: string | null
+          ordem?: number
+          owner_id?: string
+          percentual?: number
+          produto_id?: string
+          tag_consumo_nome?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "produto_receita_materia_prima_id_fkey"
+            columns: ["materia_prima_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "produto_receita_produto_id_fkey"
             columns: ["produto_id"]
             isOneToOne: false
             referencedRelation: "produtos"

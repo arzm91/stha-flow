@@ -794,14 +794,75 @@ function ObservacoesSection({
 
 function FinalizarDialog({
   op, tanques, onDone,
-}: { op: any; tanques: { id: string; codigo: string; nome: string }[]; onDone: () => void }) {
+}: { op: any; tanques: { id: string; codigo: string; nome: string; produto_id?: string | null }[]; onDone: () => void }) {
   const [open, setOpen] = useState(false);
   const [qtd, setQtd] = useState<number | "">("");
   const [obs, setObs] = useState("");
   const [tanqueId, setTanqueId] = useState("");
   const [loading, setLoading] = useState(false);
+  type MatRow = {
+    id: string;
+    materia_prima_id: string;
+    materia_prima_nome: string;
+    unidade: string;
+    percentual: number | null;
+    quantidade_prevista: number;
+    quantidade_consumida: string; // input controlled
+    tanque_id: string;
+    tag_consumo_nome: string | null;
+    tag_valor: number | null; // captured tag value if any
+  };
+  const [mats, setMats] = useState<MatRow[]>([]);
+  const [matsLoaded, setMatsLoaded] = useState(false);
 
-  useEffect(() => { if (open) { setQtd(""); setObs(""); setTanqueId(""); } }, [open]);
+  useEffect(() => {
+    if (!open) return;
+    setQtd(""); setObs(""); setTanqueId(""); setMats([]); setMatsLoaded(false);
+    (async () => {
+      const { data: rows } = await supabase
+        .from("ordem_materiais")
+        .select("id, materia_prima_id, percentual, quantidade_prevista, tanque_id, tag_consumo_nome")
+        .eq("ordem_id", op.id);
+      const list = (rows ?? []) as Array<{
+        id: string; materia_prima_id: string; percentual: number | null;
+        quantidade_prevista: number | null; tanque_id: string | null; tag_consumo_nome: string | null;
+      }>;
+      if (list.length === 0) { setMatsLoaded(true); return; }
+      const mpIds = Array.from(new Set(list.map((r) => r.materia_prima_id)));
+      const { data: prods } = await supabase.from("produtos").select("id, nome, unidade").in("id", mpIds);
+      const prodMap = new Map((prods ?? []).map((p: any) => [p.id, p]));
+      const tagNames = Array.from(new Set(list.map((r) => r.tag_consumo_nome).filter(Boolean))) as string[];
+      const tagMap = new Map<string, number>();
+      if (tagNames.length > 0) {
+        const { data: tags } = await supabase.from("tags_live").select("nome, valor_num").in("nome", tagNames);
+        for (const t of (tags ?? []) as Array<{ nome: string; valor_num: number | null }>) {
+          if (t.valor_num != null) tagMap.set(t.nome, Number(t.valor_num));
+        }
+      }
+      setMats(list.map((r) => {
+        const prod: any = prodMap.get(r.materia_prima_id) ?? {};
+        const tagVal = r.tag_consumo_nome ? (tagMap.get(r.tag_consumo_nome) ?? null) : null;
+        const prev = Number(r.quantidade_prevista ?? 0);
+        const initial = tagVal != null ? tagVal : prev;
+        return {
+          id: r.id,
+          materia_prima_id: r.materia_prima_id,
+          materia_prima_nome: prod.nome ?? "—",
+          unidade: prod.unidade ?? "",
+          percentual: r.percentual,
+          quantidade_prevista: prev,
+          quantidade_consumida: String(initial),
+          tanque_id: r.tanque_id ?? "",
+          tag_consumo_nome: r.tag_consumo_nome,
+          tag_valor: tagVal,
+        };
+      }));
+      setMatsLoaded(true);
+    })();
+  }, [open, op.id]);
+
+  const updateMat = (i: number, patch: Partial<MatRow>) =>
+    setMats((prev) => prev.map((m, idx) => (idx === i ? { ...m, ...patch } : m)));
 
   const handle = async () => {
     if (qtd === "" || Number(qtd) <= 0) return toast.error("Informe quantidade produzida");
@@ -853,6 +914,31 @@ function FinalizarDialog({
         });
         if (e3) throw e3;
       }
+
+      // Baixa das matérias-primas
+      for (const m of mats) {
+        const qConsumo = Number(m.quantidade_consumida);
+        if (!qConsumo || qConsumo <= 0) continue;
+        if (m.tanque_id) {
+          const { error: em } = await supabase.from("movimentacoes_estoque").insert({
+            owner_id: u.user.id,
+            produto_id: m.materia_prima_id,
+            tanque_id: m.tanque_id,
+            tipo: "saida",
+            quantidade: qConsumo,
+            origem: `Consumo MP — OP ${op.numero}`,
+            ordem_id: op.id,
+            ocorrido_em: fimEm,
+          });
+          if (em) throw em;
+        }
+        await supabase.from("ordem_materiais").update({
+          quantidade_consumida: qConsumo,
+          tanque_id: m.tanque_id || null,
+          consumida: true,
+        }).eq("id", m.id);
+      }
+
       toast.success("Produção finalizada");
       try {
         await gerarRelatorioProducaoPdf(op.id);
@@ -872,9 +958,9 @@ function FinalizarDialog({
       <DialogTrigger asChild>
         <Button><CheckCircle2 className="mr-2 h-4 w-4" />Finalizar Produção</Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="max-h-[92vh] w-[calc(100vw-2rem)] max-w-3xl overflow-y-auto">
         <DialogHeader><DialogTitle>Finalizar OP {op.numero}</DialogTitle></DialogHeader>
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="space-y-1.5">
             <Label>Quantidade produzida</Label>
             <Input type="number" step="any" value={qtd} onChange={(e) => setQtd(e.target.value === "" ? "" : Number(e.target.value))} />
@@ -888,6 +974,50 @@ function FinalizarDialog({
             </select>
             <p className="text-xs text-muted-foreground">Selecione um tanque para gerar entrada automática no estoque.</p>
           </div>
+
+          {/* Baixa de matérias-primas */}
+          <div className="rounded-md border border-border bg-muted/30 p-3 space-y-2">
+            <div className="text-sm font-semibold">Consumo de matérias-primas</div>
+            {!matsLoaded ? (
+              <p className="text-xs text-muted-foreground">Carregando...</p>
+            ) : mats.length === 0 ? (
+              <p className="text-xs text-muted-foreground">Este produto não tem receita cadastrada. Nenhuma baixa de MP será realizada.</p>
+            ) : (
+              <div className="space-y-2">
+                {mats.map((m, i) => (
+                  <div key={m.id} className="grid grid-cols-12 gap-2 items-center rounded-md border border-border bg-background p-2">
+                    <div className="col-span-4 text-sm">
+                      <div className="font-medium">{m.materia_prima_nome}</div>
+                      <div className="text-[10px] text-muted-foreground">
+                        {m.percentual != null ? `${Number(m.percentual).toFixed(2)}%` : "—"} · previsto {m.quantidade_prevista.toFixed(3)} {m.unidade}
+                        {m.tag_consumo_nome ? ` · tag ${m.tag_consumo_nome}${m.tag_valor != null ? ` (${m.tag_valor})` : " (sem leitura)"}` : ""}
+                      </div>
+                    </div>
+                    <div className="col-span-3 flex items-center gap-1">
+                      <Input
+                        type="number" step="any" min="0"
+                        value={m.quantidade_consumida}
+                        onChange={(ev) => updateMat(i, { quantidade_consumida: ev.target.value })}
+                        className="h-9"
+                      />
+                      <span className="text-xs text-muted-foreground">{m.unidade}</span>
+                    </div>
+                    <select
+                      value={m.tanque_id}
+                      onChange={(ev) => updateMat(i, { tanque_id: ev.target.value })}
+                      className="col-span-5 h-9 rounded-md border border-input bg-background px-2 text-xs"
+                    >
+                      <option value="">— sem baixa em tanque —</option>
+                      {tanques.map((t) => (
+                        <option key={t.id} value={t.id}>{t.codigo} — {t.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="space-y-1.5">
             <Label>Observações finais</Label>
             <textarea value={obs} onChange={(e) => setObs(e.target.value)}
@@ -902,6 +1032,7 @@ function FinalizarDialog({
     </Dialog>
   );
 }
+
 
 const TIPO_BADGE: Record<string, { label: string; cls: string }> = {
   materia_prima: { label: "Matéria-prima", cls: "bg-amber-500/15 text-amber-700 border-amber-500/30" },

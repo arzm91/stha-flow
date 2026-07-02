@@ -1,10 +1,11 @@
 import { createFileRoute, Link, Outlet, redirect, useRouterState } from "@tanstack/react-router";
-import { Cpu, Package, Gauge, FlaskConical, Database } from "lucide-react";
+import { Cpu, Package, Gauge, FlaskConical, Database, Wheat } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const tabs = [
   { to: "/cadastros/equipamentos", label: "Equipamentos", icon: Cpu },
   { to: "/cadastros/produtos", label: "Produtos", icon: Package },
+  { to: "/cadastros/materias-primas", label: "Matérias-primas", icon: Wheat },
   { to: "/cadastros/parametros", label: "Parâmetros", icon: Gauge },
   { to: "/cadastros/analises", label: "Análises", icon: FlaskConical },
   { to: "/cadastros/tanques", label: "Locais", icon: Database },

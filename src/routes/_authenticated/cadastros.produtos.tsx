@@ -134,6 +134,8 @@ function ProdutosPage() {
   const [editing, setEditing] = useState<Produto | null>(null);
   const [form, setForm] = useState<typeof emptyProduto>(emptyProduto);
   const [etapas, setEtapas] = useState<Etapa[]>([]);
+  type ReceitaItem = { id?: string; materia_prima_id: string; percentual: string; tag_consumo_nome: string };
+  const [receita, setReceita] = useState<ReceitaItem[]>([]);
 
   const list = useQuery({
     queryKey: ["produtos"],
@@ -178,11 +180,24 @@ function ProdutosPage() {
 
 
   const resPerms = useResourcePermissions();
-  const visible = resPerms.filter("produto", list.data);
+  const visible = resPerms.filter("produto", list.data).filter((p) => p.categoria !== "materia_prima");
   const filtered = visible.filter((r) => {
     if (!search) return true;
     const s = search.toLowerCase();
     return [r.nome, r.codigo, r.categoria ?? ""].some((v) => v.toLowerCase().includes(s));
+  });
+
+  // MPs available for recipe
+  const mpList = useQuery({
+    queryKey: ["materias-primas-list"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("produtos")
+        .select("id, codigo, nome, unidade")
+        .eq("categoria", "materia_prima").eq("ativo", true)
+        .order("nome");
+      if (error) throw error;
+      return (data ?? []) as { id: string; codigo: string; nome: string; unidade: string }[];
+    },
   });
 
 
@@ -190,6 +205,7 @@ function ProdutosPage() {
     setEditing(null);
     setForm(emptyProduto);
     setEtapas([]);
+    setReceita([]);
     setOpen(true);
   };
 
@@ -266,6 +282,17 @@ function ProdutosPage() {
         };
       }),
     );
+
+    // Load recipe
+    const { data: rec } = await supabase.from("produto_receita")
+      .select("id, materia_prima_id, percentual, tag_consumo_nome, ordem")
+      .eq("produto_id", r.id).order("ordem");
+    setReceita(((rec ?? []) as Array<{ id: string; materia_prima_id: string; percentual: number | null; tag_consumo_nome: string | null }>).map((x) => ({
+      id: x.id,
+      materia_prima_id: x.materia_prima_id,
+      percentual: x.percentual == null ? "" : String(x.percentual),
+      tag_consumo_nome: x.tag_consumo_nome ?? "",
+    })));
 
     setOpen(true);
   };
@@ -346,6 +373,27 @@ function ProdutosPage() {
         p_atividades: atividadesPayload,
       });
       if (rpcErr) throw rpcErr;
+
+      // Save recipe (replace all items for this product)
+      const recValid = receita.filter((r) => r.materia_prima_id);
+      const total = recValid.reduce((s, r) => s + (Number(r.percentual) || 0), 0);
+      if (recValid.length > 0 && Math.round(total * 100) / 100 > 100.01) {
+        throw new Error(`A soma das porcentagens da receita é ${total.toFixed(2)}%. Não pode ultrapassar 100%.`);
+      }
+      const { error: delErr } = await supabase.from("produto_receita").delete().eq("produto_id", produtoId);
+      if (delErr) throw delErr;
+      if (recValid.length > 0) {
+        const rows = recValid.map((r, idx) => ({
+          produto_id: produtoId!,
+          materia_prima_id: r.materia_prima_id,
+          percentual: Number(r.percentual) || 0,
+          tag_consumo_nome: r.tag_consumo_nome.trim() || null,
+          ordem: idx,
+          owner_id: u.user.id,
+        }));
+        const { error: insErr } = await supabase.from("produto_receita").insert(rows);
+        if (insErr) throw insErr;
+      }
     },
     onSuccess: () => {
       toast.success(editing ? "Produto atualizado" : "Produto criado");
@@ -355,6 +403,7 @@ function ProdutosPage() {
       setEditing(null);
       setForm(emptyProduto);
       setEtapas([]);
+      setReceita([]);
     },
     onError: async (e: Error & { code?: string; details?: string; hint?: string }) => {
       const { isAdminCancelled } = await import("@/lib/security/guard-admin");
@@ -482,6 +531,76 @@ function ProdutosPage() {
                     />
                     <Label htmlFor="ativo">Ativo</Label>
                   </div>
+                </div>
+
+                {/* ==== RECEITA (matérias-primas por %) ==== */}
+                <div className="space-y-3 rounded-md border border-border bg-muted/30 p-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold">Receita — matérias-primas</h3>
+                      <p className="text-xs text-muted-foreground">
+                        Defina o percentual de cada MP para 100% do produto. Opcionalmente, associe uma tag de consumo — se a tag estiver disponível na ordem, o valor real da tag é usado; caso contrário, a baixa usa o percentual informado.
+                      </p>
+                    </div>
+                    <Button
+                      type="button" size="sm" variant="outline"
+                      onClick={() => setReceita((p) => [...p, { materia_prima_id: "", percentual: "", tag_consumo_nome: "" }])}
+                    >
+                      <Plus className="mr-1 h-4 w-4" /> MP
+                    </Button>
+                  </div>
+
+                  {receita.length === 0 ? (
+                    <p className="rounded border border-dashed border-border bg-background p-4 text-center text-xs text-muted-foreground">
+                      Nenhuma matéria-prima adicionada. Cadastre as MPs em Cadastros → Matérias-primas.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {receita.map((r, ri) => (
+                        <div key={ri} className="grid grid-cols-12 gap-2 rounded-md border border-border bg-background p-2 items-center">
+                          <select
+                            value={r.materia_prima_id}
+                            onChange={(ev) => setReceita((prev) => prev.map((x, i) => i === ri ? { ...x, materia_prima_id: ev.target.value } : x))}
+                            className="col-span-5 h-9 rounded-md border border-input bg-background px-2 text-sm"
+                          >
+                            <option value="">— Selecione MP —</option>
+                            {(mpList.data ?? []).map((m) => (
+                              <option key={m.id} value={m.id}>{m.codigo} — {m.nome} ({m.unidade})</option>
+                            ))}
+                          </select>
+                          <div className="col-span-2 flex items-center gap-1">
+                            <Input
+                              type="number" step="0.01" min="0" max="100"
+                              value={r.percentual}
+                              onChange={(ev) => setReceita((prev) => prev.map((x, i) => i === ri ? { ...x, percentual: ev.target.value } : x))}
+                              placeholder="%" className="h-9"
+                            />
+                            <span className="text-xs text-muted-foreground">%</span>
+                          </div>
+                          <select
+                            value={r.tag_consumo_nome}
+                            onChange={(ev) => setReceita((prev) => prev.map((x, i) => i === ri ? { ...x, tag_consumo_nome: ev.target.value } : x))}
+                            className="col-span-4 h-9 rounded-md border border-input bg-background px-2 text-xs"
+                          >
+                            <option value="">Sem tag (usa %)</option>
+                            {(tagsList.data ?? []).map((t) => (
+                              <option key={t.nome} value={t.nome}>{t.nome_amigavel || t.nome}</option>
+                            ))}
+                          </select>
+                          <Button
+                            type="button" variant="ghost" size="icon"
+                            className="col-span-1"
+                            onClick={() => setReceita((prev) => prev.filter((_, i) => i !== ri))}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      ))}
+                      <div className="flex justify-end text-xs text-muted-foreground">
+                        Soma: {receita.reduce((s, r) => s + (Number(r.percentual) || 0), 0).toFixed(2)}% (não pode passar de 100%)
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-3 rounded-md border border-border bg-muted/30 p-3">

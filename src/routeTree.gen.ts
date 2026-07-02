@@ -48,6 +48,7 @@ import { Route as AuthenticatedEstoqueMovimentacaoRouteImport } from './routes/_
 import { Route as AuthenticatedCadastrosTanquesRouteImport } from './routes/_authenticated/cadastros.tanques'
 import { Route as AuthenticatedCadastrosProdutosRouteImport } from './routes/_authenticated/cadastros.produtos'
 import { Route as AuthenticatedCadastrosParametrosRouteImport } from './routes/_authenticated/cadastros.parametros'
+import { Route as AuthenticatedCadastrosMateriasPrimasRouteImport } from './routes/_authenticated/cadastros.materias-primas'
 import { Route as AuthenticatedCadastrosEquipamentosRouteImport } from './routes/_authenticated/cadastros.equipamentos'
 import { Route as AuthenticatedCadastrosAnalisesRouteImport } from './routes/_authenticated/cadastros.analises'
 import { Route as AuthenticatedAutomacoesIdRouteImport } from './routes/_authenticated/automacoes.$id'
@@ -273,6 +274,12 @@ const AuthenticatedCadastrosParametrosRoute =
     path: '/parametros',
     getParentRoute: () => AuthenticatedCadastrosRoute,
   } as any)
+const AuthenticatedCadastrosMateriasPrimasRoute =
+  AuthenticatedCadastrosMateriasPrimasRouteImport.update({
+    id: '/materias-primas',
+    path: '/materias-primas',
+    getParentRoute: () => AuthenticatedCadastrosRoute,
+  } as any)
 const AuthenticatedCadastrosEquipamentosRoute =
   AuthenticatedCadastrosEquipamentosRouteImport.update({
     id: '/equipamentos',
@@ -347,6 +354,7 @@ export interface FileRoutesByFullPath {
   '/automacoes/$id': typeof AuthenticatedAutomacoesIdRoute
   '/cadastros/analises': typeof AuthenticatedCadastrosAnalisesRoute
   '/cadastros/equipamentos': typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
+  '/cadastros/materias-primas': typeof AuthenticatedCadastrosMateriasPrimasRoute
   '/cadastros/parametros': typeof AuthenticatedCadastrosParametrosRoute
   '/cadastros/produtos': typeof AuthenticatedCadastrosProdutosRoute
   '/cadastros/tanques': typeof AuthenticatedCadastrosTanquesRoute
@@ -388,6 +396,7 @@ export interface FileRoutesByTo {
   '/automacoes/$id': typeof AuthenticatedAutomacoesIdRoute
   '/cadastros/analises': typeof AuthenticatedCadastrosAnalisesRoute
   '/cadastros/equipamentos': typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
+  '/cadastros/materias-primas': typeof AuthenticatedCadastrosMateriasPrimasRoute
   '/cadastros/parametros': typeof AuthenticatedCadastrosParametrosRoute
   '/cadastros/produtos': typeof AuthenticatedCadastrosProdutosRoute
   '/cadastros/tanques': typeof AuthenticatedCadastrosTanquesRoute
@@ -439,6 +448,7 @@ export interface FileRoutesById {
   '/_authenticated/automacoes/$id': typeof AuthenticatedAutomacoesIdRoute
   '/_authenticated/cadastros/analises': typeof AuthenticatedCadastrosAnalisesRoute
   '/_authenticated/cadastros/equipamentos': typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
+  '/_authenticated/cadastros/materias-primas': typeof AuthenticatedCadastrosMateriasPrimasRoute
   '/_authenticated/cadastros/parametros': typeof AuthenticatedCadastrosParametrosRoute
   '/_authenticated/cadastros/produtos': typeof AuthenticatedCadastrosProdutosRoute
   '/_authenticated/cadastros/tanques': typeof AuthenticatedCadastrosTanquesRoute
@@ -490,6 +500,7 @@ export interface FileRouteTypes {
     | '/automacoes/$id'
     | '/cadastros/analises'
     | '/cadastros/equipamentos'
+    | '/cadastros/materias-primas'
     | '/cadastros/parametros'
     | '/cadastros/produtos'
     | '/cadastros/tanques'
@@ -531,6 +542,7 @@ export interface FileRouteTypes {
     | '/automacoes/$id'
     | '/cadastros/analises'
     | '/cadastros/equipamentos'
+    | '/cadastros/materias-primas'
     | '/cadastros/parametros'
     | '/cadastros/produtos'
     | '/cadastros/tanques'
@@ -581,6 +593,7 @@ export interface FileRouteTypes {
     | '/_authenticated/automacoes/$id'
     | '/_authenticated/cadastros/analises'
     | '/_authenticated/cadastros/equipamentos'
+    | '/_authenticated/cadastros/materias-primas'
     | '/_authenticated/cadastros/parametros'
     | '/_authenticated/cadastros/produtos'
     | '/_authenticated/cadastros/tanques'
@@ -894,6 +907,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCadastrosParametrosRouteImport
       parentRoute: typeof AuthenticatedCadastrosRoute
     }
+    '/_authenticated/cadastros/materias-primas': {
+      id: '/_authenticated/cadastros/materias-primas'
+      path: '/materias-primas'
+      fullPath: '/cadastros/materias-primas'
+      preLoaderRoute: typeof AuthenticatedCadastrosMateriasPrimasRouteImport
+      parentRoute: typeof AuthenticatedCadastrosRoute
+    }
     '/_authenticated/cadastros/equipamentos': {
       id: '/_authenticated/cadastros/equipamentos'
       path: '/equipamentos'
@@ -1005,6 +1025,7 @@ const AuthenticatedCadastrosEquipamentosRouteWithChildren =
 interface AuthenticatedCadastrosRouteChildren {
   AuthenticatedCadastrosAnalisesRoute: typeof AuthenticatedCadastrosAnalisesRoute
   AuthenticatedCadastrosEquipamentosRoute: typeof AuthenticatedCadastrosEquipamentosRouteWithChildren
+  AuthenticatedCadastrosMateriasPrimasRoute: typeof AuthenticatedCadastrosMateriasPrimasRoute
   AuthenticatedCadastrosParametrosRoute: typeof AuthenticatedCadastrosParametrosRoute
   AuthenticatedCadastrosProdutosRoute: typeof AuthenticatedCadastrosProdutosRoute
   AuthenticatedCadastrosTanquesRoute: typeof AuthenticatedCadastrosTanquesRoute
@@ -1016,6 +1037,8 @@ const AuthenticatedCadastrosRouteChildren: AuthenticatedCadastrosRouteChildren =
     AuthenticatedCadastrosAnalisesRoute: AuthenticatedCadastrosAnalisesRoute,
     AuthenticatedCadastrosEquipamentosRoute:
       AuthenticatedCadastrosEquipamentosRouteWithChildren,
+    AuthenticatedCadastrosMateriasPrimasRoute:
+      AuthenticatedCadastrosMateriasPrimasRoute,
     AuthenticatedCadastrosParametrosRoute:
       AuthenticatedCadastrosParametrosRoute,
     AuthenticatedCadastrosProdutosRoute: AuthenticatedCadastrosProdutosRoute,
