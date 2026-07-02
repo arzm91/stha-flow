@@ -466,8 +466,8 @@ function AvancoProducaoHeader({
     ? Math.max(0, Math.min(100, (totalNum / qtdPlanejada) * 100))
     : null;
 
-  const indice = (totalNum != null && consumoNum != null && consumoNum !== 0)
-    ? totalNum / consumoNum
+  const indice = (consumoNum != null && vel?.valor_num != null && vel.valor_num !== 0)
+    ? consumoNum / vel.valor_num
     : null;
   const minNum = cfg.min !== "" && !isNaN(Number(cfg.min)) ? Number(cfg.min) : null;
   const maxNum = cfg.max !== "" && !isNaN(Number(cfg.max)) ? Number(cfg.max) : null;
