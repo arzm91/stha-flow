@@ -21,6 +21,7 @@ import {
 import { PageHeader } from "@/components/PageHeader";
 import { Bell, Plus, Trash2, Check, Eye, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
+import { RotinasSemanais } from "@/components/alertas/RotinasSemanais";
 
 export const Route = createFileRoute("/_authenticated/alertas/")({
   component: AlertasPage,
