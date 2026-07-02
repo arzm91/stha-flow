@@ -128,6 +128,28 @@ function ProducaoPage() {
                       <div className="text-xs text-muted-foreground">
                         {(op.produto as { nome: string } | null)?.nome ?? ""}{op.inicio_em ? ` · há ${durationFromNow(op.inicio_em)}` : ""}
                       </div>
+                      {(() => {
+                        if (!e.tag_producao_total) return null;
+                        const tag = tagMap.get(e.tag_producao_total);
+                        const plan = Number(op.qtd_planejada ?? 0);
+                        const val = tag?.valor_num ?? null;
+                        const pct = val != null && plan > 0 ? Math.max(0, Math.min(100, (val / plan) * 100)) : null;
+                        return (
+                          <div className="mt-2">
+                            <div className="flex items-baseline justify-between text-xs">
+                              <span className="text-muted-foreground">Avanço</span>
+                              <span className="font-mono font-semibold text-primary">
+                                {val != null ? val.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) : "—"}
+                                {tag?.unidade ? ` ${tag.unidade}` : ""} / {plan.toLocaleString("pt-BR")}
+                                {pct != null ? ` · ${pct.toFixed(0)}%` : ""}
+                              </span>
+                            </div>
+                            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct ?? 0}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   ) : (
                     <div className="mt-3 text-sm text-muted-foreground">
