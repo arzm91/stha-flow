@@ -1640,6 +1640,8 @@ export type Database = {
       tags_live: {
         Row: {
           atualizado_em: string
+          escala_fator: number
+          escala_op: string
           grupo: string | null
           nome: string
           nome_amigavel: string | null
@@ -1651,9 +1653,12 @@ export type Database = {
           valor_max: number | null
           valor_min: number | null
           valor_num: number | null
+          valor_num_bruto: number | null
         }
         Insert: {
           atualizado_em?: string
+          escala_fator?: number
+          escala_op?: string
           grupo?: string | null
           nome: string
           nome_amigavel?: string | null
@@ -1665,9 +1670,12 @@ export type Database = {
           valor_max?: number | null
           valor_min?: number | null
           valor_num?: number | null
+          valor_num_bruto?: number | null
         }
         Update: {
           atualizado_em?: string
+          escala_fator?: number
+          escala_op?: string
           grupo?: string | null
           nome?: string
           nome_amigavel?: string | null
@@ -1679,6 +1687,7 @@ export type Database = {
           valor_max?: number | null
           valor_min?: number | null
           valor_num?: number | null
+          valor_num_bruto?: number | null
         }
         Relationships: []
       }
