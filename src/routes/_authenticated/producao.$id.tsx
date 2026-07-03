@@ -343,12 +343,22 @@ function TimelineUnificada({ ordemId }: { ordemId: string }) {
       titulo: `Início: ${nome}`,
     });
     if (ev.finalizado_em) {
+      const partes: string[] = [];
+      if (ev.duracao_seg != null) partes.push(`Duração ${formatDuracao(ev.duracao_seg)}`);
+      if (ev.valor_capturado != null) {
+        partes.push(`Valor ${formatNumber(Number(ev.valor_capturado))}${ev.unidade ? ` ${ev.unidade}` : ""}`);
+      }
+      if (ev.valor_inicio != null || ev.valor_fim != null) {
+        const ini = ev.valor_inicio != null ? formatNumber(Number(ev.valor_inicio)) : "—";
+        const fim = ev.valor_fim != null ? formatNumber(Number(ev.valor_fim)) : "—";
+        partes.push(`Tag ${ini} → ${fim}${ev.unidade ? ` ${ev.unidade}` : ""}`);
+      }
       eventos.push({
         key: `etp-fim-${ev.id}`,
         when: ev.finalizado_em,
         tipo: "processo_fim",
         titulo: `Fim: ${nome}`,
-        detalhe: ev.duracao_seg != null ? `Duração ${formatDuracao(ev.duracao_seg)}` : undefined,
+        detalhe: partes.length ? partes.join(" · ") : undefined,
       });
     }
   }
@@ -1421,6 +1431,20 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
                 ) : (
                   <div className="text-[10px] text-primary">em andamento</div>
                 )}
+                {(() => {
+                  const partes: string[] = [];
+                  if (e.valor_capturado != null) {
+                    partes.push(`valor: ${formatNumber(Number(e.valor_capturado))}${e.unidade ? ` ${e.unidade}` : ""}`);
+                  }
+                  if (e.valor_inicio != null || e.valor_fim != null) {
+                    const ini = e.valor_inicio != null ? formatNumber(Number(e.valor_inicio)) : "—";
+                    const fim = e.valor_fim != null ? formatNumber(Number(e.valor_fim)) : "—";
+                    partes.push(`tag: ${ini} → ${fim}${e.unidade ? ` ${e.unidade}` : ""}`);
+                  }
+                  return partes.length ? (
+                    <div className="mt-1 font-mono text-[11px] text-emerald-700">{partes.join(" · ")}</div>
+                  ) : null;
+                })()}
                 {e.observacao ? (
                   <div className="mt-1 text-[11px] text-foreground/80">{e.observacao}</div>
                 ) : null}
