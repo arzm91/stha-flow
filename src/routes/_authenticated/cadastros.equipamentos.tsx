@@ -103,6 +103,9 @@ function EquipamentosPage() {
       ]}
       extraActions={(r) => (
         <>
+          <Button asChild variant="ghost" size="icon" title="Processos (atividades)">
+            <Link to="/cadastros/equipamentos-atividades/$id" params={{ id: r.id }}><ListChecks className="h-4 w-4" /></Link>
+          </Button>
           <Button asChild variant="ghost" size="icon" title="Diagrama PFD">
             <Link to="/cadastros/equipamentos-pfd/$id" params={{ id: r.id }}><Workflow className="h-4 w-4" /></Link>
           </Button>
