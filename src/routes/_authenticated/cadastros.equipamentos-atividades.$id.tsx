@@ -132,7 +132,7 @@ function EquipAtividadesPage() {
         .eq("equipamento_id", equipId)
         .order("ordem", { ascending: true });
       if (error) throw error;
-      return (data ?? []) as AtividadeRow[];
+      return (data ?? []) as unknown as AtividadeRow[];
     },
   });
 
