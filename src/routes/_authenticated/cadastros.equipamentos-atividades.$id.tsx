@@ -186,12 +186,13 @@ function EquipAtividadesPage() {
         estab_janela_seg: Number(form.estab_janela_seg) || 30,
         estab_min_estavel_seg: Number(form.estab_min_estavel_seg) || 30,
       };
+      const client = supabase as unknown as { from: (t: string) => { update: (p: unknown) => { eq: (c: string, v: string) => Promise<{ error: unknown }> }; insert: (p: unknown) => Promise<{ error: unknown }> } };
       if (form.id) {
-        const { error } = await supabase.from("equipamento_atividades").update(payload).eq("id", form.id);
-        if (error) throw error;
+        const { error } = await client.from("equipamento_atividades").update(payload).eq("id", form.id);
+        if (error) throw error as Error;
       } else {
-        const { error } = await supabase.from("equipamento_atividades").insert(payload);
-        if (error) throw error;
+        const { error } = await client.from("equipamento_atividades").insert(payload);
+        if (error) throw error as Error;
       }
     },
     onSuccess: () => {
