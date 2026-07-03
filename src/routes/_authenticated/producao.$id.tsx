@@ -132,6 +132,28 @@ function OPPage() {
               {isFs ? <Minimize2 className="mr-1 h-4 w-4" /> : <Maximize2 className="mr-1 h-4 w-4" />}
               {isFs ? "Sair" : "Tela cheia"}
             </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try { await gerarRelatorioProducaoPdf(id); toast.success("Relatório PDF gerado"); }
+                catch (e) { toast.error("Falha ao gerar PDF: " + (e as Error).message); }
+              }}
+              title="Emitir relatório PDF da produção"
+            >
+              <FileText className="mr-1 h-4 w-4" /> Relatório PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try { await gerarRelatorioProducaoXlsx(id); toast.success("Excel gerado"); }
+                catch (e) { toast.error("Falha ao gerar Excel: " + (e as Error).message); }
+              }}
+              title="Exportar timeline e histórico para Excel"
+            >
+              <FileSpreadsheet className="mr-1 h-4 w-4" /> Exportar Excel
+            </Button>
             {!isFinal && <FinalizarDialog op={op.data} tanques={tanquesProd.data ?? []} onDone={() => { qc.invalidateQueries(); navigate({ to: "/producao" }); }} />}
           </div>
         }
