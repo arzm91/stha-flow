@@ -11,12 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, CheckCircle2, Gauge, FlaskConical, MessageSquare, Activity, AlertTriangle, Play, Square, ListChecks, Clock, History, Maximize2, Minimize2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Gauge, FlaskConical, MessageSquare, Activity, AlertTriangle, Play, Square, ListChecks, Clock, History, Maximize2, Minimize2, FileText, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate, formatNumber, durationFromNow, durationBetween } from "@/lib/format";
 import { ScadaViewer } from "@/components/scada/ScadaViewer";
 import { TagsMonitoramento } from "@/components/producao/TagsMonitoramento";
 import { gerarRelatorioProducaoPdf } from "@/lib/producao-pdf";
+import { gerarRelatorioProducaoXlsx } from "@/lib/producao-xlsx";
 
 export const Route = createFileRoute("/_authenticated/producao/$id")({
   component: OPPage,
@@ -130,6 +131,28 @@ function OPPage() {
             <Button variant="outline" size="sm" onClick={toggleFs} title={isFs ? "Sair da tela cheia" : "Tela cheia"}>
               {isFs ? <Minimize2 className="mr-1 h-4 w-4" /> : <Maximize2 className="mr-1 h-4 w-4" />}
               {isFs ? "Sair" : "Tela cheia"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try { await gerarRelatorioProducaoPdf(id); toast.success("Relatório PDF gerado"); }
+                catch (e) { toast.error("Falha ao gerar PDF: " + (e as Error).message); }
+              }}
+              title="Emitir relatório PDF da produção"
+            >
+              <FileText className="mr-1 h-4 w-4" /> Relatório PDF
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                try { await gerarRelatorioProducaoXlsx(id); toast.success("Excel gerado"); }
+                catch (e) { toast.error("Falha ao gerar Excel: " + (e as Error).message); }
+              }}
+              title="Exportar timeline e histórico para Excel"
+            >
+              <FileSpreadsheet className="mr-1 h-4 w-4" /> Exportar Excel
             </Button>
             {!isFinal && <FinalizarDialog op={op.data} tanques={tanquesProd.data ?? []} onDone={() => { qc.invalidateQueries(); navigate({ to: "/producao" }); }} />}
           </div>
