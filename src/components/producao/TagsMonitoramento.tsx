@@ -265,6 +265,9 @@ export function TagsMonitoramento({
       });
     }
     for (const e of q.etapas) {
+      // Mostrar apenas processos vindos de atividades de equipamento;
+      // ignorar processos cadastrados no produto.
+      if (!(e as any).equipamento_atividade_id) continue;
       const t = (e as any).tipo as string;
       if (t === "tag_captura") {
         pontos.push({
