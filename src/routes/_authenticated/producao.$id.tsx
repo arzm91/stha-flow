@@ -1421,6 +1421,20 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
                 ) : (
                   <div className="text-[10px] text-primary">em andamento</div>
                 )}
+                {(() => {
+                  const partes: string[] = [];
+                  if (e.valor_capturado != null) {
+                    partes.push(`valor: ${formatNumber(Number(e.valor_capturado))}${e.unidade ? ` ${e.unidade}` : ""}`);
+                  }
+                  if (e.valor_inicio != null || e.valor_fim != null) {
+                    const ini = e.valor_inicio != null ? formatNumber(Number(e.valor_inicio)) : "—";
+                    const fim = e.valor_fim != null ? formatNumber(Number(e.valor_fim)) : "—";
+                    partes.push(`tag: ${ini} → ${fim}${e.unidade ? ` ${e.unidade}` : ""}`);
+                  }
+                  return partes.length ? (
+                    <div className="mt-1 font-mono text-[11px] text-emerald-700">{partes.join(" · ")}</div>
+                  ) : null;
+                })()}
                 {e.observacao ? (
                   <div className="mt-1 text-[11px] text-foreground/80">{e.observacao}</div>
                 ) : null}
