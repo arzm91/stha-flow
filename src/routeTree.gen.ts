@@ -58,6 +58,7 @@ import { Route as AuthenticatedProducaoHistoricoEquipIdRouteImport } from './rou
 import { Route as AuthenticatedEstoqueTanquesIdRouteImport } from './routes/_authenticated/estoque.tanques.$id'
 import { Route as AuthenticatedCadastrosEquipamentosIdRouteImport } from './routes/_authenticated/cadastros.equipamentos.$id'
 import { Route as AuthenticatedCadastrosEquipamentosPfdIdRouteImport } from './routes/_authenticated/cadastros.equipamentos-pfd.$id'
+import { Route as AuthenticatedCadastrosEquipamentosAtividadesIdRouteImport } from './routes/_authenticated/cadastros.equipamentos-atividades.$id'
 
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
@@ -332,6 +333,12 @@ const AuthenticatedCadastrosEquipamentosPfdIdRoute =
     path: '/equipamentos-pfd/$id',
     getParentRoute: () => AuthenticatedCadastrosRoute,
   } as any)
+const AuthenticatedCadastrosEquipamentosAtividadesIdRoute =
+  AuthenticatedCadastrosEquipamentosAtividadesIdRouteImport.update({
+    id: '/equipamentos-atividades/$id',
+    path: '/equipamentos-atividades/$id',
+    getParentRoute: () => AuthenticatedCadastrosRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -376,6 +383,7 @@ export interface FileRoutesByFullPath {
   '/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/tabelas/': typeof AuthenticatedTabelasIndexRoute
   '/tags/': typeof AuthenticatedTagsIndexRoute
+  '/cadastros/equipamentos-atividades/$id': typeof AuthenticatedCadastrosEquipamentosAtividadesIdRoute
   '/cadastros/equipamentos-pfd/$id': typeof AuthenticatedCadastrosEquipamentosPfdIdRoute
   '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
   '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
@@ -418,6 +426,7 @@ export interface FileRoutesByTo {
   '/relatorios': typeof AuthenticatedRelatoriosIndexRoute
   '/tabelas': typeof AuthenticatedTabelasIndexRoute
   '/tags': typeof AuthenticatedTagsIndexRoute
+  '/cadastros/equipamentos-atividades/$id': typeof AuthenticatedCadastrosEquipamentosAtividadesIdRoute
   '/cadastros/equipamentos-pfd/$id': typeof AuthenticatedCadastrosEquipamentosPfdIdRoute
   '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
   '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
@@ -470,6 +479,7 @@ export interface FileRoutesById {
   '/_authenticated/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/_authenticated/tabelas/': typeof AuthenticatedTabelasIndexRoute
   '/_authenticated/tags/': typeof AuthenticatedTagsIndexRoute
+  '/_authenticated/cadastros/equipamentos-atividades/$id': typeof AuthenticatedCadastrosEquipamentosAtividadesIdRoute
   '/_authenticated/cadastros/equipamentos-pfd/$id': typeof AuthenticatedCadastrosEquipamentosPfdIdRoute
   '/_authenticated/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
   '/_authenticated/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
@@ -522,6 +532,7 @@ export interface FileRouteTypes {
     | '/relatorios/'
     | '/tabelas/'
     | '/tags/'
+    | '/cadastros/equipamentos-atividades/$id'
     | '/cadastros/equipamentos-pfd/$id'
     | '/cadastros/equipamentos/$id'
     | '/estoque/tanques/$id'
@@ -564,6 +575,7 @@ export interface FileRouteTypes {
     | '/relatorios'
     | '/tabelas'
     | '/tags'
+    | '/cadastros/equipamentos-atividades/$id'
     | '/cadastros/equipamentos-pfd/$id'
     | '/cadastros/equipamentos/$id'
     | '/estoque/tanques/$id'
@@ -615,6 +627,7 @@ export interface FileRouteTypes {
     | '/_authenticated/relatorios/'
     | '/_authenticated/tabelas/'
     | '/_authenticated/tags/'
+    | '/_authenticated/cadastros/equipamentos-atividades/$id'
     | '/_authenticated/cadastros/equipamentos-pfd/$id'
     | '/_authenticated/cadastros/equipamentos/$id'
     | '/_authenticated/estoque/tanques/$id'
@@ -977,6 +990,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCadastrosEquipamentosPfdIdRouteImport
       parentRoute: typeof AuthenticatedCadastrosRoute
     }
+    '/_authenticated/cadastros/equipamentos-atividades/$id': {
+      id: '/_authenticated/cadastros/equipamentos-atividades/$id'
+      path: '/equipamentos-atividades/$id'
+      fullPath: '/cadastros/equipamentos-atividades/$id'
+      preLoaderRoute: typeof AuthenticatedCadastrosEquipamentosAtividadesIdRouteImport
+      parentRoute: typeof AuthenticatedCadastrosRoute
+    }
   }
 }
 
@@ -1029,6 +1049,7 @@ interface AuthenticatedCadastrosRouteChildren {
   AuthenticatedCadastrosParametrosRoute: typeof AuthenticatedCadastrosParametrosRoute
   AuthenticatedCadastrosProdutosRoute: typeof AuthenticatedCadastrosProdutosRoute
   AuthenticatedCadastrosTanquesRoute: typeof AuthenticatedCadastrosTanquesRoute
+  AuthenticatedCadastrosEquipamentosAtividadesIdRoute: typeof AuthenticatedCadastrosEquipamentosAtividadesIdRoute
   AuthenticatedCadastrosEquipamentosPfdIdRoute: typeof AuthenticatedCadastrosEquipamentosPfdIdRoute
 }
 
@@ -1043,6 +1064,8 @@ const AuthenticatedCadastrosRouteChildren: AuthenticatedCadastrosRouteChildren =
       AuthenticatedCadastrosParametrosRoute,
     AuthenticatedCadastrosProdutosRoute: AuthenticatedCadastrosProdutosRoute,
     AuthenticatedCadastrosTanquesRoute: AuthenticatedCadastrosTanquesRoute,
+    AuthenticatedCadastrosEquipamentosAtividadesIdRoute:
+      AuthenticatedCadastrosEquipamentosAtividadesIdRoute,
     AuthenticatedCadastrosEquipamentosPfdIdRoute:
       AuthenticatedCadastrosEquipamentosPfdIdRoute,
   }
@@ -1200,13 +1223,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
