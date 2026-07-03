@@ -268,6 +268,9 @@ export function TagsMonitoramento({
       // Mostrar apenas processos vindos de atividades de equipamento;
       // ignorar processos cadastrados no produto.
       if (!(e as any).equipamento_atividade_id) continue;
+      // Ignorar atividades que ainda não foram efetivamente acionadas
+      // (fase de estabilização aguardando variação da tag).
+      if ((e as any).estab_fase === "aguardando_atividade") continue;
       const t = (e as any).tipo as string;
       if (t === "tag_captura") {
         pontos.push({
