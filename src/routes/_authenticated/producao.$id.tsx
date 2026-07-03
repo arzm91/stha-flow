@@ -343,12 +343,22 @@ function TimelineUnificada({ ordemId }: { ordemId: string }) {
       titulo: `Início: ${nome}`,
     });
     if (ev.finalizado_em) {
+      const partes: string[] = [];
+      if (ev.duracao_seg != null) partes.push(`Duração ${formatDuracao(ev.duracao_seg)}`);
+      if (ev.valor_capturado != null) {
+        partes.push(`Valor ${formatNumber(Number(ev.valor_capturado))}${ev.unidade ? ` ${ev.unidade}` : ""}`);
+      }
+      if (ev.valor_inicio != null || ev.valor_fim != null) {
+        const ini = ev.valor_inicio != null ? formatNumber(Number(ev.valor_inicio)) : "—";
+        const fim = ev.valor_fim != null ? formatNumber(Number(ev.valor_fim)) : "—";
+        partes.push(`Tag ${ini} → ${fim}${ev.unidade ? ` ${ev.unidade}` : ""}`);
+      }
       eventos.push({
         key: `etp-fim-${ev.id}`,
         when: ev.finalizado_em,
         tipo: "processo_fim",
         titulo: `Fim: ${nome}`,
-        detalhe: ev.duracao_seg != null ? `Duração ${formatDuracao(ev.duracao_seg)}` : undefined,
+        detalhe: partes.length ? partes.join(" · ") : undefined,
       });
     }
   }
