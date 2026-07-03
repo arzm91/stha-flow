@@ -527,6 +527,95 @@ export type Database = {
         }
         Relationships: []
       }
+      equipamento_atividades: {
+        Row: {
+          ativo: boolean
+          captura_gatilho: Json | null
+          captura_modo: string
+          created_at: string
+          descricao: string | null
+          equipamento_id: string
+          estab_enabled: boolean
+          estab_janela_seg: number
+          estab_min_estavel_seg: number
+          estab_pct: number
+          gatilhos: Json
+          id: string
+          modo_execucao: string
+          nome: string
+          ordem: number
+          owner_id: string
+          qtd_modo: string
+          qtd_tag_nome: string | null
+          quantidade: number | null
+          tag_nome: string | null
+          tempo_estimado_min: number | null
+          tipo: string
+          unidade: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          captura_gatilho?: Json | null
+          captura_modo?: string
+          created_at?: string
+          descricao?: string | null
+          equipamento_id: string
+          estab_enabled?: boolean
+          estab_janela_seg?: number
+          estab_min_estavel_seg?: number
+          estab_pct?: number
+          gatilhos?: Json
+          id?: string
+          modo_execucao?: string
+          nome: string
+          ordem?: number
+          owner_id: string
+          qtd_modo?: string
+          qtd_tag_nome?: string | null
+          quantidade?: number | null
+          tag_nome?: string | null
+          tempo_estimado_min?: number | null
+          tipo?: string
+          unidade?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          captura_gatilho?: Json | null
+          captura_modo?: string
+          created_at?: string
+          descricao?: string | null
+          equipamento_id?: string
+          estab_enabled?: boolean
+          estab_janela_seg?: number
+          estab_min_estavel_seg?: number
+          estab_pct?: number
+          gatilhos?: Json
+          id?: string
+          modo_execucao?: string
+          nome?: string
+          ordem?: number
+          owner_id?: string
+          qtd_modo?: string
+          qtd_tag_nome?: string | null
+          quantidade?: number | null
+          tag_nome?: string | null
+          tempo_estimado_min?: number | null
+          tipo?: string
+          unidade?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "equipamento_atividades_equipamento_id_fkey"
+            columns: ["equipamento_id"]
+            isOneToOne: false
+            referencedRelation: "equipamentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       equipamentos: {
         Row: {
           ativo: boolean
@@ -875,6 +964,7 @@ export type Database = {
           atividade_id: string | null
           created_at: string
           duracao_seg: number | null
+          equipamento_atividade_id: string | null
           estab_amostras: Json
           estab_estavel_desde: string | null
           estab_fase: string | null
@@ -901,6 +991,7 @@ export type Database = {
           atividade_id?: string | null
           created_at?: string
           duracao_seg?: number | null
+          equipamento_atividade_id?: string | null
           estab_amostras?: Json
           estab_estavel_desde?: string | null
           estab_fase?: string | null
@@ -927,6 +1018,7 @@ export type Database = {
           atividade_id?: string | null
           created_at?: string
           duracao_seg?: number | null
+          equipamento_atividade_id?: string | null
           estab_amostras?: Json
           estab_estavel_desde?: string | null
           estab_fase?: string | null
@@ -954,6 +1046,13 @@ export type Database = {
             columns: ["atividade_id"]
             isOneToOne: false
             referencedRelation: "produto_atividades"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordem_etapas_equipamento_atividade_id_fkey"
+            columns: ["equipamento_atividade_id"]
+            isOneToOne: false
+            referencedRelation: "equipamento_atividades"
             referencedColumns: ["id"]
           },
           {
@@ -2059,11 +2158,16 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _equip_tem_atividades: {
+        Args: { p_equip: string; p_owner: string }
+        Returns: boolean
+      }
       _estab_variacao_pct: { Args: { p_amostras: Json }; Returns: number }
       _gatilho_match: {
         Args: { p_op: string; p_ref: number; p_val: number }
         Returns: boolean
       }
+      auto_advance_equipamento_atividades: { Args: never; Returns: number }
       auto_advance_ordens_producao: { Args: never; Returns: number }
       can_access_page: {
         Args: { _need_edit?: boolean; _page: string; _user: string }
