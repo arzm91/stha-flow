@@ -11,12 +11,13 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, CheckCircle2, Gauge, FlaskConical, MessageSquare, Activity, AlertTriangle, Play, Square, ListChecks, Clock, History, Maximize2, Minimize2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Gauge, FlaskConical, MessageSquare, Activity, AlertTriangle, Play, Square, ListChecks, Clock, History, Maximize2, Minimize2, FileText, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate, formatNumber, durationFromNow, durationBetween } from "@/lib/format";
 import { ScadaViewer } from "@/components/scada/ScadaViewer";
 import { TagsMonitoramento } from "@/components/producao/TagsMonitoramento";
 import { gerarRelatorioProducaoPdf } from "@/lib/producao-pdf";
+import { gerarRelatorioProducaoXlsx } from "@/lib/producao-xlsx";
 
 export const Route = createFileRoute("/_authenticated/producao/$id")({
   component: OPPage,
