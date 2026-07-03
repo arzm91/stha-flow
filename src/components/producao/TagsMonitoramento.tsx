@@ -117,7 +117,7 @@ export function TagsMonitoramento({
         supabase.from("observacoes_producao")
           .select("id,texto,registrado_em").eq("ordem_id", ordemId),
         supabase.from("ordem_etapas")
-          .select("id,tipo,processo_nome,atividade_descricao,iniciado_em,finalizado_em,observacao,motivo_atraso,equipamento_atividade_id,processo_id")
+          .select("id,tipo,processo_nome,atividade_descricao,iniciado_em,finalizado_em,observacao,motivo_atraso,equipamento_atividade_id,processo_id,estab_fase")
           .eq("ordem_id", ordemId),
       ]);
       return {
@@ -268,6 +268,9 @@ export function TagsMonitoramento({
       // Mostrar apenas processos vindos de atividades de equipamento;
       // ignorar processos cadastrados no produto.
       if (!(e as any).equipamento_atividade_id) continue;
+      // Ignorar atividades que ainda não foram efetivamente acionadas
+      // (fase de estabilização aguardando variação da tag).
+      if ((e as any).estab_fase === "aguardando_atividade") continue;
       const t = (e as any).tipo as string;
       if (t === "tag_captura") {
         pontos.push({
