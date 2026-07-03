@@ -117,7 +117,7 @@ export function TagsMonitoramento({
         supabase.from("observacoes_producao")
           .select("id,texto,registrado_em").eq("ordem_id", ordemId),
         supabase.from("ordem_etapas")
-          .select("id,tipo,processo_nome,atividade_descricao,iniciado_em,finalizado_em,observacao,motivo_atraso,equipamento_atividade_id,processo_id")
+          .select("id,tipo,processo_nome,atividade_descricao,iniciado_em,finalizado_em,observacao,motivo_atraso,equipamento_atividade_id,processo_id,estab_fase")
           .eq("ordem_id", ordemId),
       ]);
       return {
