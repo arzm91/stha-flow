@@ -49,4 +49,5 @@ export const COMPARADORES = [
   { value: "lte", label: "menor ou igual (≤)" },
   { value: "eq", label: "igual (=)" },
   { value: "neq", label: "diferente (≠)" },
+  { value: "between", label: "está entre (mín ≤ x ≤ máx)" },
 ];

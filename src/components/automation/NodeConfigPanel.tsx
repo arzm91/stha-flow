@@ -82,10 +82,23 @@ export function NodeConfigPanel({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1">
-                    <Label>Valor</Label>
-                    <Input type="number" value={String(cfg.valor ?? "")} onChange={(e) => set({ valor: e.target.value === "" ? undefined : Number(e.target.value) })} />
-                  </div>
+                  {cfg.operador === "between" ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label>Mínimo</Label>
+                        <Input type="number" value={String(cfg.valor_min ?? "")} onChange={(e) => set({ valor_min: e.target.value === "" ? undefined : Number(e.target.value) })} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Máximo</Label>
+                        <Input type="number" value={String(cfg.valor_max ?? "")} onChange={(e) => set({ valor_max: e.target.value === "" ? undefined : Number(e.target.value) })} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <Label>Valor</Label>
+                      <Input type="number" value={String(cfg.valor ?? "")} onChange={(e) => set({ valor: e.target.value === "" ? undefined : Number(e.target.value) })} />
+                    </div>
+                  )}
                 </div>
                 <p className="text-[11px] text-muted-foreground">
                   Dispara quando o valor da tag satisfizer a comparação selecionada.
@@ -234,10 +247,23 @@ export function NodeConfigPanel({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-1">
-                    <Label>Valor</Label>
-                    <Input type="number" value={String(cfg.valor ?? 0)} onChange={(e) => set({ valor: Number(e.target.value) })} />
-                  </div>
+                  {cfg.operador === "between" ? (
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1">
+                        <Label>Mínimo</Label>
+                        <Input type="number" value={String(cfg.valor_min ?? "")} onChange={(e) => set({ valor_min: e.target.value === "" ? undefined : Number(e.target.value) })} />
+                      </div>
+                      <div className="space-y-1">
+                        <Label>Máximo</Label>
+                        <Input type="number" value={String(cfg.valor_max ?? "")} onChange={(e) => set({ valor_max: e.target.value === "" ? undefined : Number(e.target.value) })} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-1">
+                      <Label>Valor</Label>
+                      <Input type="number" value={String(cfg.valor ?? 0)} onChange={(e) => set({ valor: Number(e.target.value) })} />
+                    </div>
+                  )}
                 </div>
               </>
             )}
