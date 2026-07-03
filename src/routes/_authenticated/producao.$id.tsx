@@ -1165,6 +1165,7 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
         .from("produto_processos")
         .select("id, nome, ordem, tempo_limite_min")
         .eq("produto_id", produtoId)
+        .eq("ativo", true)
         .order("ordem", { ascending: true });
       if (error) throw error;
       const ids = (ps ?? []).map((p) => p.id);
