@@ -22,6 +22,11 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
+  const { next } = Route.useSearch();
+  const goNext = () => {
+    if (next) window.location.assign(next);
+    else navigate({ to: "/dashboard", replace: true });
+  };
   const [loading, setLoading] = useState(false);
 
   // login
