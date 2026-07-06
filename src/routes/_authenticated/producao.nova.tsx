@@ -31,7 +31,7 @@ function NovaOPPage() {
   const equipamentos = useQuery({
     queryKey: ["equipamentos-disp"],
     queryFn: async () => {
-      const { data } = await supabase.from("equipamentos").select("id,codigo,nome,status").eq("ativo", true).order("codigo");
+      const { data } = await supabase.from("equipamentos").select("id,codigo,nome,status").eq("ativo", true).eq("categoria", "producao").order("codigo");
       return data ?? [];
     },
   });
