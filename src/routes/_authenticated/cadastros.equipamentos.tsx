@@ -34,6 +34,26 @@ function EquipamentosPage() {
     ].filter(Boolean).join(" · "),
   }));
 
+  const utilidades = useQuery({
+    queryKey: ["equipamentos", "utilidades-opts"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("equipamentos")
+        .select("id,codigo,nome,localizacao,tipo")
+        .eq("categoria", "utilidade")
+        .eq("ativo", true)
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const utilidadeOptions = (utilidades.data ?? []).map((u) => ({
+    value: u.id,
+    label: `${u.codigo} — ${u.nome}`,
+    hint: [u.tipo, u.localizacao].filter(Boolean).join(" · "),
+  }));
+
   const fields: FieldDef[] = [
     { key: "codigo", label: "Código", required: true },
     { key: "nome", label: "Nome", required: true },
@@ -54,6 +74,16 @@ function EquipamentosPage() {
       help: tags.isLoading
         ? "Carregando tags ao vivo..."
         : `${tagOptions.length} tag(s) disponíveis em Tags Ao Vivo.`,
+    },
+    {
+      key: "utilidade_ids",
+      label: "Utilidades vinculadas",
+      type: "multiselect",
+      options: utilidadeOptions,
+      placeholder: "Pesquise por código ou nome da utilidade...",
+      help: utilidades.isLoading
+        ? "Carregando utilidades..."
+        : `${utilidadeOptions.length} utilidade(s) cadastradas. Aparecerão no acompanhamento da produção.`,
     },
     {
       key: "tag_velocidade_producao",
