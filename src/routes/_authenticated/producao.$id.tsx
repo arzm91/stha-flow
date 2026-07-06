@@ -160,6 +160,8 @@ function OPPage() {
         }
       />
 
+      {op.data.equipamento_id ? <UtilidadesStrip equipamentoId={op.data.equipamento_id as string} /> : null}
+
       {(tagVel || tagTotal) ? (
         <AvancoProducaoHeader ordemId={id} tagVel={tagVel} tagTotal={tagTotal} qtdPlanejada={qtdPlanejada} />
       ) : null}
