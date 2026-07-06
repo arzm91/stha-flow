@@ -107,10 +107,12 @@ function EquipamentosPage() {
       table="equipamentos"
       resourceType="equipamento"
       title="Equipamentos"
-      description="Cadastro e gestão dos equipamentos da planta."
+      description="Cadastro e gestão dos equipamentos de produção da planta."
       searchKeys={["nome", "codigo", "tipo", "localizacao"]}
-      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [], tag_velocidade_producao: "", tag_producao_total: "" }}
+      filter={{ categoria: "producao" }}
+      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [], utilidade_ids: [], tag_velocidade_producao: "", tag_producao_total: "" }}
       fields={fields}
+
 
       columns={[
         { key: "codigo", label: "Código" },
