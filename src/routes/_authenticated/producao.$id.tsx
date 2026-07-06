@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { formatDate, formatNumber, durationFromNow, durationBetween } from "@/lib/format";
 import { ScadaViewer } from "@/components/scada/ScadaViewer";
 import { TagsMonitoramento } from "@/components/producao/TagsMonitoramento";
+import { UtilidadesLive, UtilidadesStrip } from "@/components/producao/UtilidadesLive";
 import { gerarRelatorioProducaoPdf } from "@/lib/producao-pdf";
 import { gerarRelatorioProducaoXlsx } from "@/lib/producao-xlsx";
 
