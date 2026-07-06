@@ -619,6 +619,7 @@ export type Database = {
       equipamentos: {
         Row: {
           ativo: boolean
+          categoria: string
           codigo: string
           created_at: string
           descricao: string | null
@@ -633,9 +634,11 @@ export type Database = {
           tag_velocidade_producao: string | null
           tipo: string | null
           updated_at: string
+          utilidade_ids: string[]
         }
         Insert: {
           ativo?: boolean
+          categoria?: string
           codigo: string
           created_at?: string
           descricao?: string | null
@@ -650,9 +653,11 @@ export type Database = {
           tag_velocidade_producao?: string | null
           tipo?: string | null
           updated_at?: string
+          utilidade_ids?: string[]
         }
         Update: {
           ativo?: boolean
+          categoria?: string
           codigo?: string
           created_at?: string
           descricao?: string | null
@@ -667,6 +672,7 @@ export type Database = {
           tag_velocidade_producao?: string | null
           tipo?: string | null
           updated_at?: string
+          utilidade_ids?: string[]
         }
         Relationships: []
       }
