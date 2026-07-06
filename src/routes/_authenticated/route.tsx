@@ -13,17 +13,16 @@ export const Route = createFileRoute("/_authenticated")({
     // Try current session first; if missing/expired, attempt a refresh before
     // redirecting to /auth. Evita deslogar por falhas momentâneas de refresh
     // (rede, aba em segundo plano, token quase expirando).
-    let { data } = await supabase.auth.getSession();
-    if (!data.session) {
+    let session = (await supabase.auth.getSession()).data.session;
+    if (!session) {
       try {
-        const { data: refreshed } = await supabase.auth.refreshSession();
-        if (refreshed.session) data = { session: refreshed.session } as typeof data;
+        session = (await supabase.auth.refreshSession()).data.session;
       } catch {
         // ignore — cai no redirect abaixo
       }
     }
-    if (!data.session) throw redirect({ to: "/auth" });
-    return { user: data.session.user };
+    if (!session) throw redirect({ to: "/auth" });
+    return { user: session.user };
   },
   component: () => (
     <AppShell>
