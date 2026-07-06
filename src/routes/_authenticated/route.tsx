@@ -24,7 +24,6 @@ export const Route = createFileRoute("/_authenticated")({
     if (!session) throw redirect({ to: "/auth" });
     return { user: session.user };
   },
-  },
   component: () => (
     <AppShell>
       <AutoTagSync />
