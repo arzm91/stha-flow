@@ -1690,6 +1690,39 @@ export type Database = {
         }
         Relationships: []
       }
+      relatorio_templates: {
+        Row: {
+          config: Json
+          created_at: string
+          created_by: string
+          descricao: string | null
+          fonte: string
+          id: string
+          nome: string
+          updated_at: string
+        }
+        Insert: {
+          config?: Json
+          created_at?: string
+          created_by: string
+          descricao?: string | null
+          fonte: string
+          id?: string
+          nome: string
+          updated_at?: string
+        }
+        Update: {
+          config?: Json
+          created_at?: string
+          created_by?: string
+          descricao?: string | null
+          fonte?: string
+          id?: string
+          nome?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       relatorio_turno_eventos: {
         Row: {
           categoria: string

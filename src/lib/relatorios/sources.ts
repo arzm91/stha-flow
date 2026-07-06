@@ -1,0 +1,242 @@
+import type { SourceDef, SourceKey, Fonte } from "./types";
+
+export const SOURCES: Record<SourceKey, SourceDef> = {
+  "producao.etapas": {
+    key: "producao.etapas",
+    fonte: "producao",
+    label: "Produção — Etapas / Processos",
+    description: "Cada etapa de processo executada dentro das ordens de produção, com duração e valor capturado.",
+    dateColumn: "iniciado_em",
+    columns: [
+      { key: "op_numero", label: "OP nº", type: "text" },
+      { key: "produto", label: "Produto", type: "text" },
+      { key: "equipamento", label: "Equipamento", type: "text" },
+      { key: "op_status", label: "Status OP", type: "text" },
+      { key: "op_inicio_em", label: "Início OP", type: "datetime" },
+      { key: "op_fim_em", label: "Fim OP", type: "datetime" },
+      { key: "op_qtd_planejada", label: "Qtd. planejada", type: "number", numeric: true },
+      { key: "op_qtd_produzida", label: "Qtd. produzida", type: "number", numeric: true },
+      { key: "processo_nome", label: "Processo/Etapa", type: "text" },
+      { key: "tipo", label: "Tipo etapa", type: "text" },
+      { key: "iniciado_em", label: "Início etapa", type: "datetime" },
+      { key: "finalizado_em", label: "Fim etapa", type: "datetime" },
+      { key: "duracao_seg", label: "Duração (s)", type: "duration_seg", numeric: true },
+      { key: "valor_capturado", label: "Valor capturado", type: "number", numeric: true },
+      { key: "unidade", label: "Unidade", type: "text" },
+    ],
+    filters: [
+      { key: "date_range", label: "Período (início da etapa)" },
+      { key: "select_equipamento", label: "Equipamento" },
+      { key: "select_produto", label: "Produto" },
+      { key: "select_status", label: "Status OP", appliesTo: "op_status" },
+      { key: "select_tipo", label: "Tipo etapa", appliesTo: "tipo" },
+    ],
+  },
+
+  "producao.ordens": {
+    key: "producao.ordens",
+    fonte: "producao",
+    label: "Produção — Ordens",
+    description: "Resumo por ordem de produção: quantidade, tempos, status.",
+    dateColumn: "inicio_em",
+    columns: [
+      { key: "numero", label: "OP nº", type: "text" },
+      { key: "produto", label: "Produto", type: "text" },
+      { key: "equipamento", label: "Equipamento", type: "text" },
+      { key: "status", label: "Status", type: "text" },
+      { key: "prioridade", label: "Prioridade", type: "text" },
+      { key: "inicio_previsto", label: "Início previsto", type: "datetime" },
+      { key: "inicio_em", label: "Início real", type: "datetime" },
+      { key: "fim_em", label: "Fim real", type: "datetime" },
+      { key: "duracao_min", label: "Duração (min)", type: "number", numeric: true },
+      { key: "duracao_estimada_min", label: "Duração estimada (min)", type: "number", numeric: true },
+      { key: "qtd_planejada", label: "Qtd. planejada", type: "number", numeric: true },
+      { key: "qtd_produzida", label: "Qtd. produzida", type: "number", numeric: true },
+      { key: "aderencia_pct", label: "Aderência (%)", type: "number", numeric: true },
+    ],
+    filters: [
+      { key: "date_range", label: "Período (início real)" },
+      { key: "select_equipamento", label: "Equipamento" },
+      { key: "select_produto", label: "Produto" },
+      { key: "select_status", label: "Status", appliesTo: "status" },
+      { key: "select_prioridade", label: "Prioridade", appliesTo: "prioridade" },
+    ],
+  },
+
+  "producao.analises": {
+    key: "producao.analises",
+    fonte: "producao",
+    label: "Produção — Análises registradas",
+    description: "Análises de qualidade registradas em cada ordem de produção.",
+    dateColumn: "registrado_em",
+    columns: [
+      { key: "op_numero", label: "OP nº", type: "text" },
+      { key: "produto", label: "Produto", type: "text" },
+      { key: "equipamento", label: "Equipamento", type: "text" },
+      { key: "analise", label: "Análise", type: "text" },
+      { key: "resultado", label: "Resultado", type: "number", numeric: true },
+      { key: "unidade", label: "Unidade", type: "text" },
+      { key: "valor_min", label: "Mín. esperado", type: "number", numeric: true },
+      { key: "valor_max", label: "Máx. esperado", type: "number", numeric: true },
+      { key: "dentro_spec", label: "Dentro da spec", type: "text" },
+      { key: "registrado_em", label: "Registrado em", type: "datetime" },
+    ],
+    filters: [
+      { key: "date_range", label: "Período" },
+      { key: "select_equipamento", label: "Equipamento" },
+      { key: "select_produto", label: "Produto" },
+    ],
+  },
+
+  "estoque.movimentacoes": {
+    key: "estoque.movimentacoes",
+    fonte: "estoque_qualidade",
+    label: "Estoque — Movimentações",
+    description: "Entradas, saídas, transferências e consumos em tanques.",
+    dateColumn: "ocorrido_em",
+    columns: [
+      { key: "ocorrido_em", label: "Data", type: "datetime" },
+      { key: "tipo", label: "Tipo", type: "text" },
+      { key: "produto", label: "Produto", type: "text" },
+      { key: "tanque", label: "Tanque", type: "text" },
+      { key: "quantidade", label: "Quantidade", type: "number", numeric: true },
+      { key: "unidade", label: "Unidade", type: "text" },
+      { key: "origem", label: "Origem", type: "text" },
+      { key: "destino", label: "Destino", type: "text" },
+      { key: "op_numero", label: "OP relacionada", type: "text" },
+    ],
+    filters: [
+      { key: "date_range", label: "Período" },
+      { key: "select_produto", label: "Produto" },
+      { key: "select_tipo", label: "Tipo", appliesTo: "tipo" },
+    ],
+  },
+
+  "estoque.tanques_analises": {
+    key: "estoque.tanques_analises",
+    fonte: "estoque_qualidade",
+    label: "Qualidade — Análises de tanque",
+    description: "Análises registradas diretamente em tanques.",
+    dateColumn: "registrado_em",
+    columns: [
+      { key: "registrado_em", label: "Registrado em", type: "datetime" },
+      { key: "tanque", label: "Tanque", type: "text" },
+      { key: "produto", label: "Produto", type: "text" },
+      { key: "analise", label: "Análise", type: "text" },
+      { key: "resultado", label: "Resultado", type: "number", numeric: true },
+      { key: "unidade", label: "Unidade", type: "text" },
+      { key: "valor_min", label: "Mín.", type: "number", numeric: true },
+      { key: "valor_max", label: "Máx.", type: "number", numeric: true },
+      { key: "dentro_spec", label: "Dentro da spec", type: "text" },
+      { key: "observacao", label: "Observação", type: "text" },
+    ],
+    filters: [{ key: "date_range", label: "Período" }],
+  },
+
+  "manutencao.ordens": {
+    key: "manutencao.ordens",
+    fonte: "manutencao_automacao",
+    label: "Manutenção — Ordens",
+    description: "Ordens de manutenção (corretivas/preventivas) com tempo e custo.",
+    dateColumn: "data_abertura",
+    columns: [
+      { key: "numero", label: "OM nº", type: "text" },
+      { key: "equipamento", label: "Equipamento", type: "text" },
+      { key: "tipo", label: "Tipo", type: "text" },
+      { key: "status", label: "Status", type: "text" },
+      { key: "prioridade", label: "Prioridade", type: "text" },
+      { key: "responsavel", label: "Responsável", type: "text" },
+      { key: "data_abertura", label: "Abertura", type: "datetime" },
+      { key: "data_inicio", label: "Início", type: "datetime" },
+      { key: "data_conclusao", label: "Conclusão", type: "datetime" },
+      { key: "duracao_min", label: "Duração (min)", type: "number", numeric: true },
+      { key: "custo", label: "Custo", type: "number", numeric: true },
+      { key: "descricao_problema", label: "Problema", type: "text" },
+      { key: "descricao_servico", label: "Serviço", type: "text" },
+    ],
+    filters: [
+      { key: "date_range", label: "Período (abertura)" },
+      { key: "select_equipamento", label: "Equipamento" },
+      { key: "select_status", label: "Status", appliesTo: "status" },
+      { key: "select_tipo", label: "Tipo", appliesTo: "tipo" },
+      { key: "select_prioridade", label: "Prioridade", appliesTo: "prioridade" },
+    ],
+  },
+
+  "manutencao.preventivas": {
+    key: "manutencao.preventivas",
+    fonte: "manutencao_automacao",
+    label: "Manutenção — Preventivas cadastradas",
+    description: "Plano de manutenção preventiva por equipamento.",
+    dateColumn: "proxima_execucao",
+    columns: [
+      { key: "nome", label: "Nome", type: "text" },
+      { key: "equipamento", label: "Equipamento", type: "text" },
+      { key: "ativo", label: "Ativa", type: "text" },
+      { key: "tipo_recorrencia", label: "Recorrência", type: "text" },
+      { key: "intervalo_dias", label: "Intervalo (dias)", type: "number", numeric: true },
+      { key: "responsavel_padrao", label: "Responsável", type: "text" },
+      { key: "ultima_execucao", label: "Última execução", type: "datetime" },
+      { key: "proxima_execucao", label: "Próxima execução", type: "datetime" },
+    ],
+    filters: [
+      { key: "date_range", label: "Período (próxima execução)" },
+      { key: "select_equipamento", label: "Equipamento" },
+    ],
+  },
+
+  "automacao.alertas": {
+    key: "automacao.alertas",
+    fonte: "manutencao_automacao",
+    label: "Automação — Alertas disparados",
+    description: "Histórico de disparos de alertas do sistema.",
+    dateColumn: "created_at",
+    columns: [
+      { key: "created_at", label: "Disparado em", type: "datetime" },
+      { key: "alerta_nome", label: "Alerta", type: "text" },
+      { key: "categoria", label: "Categoria", type: "text" },
+      { key: "severidade", label: "Severidade", type: "text" },
+      { key: "status", label: "Status", type: "text" },
+      { key: "mensagem", label: "Mensagem", type: "text" },
+      { key: "resolvido_em", label: "Resolvido em", type: "datetime" },
+    ],
+    filters: [{ key: "date_range", label: "Período" }, { key: "select_status", label: "Status", appliesTo: "status" }],
+  },
+
+  "automacao.runs": {
+    key: "automacao.runs",
+    fonte: "manutencao_automacao",
+    label: "Automação — Execuções",
+    description: "Execuções (runs) das automações do sistema.",
+    dateColumn: "trigger_fired_at",
+    columns: [
+      { key: "trigger_fired_at", label: "Disparo", type: "datetime" },
+      { key: "flow", label: "Automação", type: "text" },
+      { key: "status", label: "Status", type: "text" },
+      { key: "executed_at", label: "Executado em", type: "datetime" },
+      { key: "error_message", label: "Erro", type: "text" },
+    ],
+    filters: [{ key: "date_range", label: "Período" }, { key: "select_status", label: "Status", appliesTo: "status" }],
+  },
+};
+
+export const SOURCES_BY_FONTE: Record<Fonte, SourceDef[]> = {
+  producao: [SOURCES["producao.etapas"], SOURCES["producao.ordens"], SOURCES["producao.analises"]],
+  estoque_qualidade: [SOURCES["estoque.movimentacoes"], SOURCES["estoque.tanques_analises"]],
+  manutencao_automacao: [
+    SOURCES["manutencao.ordens"],
+    SOURCES["manutencao.preventivas"],
+    SOURCES["automacao.alertas"],
+    SOURCES["automacao.runs"],
+  ],
+};
+
+export const FONTE_LABEL: Record<Fonte, string> = {
+  producao: "Produção",
+  estoque_qualidade: "Estoque e Qualidade",
+  manutencao_automacao: "Manutenção e Automação",
+};
+
+export function sourceFor(key: SourceKey): SourceDef {
+  return SOURCES[key];
+}
