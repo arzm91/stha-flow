@@ -31,13 +31,13 @@ function NovoRelatorio() {
         canEdit
         onSave={async ({ nome, descricao, fonte, config }) => {
           const { data: u } = await supabase.auth.getUser();
-          if (!u.user) return toast.error("Sessão inválida");
+          if (!u.user) { toast.error("Sessão inválida"); return; }
           const { data, error } = await supabase
             .from("relatorio_templates")
             .insert({ nome, descricao: descricao || null, fonte, config, created_by: u.user.id })
             .select("id")
             .single();
-          if (error) return toast.error(error.message);
+          if (error) { toast.error(error.message); return; }
           toast.success("Relatório salvo");
           navigate({ to: "/relatorios/$id", params: { id: data.id } });
         }}
