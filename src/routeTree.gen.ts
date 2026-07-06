@@ -37,9 +37,8 @@ import { Route as AuthenticatedAutomacoesIndexRouteImport } from './routes/_auth
 import { Route as AuthenticatedAlertasIndexRouteImport } from './routes/_authenticated/alertas.index'
 import { Route as AuthenticatedTagsEndpointsRouteImport } from './routes/_authenticated/tags.endpoints'
 import { Route as AuthenticatedTabelasIdRouteImport } from './routes/_authenticated/tabelas.$id'
-import { Route as AuthenticatedRelatoriosQualidadeRouteImport } from './routes/_authenticated/relatorios.qualidade'
-import { Route as AuthenticatedRelatoriosProducaoRouteImport } from './routes/_authenticated/relatorios.producao'
-import { Route as AuthenticatedRelatoriosEstoqueRouteImport } from './routes/_authenticated/relatorios.estoque'
+import { Route as AuthenticatedRelatoriosNovoRouteImport } from './routes/_authenticated/relatorios.novo'
+import { Route as AuthenticatedRelatoriosIdRouteImport } from './routes/_authenticated/relatorios.$id'
 import { Route as AuthenticatedProducaoPcpRouteImport } from './routes/_authenticated/producao.pcp'
 import { Route as AuthenticatedProducaoNovaRouteImport } from './routes/_authenticated/producao.nova'
 import { Route as AuthenticatedProducaoDashboardRouteImport } from './routes/_authenticated/producao.dashboard'
@@ -210,22 +209,16 @@ const AuthenticatedTabelasIdRoute = AuthenticatedTabelasIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AuthenticatedTabelasRoute,
 } as any)
-const AuthenticatedRelatoriosQualidadeRoute =
-  AuthenticatedRelatoriosQualidadeRouteImport.update({
-    id: '/qualidade',
-    path: '/qualidade',
+const AuthenticatedRelatoriosNovoRoute =
+  AuthenticatedRelatoriosNovoRouteImport.update({
+    id: '/novo',
+    path: '/novo',
     getParentRoute: () => AuthenticatedRelatoriosRoute,
   } as any)
-const AuthenticatedRelatoriosProducaoRoute =
-  AuthenticatedRelatoriosProducaoRouteImport.update({
-    id: '/producao',
-    path: '/producao',
-    getParentRoute: () => AuthenticatedRelatoriosRoute,
-  } as any)
-const AuthenticatedRelatoriosEstoqueRoute =
-  AuthenticatedRelatoriosEstoqueRouteImport.update({
-    id: '/estoque',
-    path: '/estoque',
+const AuthenticatedRelatoriosIdRoute =
+  AuthenticatedRelatoriosIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
     getParentRoute: () => AuthenticatedRelatoriosRoute,
   } as any)
 const AuthenticatedProducaoPcpRoute =
@@ -370,9 +363,8 @@ export interface FileRoutesByFullPath {
   '/producao/dashboard': typeof AuthenticatedProducaoDashboardRoute
   '/producao/nova': typeof AuthenticatedProducaoNovaRoute
   '/producao/pcp': typeof AuthenticatedProducaoPcpRoute
-  '/relatorios/estoque': typeof AuthenticatedRelatoriosEstoqueRoute
-  '/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
-  '/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
+  '/relatorios/$id': typeof AuthenticatedRelatoriosIdRoute
+  '/relatorios/novo': typeof AuthenticatedRelatoriosNovoRoute
   '/tabelas/$id': typeof AuthenticatedTabelasIdRoute
   '/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
   '/alertas/': typeof AuthenticatedAlertasIndexRoute
@@ -413,9 +405,8 @@ export interface FileRoutesByTo {
   '/producao/dashboard': typeof AuthenticatedProducaoDashboardRoute
   '/producao/nova': typeof AuthenticatedProducaoNovaRoute
   '/producao/pcp': typeof AuthenticatedProducaoPcpRoute
-  '/relatorios/estoque': typeof AuthenticatedRelatoriosEstoqueRoute
-  '/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
-  '/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
+  '/relatorios/$id': typeof AuthenticatedRelatoriosIdRoute
+  '/relatorios/novo': typeof AuthenticatedRelatoriosNovoRoute
   '/tabelas/$id': typeof AuthenticatedTabelasIdRoute
   '/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
   '/alertas': typeof AuthenticatedAlertasIndexRoute
@@ -466,9 +457,8 @@ export interface FileRoutesById {
   '/_authenticated/producao/dashboard': typeof AuthenticatedProducaoDashboardRoute
   '/_authenticated/producao/nova': typeof AuthenticatedProducaoNovaRoute
   '/_authenticated/producao/pcp': typeof AuthenticatedProducaoPcpRoute
-  '/_authenticated/relatorios/estoque': typeof AuthenticatedRelatoriosEstoqueRoute
-  '/_authenticated/relatorios/producao': typeof AuthenticatedRelatoriosProducaoRoute
-  '/_authenticated/relatorios/qualidade': typeof AuthenticatedRelatoriosQualidadeRoute
+  '/_authenticated/relatorios/$id': typeof AuthenticatedRelatoriosIdRoute
+  '/_authenticated/relatorios/novo': typeof AuthenticatedRelatoriosNovoRoute
   '/_authenticated/tabelas/$id': typeof AuthenticatedTabelasIdRoute
   '/_authenticated/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
   '/_authenticated/alertas/': typeof AuthenticatedAlertasIndexRoute
@@ -519,9 +509,8 @@ export interface FileRouteTypes {
     | '/producao/dashboard'
     | '/producao/nova'
     | '/producao/pcp'
-    | '/relatorios/estoque'
-    | '/relatorios/producao'
-    | '/relatorios/qualidade'
+    | '/relatorios/$id'
+    | '/relatorios/novo'
     | '/tabelas/$id'
     | '/tags/endpoints'
     | '/alertas/'
@@ -562,9 +551,8 @@ export interface FileRouteTypes {
     | '/producao/dashboard'
     | '/producao/nova'
     | '/producao/pcp'
-    | '/relatorios/estoque'
-    | '/relatorios/producao'
-    | '/relatorios/qualidade'
+    | '/relatorios/$id'
+    | '/relatorios/novo'
     | '/tabelas/$id'
     | '/tags/endpoints'
     | '/alertas'
@@ -614,9 +602,8 @@ export interface FileRouteTypes {
     | '/_authenticated/producao/dashboard'
     | '/_authenticated/producao/nova'
     | '/_authenticated/producao/pcp'
-    | '/_authenticated/relatorios/estoque'
-    | '/_authenticated/relatorios/producao'
-    | '/_authenticated/relatorios/qualidade'
+    | '/_authenticated/relatorios/$id'
+    | '/_authenticated/relatorios/novo'
     | '/_authenticated/tabelas/$id'
     | '/_authenticated/tags/endpoints'
     | '/_authenticated/alertas/'
@@ -843,25 +830,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTabelasIdRouteImport
       parentRoute: typeof AuthenticatedTabelasRoute
     }
-    '/_authenticated/relatorios/qualidade': {
-      id: '/_authenticated/relatorios/qualidade'
-      path: '/qualidade'
-      fullPath: '/relatorios/qualidade'
-      preLoaderRoute: typeof AuthenticatedRelatoriosQualidadeRouteImport
+    '/_authenticated/relatorios/novo': {
+      id: '/_authenticated/relatorios/novo'
+      path: '/novo'
+      fullPath: '/relatorios/novo'
+      preLoaderRoute: typeof AuthenticatedRelatoriosNovoRouteImport
       parentRoute: typeof AuthenticatedRelatoriosRoute
     }
-    '/_authenticated/relatorios/producao': {
-      id: '/_authenticated/relatorios/producao'
-      path: '/producao'
-      fullPath: '/relatorios/producao'
-      preLoaderRoute: typeof AuthenticatedRelatoriosProducaoRouteImport
-      parentRoute: typeof AuthenticatedRelatoriosRoute
-    }
-    '/_authenticated/relatorios/estoque': {
-      id: '/_authenticated/relatorios/estoque'
-      path: '/estoque'
-      fullPath: '/relatorios/estoque'
-      preLoaderRoute: typeof AuthenticatedRelatoriosEstoqueRouteImport
+    '/_authenticated/relatorios/$id': {
+      id: '/_authenticated/relatorios/$id'
+      path: '/$id'
+      fullPath: '/relatorios/$id'
+      preLoaderRoute: typeof AuthenticatedRelatoriosIdRouteImport
       parentRoute: typeof AuthenticatedRelatoriosRoute
     }
     '/_authenticated/producao/pcp': {
@@ -1129,18 +1109,15 @@ const AuthenticatedProducaoRouteWithChildren =
   )
 
 interface AuthenticatedRelatoriosRouteChildren {
-  AuthenticatedRelatoriosEstoqueRoute: typeof AuthenticatedRelatoriosEstoqueRoute
-  AuthenticatedRelatoriosProducaoRoute: typeof AuthenticatedRelatoriosProducaoRoute
-  AuthenticatedRelatoriosQualidadeRoute: typeof AuthenticatedRelatoriosQualidadeRoute
+  AuthenticatedRelatoriosIdRoute: typeof AuthenticatedRelatoriosIdRoute
+  AuthenticatedRelatoriosNovoRoute: typeof AuthenticatedRelatoriosNovoRoute
   AuthenticatedRelatoriosIndexRoute: typeof AuthenticatedRelatoriosIndexRoute
 }
 
 const AuthenticatedRelatoriosRouteChildren: AuthenticatedRelatoriosRouteChildren =
   {
-    AuthenticatedRelatoriosEstoqueRoute: AuthenticatedRelatoriosEstoqueRoute,
-    AuthenticatedRelatoriosProducaoRoute: AuthenticatedRelatoriosProducaoRoute,
-    AuthenticatedRelatoriosQualidadeRoute:
-      AuthenticatedRelatoriosQualidadeRoute,
+    AuthenticatedRelatoriosIdRoute: AuthenticatedRelatoriosIdRoute,
+    AuthenticatedRelatoriosNovoRoute: AuthenticatedRelatoriosNovoRoute,
     AuthenticatedRelatoriosIndexRoute: AuthenticatedRelatoriosIndexRoute,
   }
 

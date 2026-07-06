@@ -1,6 +1,4 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { z } from "zod";
-import { zodValidator } from "@tanstack/zod-adapter";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -12,12 +10,11 @@ import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import type { Fonte, ReportConfig, SourceKey } from "@/lib/relatorios/types";
 
-const searchSchema = z.object({ edit: z.number().optional() });
-
 export const Route = createFileRoute("/_authenticated/relatorios/$id")({
-  validateSearch: zodValidator(searchSchema),
+  validateSearch: (s: Record<string, unknown>) => ({ edit: s.edit === 1 || s.edit === "1" ? 1 : undefined }) as { edit?: 1 },
   component: RelatorioDetalhe,
 });
+
 
 function RelatorioDetalhe() {
   const { id } = Route.useParams();
