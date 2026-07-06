@@ -77,7 +77,7 @@ function RelatorioDetalhe() {
             .from("relatorio_templates")
             .update({ nome, descricao: descricao || null, fonte, config })
             .eq("id", id);
-          if (error) return toast.error(error.message);
+          if (error) { toast.error(error.message); return; }
           toast.success("Relatório atualizado");
           navigate({ to: "/relatorios/$id", params: { id }, search: {} });
         } : undefined}
