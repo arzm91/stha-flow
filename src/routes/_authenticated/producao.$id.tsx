@@ -184,6 +184,8 @@ function OPPage() {
 
       {op.data.equipamento_id ? <ScadaViewer equipamentoId={op.data.equipamento_id as string} /> : null}
 
+      {op.data.equipamento_id ? <UtilidadesLive equipamentoId={op.data.equipamento_id as string} /> : null}
+
       <TagsMonitoramento ordemId={id} tagNomes={tagNomes} ativa={!isFinal} />
 
       {(op.data.obs_iniciais || op.data.obs_finais) ? (
