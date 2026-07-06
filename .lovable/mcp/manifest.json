@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://omdxffpegolifvkzrvbi.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "sthapc-mcp",
+      "version": "0.1.0",
+      "title": "STHApc — Gestão Industrial"
+    },
+    "tools": [
+      {
+        "name": "list_ordens_producao",
+        "title": "Listar ordens de produção",
+        "description": "Lista as ordens de produção do usuário autenticado, com filtro opcional por status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "status": {
+              "description": "Filtro opcional por status (ex.: 'aberta', 'em_andamento', 'concluida').",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Quantidade máxima de registros (padrão 50).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_tanques",
+        "title": "Listar tanques",
+        "description": "Lista os tanques cadastrados com dados de estoque atual (saldo, capacidade, produto).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "description": "Quantidade máxima (padrão 100).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_alertas_recentes",
+        "title": "Listar alertas recentes",
+        "description": "Lista os disparos de alertas mais recentes do sistema.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "limit": {
+              "description": "Quantidade máxima (padrão 50).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_tags_live",
+        "title": "Listar tags ao vivo",
+        "description": "Retorna os valores atuais das tags monitoradas. Filtro opcional por nome (busca parcial).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "nome": {
+              "description": "Filtro parcial pelo nome da tag.",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Quantidade máxima (padrão 100).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500
+            }
+          }
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
