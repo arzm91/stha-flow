@@ -84,7 +84,7 @@ export function CrudTable({
     mutationFn: async (values: Record<string, unknown>) => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Não autenticado");
-      const payload: Record<string, unknown> = { ...values, owner_id: u.user.id };
+      const payload: Record<string, unknown> = { ...values, ...(filter ?? {}), owner_id: u.user.id };
       // Normalize empties
       for (const k of Object.keys(payload)) {
         if (payload[k] === "") payload[k] = null;
