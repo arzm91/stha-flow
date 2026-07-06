@@ -114,7 +114,7 @@ function PcpPage() {
   const equipamentos = useQuery({
     queryKey: ["pcp-equipamentos"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("equipamentos").select("id,codigo,nome,status").eq("ativo", true).order("codigo");
+      const { data, error } = await supabase.from("equipamentos").select("id,codigo,nome,status").eq("ativo", true).eq("categoria", "producao").order("codigo");
       if (error) throw error;
       return (data ?? []) as Equip[];
     },

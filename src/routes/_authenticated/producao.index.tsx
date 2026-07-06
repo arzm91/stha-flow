@@ -35,7 +35,7 @@ function ProducaoPage() {
   const equipamentos = useQuery({
     queryKey: ["equipamentos"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("equipamentos").select("*").eq("ativo", true).order("codigo");
+      const { data, error } = await supabase.from("equipamentos").select("*").eq("ativo", true).eq("categoria", "producao").order("codigo");
       if (error) throw error;
       return (data ?? []) as Equip[];
     },

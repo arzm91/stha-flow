@@ -35,6 +35,7 @@ export function CrudTable({
   extraActions,
   emptyAction,
   resourceType,
+  filter,
 }: {
   table: string;
   title: string;
@@ -47,6 +48,8 @@ export function CrudTable({
   emptyAction?: ReactNode;
   /** When set, filters list rows to those allowed for the current user. */
   resourceType?: ResourceType;
+  /** Optional equality filter applied both to the list query and merged into inserts/updates. */
+  filter?: Record<string, unknown>;
 }) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
@@ -55,10 +58,15 @@ export function CrudTable({
   const [form, setForm] = useState<Record<string, unknown>>(initialValues);
   const resPerms = useResourcePermissions();
 
+  const filterKey = JSON.stringify(filter ?? {});
   const list = useQuery({
-    queryKey: [table],
+    queryKey: [table, filterKey],
     queryFn: async () => {
-      const { data, error } = await supabase.from(table as never).select("*").order("created_at", { ascending: false });
+      let q: any = supabase.from(table as never).select("*").order("created_at", { ascending: false });
+      if (filter) {
+        for (const [k, v] of Object.entries(filter)) q = q.eq(k, v);
+      }
+      const { data, error } = await q;
       if (error) throw error;
       return (data as unknown as Row[]) ?? [];
     },
@@ -76,7 +84,7 @@ export function CrudTable({
     mutationFn: async (values: Record<string, unknown>) => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Não autenticado");
-      const payload: Record<string, unknown> = { ...values, owner_id: u.user.id };
+      const payload: Record<string, unknown> = { ...values, ...(filter ?? {}), owner_id: u.user.id };
       // Normalize empties
       for (const k of Object.keys(payload)) {
         if (payload[k] === "") payload[k] = null;

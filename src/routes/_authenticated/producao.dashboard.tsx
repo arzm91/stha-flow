@@ -167,7 +167,7 @@ function ProducaoDashboardPage() {
   const equipamentosQ = useQuery({
     queryKey: ["dash-equipamentos"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("equipamentos").select("id,codigo,nome").eq("ativo", true).order("codigo");
+      const { data, error } = await supabase.from("equipamentos").select("id,codigo,nome").eq("ativo", true).eq("categoria", "producao").order("codigo");
       if (error) throw error;
       return data ?? [];
     },

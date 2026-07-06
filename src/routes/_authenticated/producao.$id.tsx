@@ -16,6 +16,7 @@ import { toast } from "sonner";
 import { formatDate, formatNumber, durationFromNow, durationBetween } from "@/lib/format";
 import { ScadaViewer } from "@/components/scada/ScadaViewer";
 import { TagsMonitoramento } from "@/components/producao/TagsMonitoramento";
+import { UtilidadesLive, UtilidadesStrip } from "@/components/producao/UtilidadesLive";
 import { gerarRelatorioProducaoPdf } from "@/lib/producao-pdf";
 import { gerarRelatorioProducaoXlsx } from "@/lib/producao-xlsx";
 
@@ -159,6 +160,8 @@ function OPPage() {
         }
       />
 
+      {op.data.equipamento_id ? <UtilidadesStrip equipamentoId={op.data.equipamento_id as string} /> : null}
+
       {(tagVel || tagTotal) ? (
         <AvancoProducaoHeader ordemId={id} tagVel={tagVel} tagTotal={tagTotal} qtdPlanejada={qtdPlanejada} />
       ) : null}
@@ -180,6 +183,8 @@ function OPPage() {
       </div>
 
       {op.data.equipamento_id ? <ScadaViewer equipamentoId={op.data.equipamento_id as string} /> : null}
+
+      {op.data.equipamento_id ? <UtilidadesLive equipamentoId={op.data.equipamento_id as string} /> : null}
 
       <TagsMonitoramento ordemId={id} tagNomes={tagNomes} ativa={!isFinal} />
 

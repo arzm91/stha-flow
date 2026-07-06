@@ -4,13 +4,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { CrudTable, type FieldDef } from "@/components/CrudTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { History, ListChecks, Workflow } from "lucide-react";
+import { History } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/cadastros/equipamentos")({
-  component: EquipamentosPage,
+export const Route = createFileRoute("/_authenticated/cadastros/utilidades")({
+  component: UtilidadesPage,
 });
 
-function EquipamentosPage() {
+function UtilidadesPage() {
   const tags = useQuery({
     queryKey: ["tags_live", "select"],
     queryFn: async () => {
@@ -34,70 +34,25 @@ function EquipamentosPage() {
     ].filter(Boolean).join(" · "),
   }));
 
-  const utilidades = useQuery({
-    queryKey: ["equipamentos", "utilidades-opts"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("equipamentos")
-        .select("id,codigo,nome,localizacao,tipo")
-        .eq("categoria", "utilidade")
-        .eq("ativo", true)
-        .order("nome");
-      if (error) throw error;
-      return data ?? [];
-    },
-  });
-
-  const utilidadeOptions = (utilidades.data ?? []).map((u) => ({
-    value: u.id,
-    label: `${u.codigo} — ${u.nome}`,
-    hint: [u.tipo, u.localizacao].filter(Boolean).join(" · "),
-  }));
-
   const fields: FieldDef[] = [
     { key: "codigo", label: "Código", required: true },
-    { key: "nome", label: "Nome", required: true },
+    { key: "nome", label: "Nome", required: true, placeholder: "Ex: Compressor de ar principal" },
     { key: "descricao", label: "Descrição", type: "textarea" },
-    { key: "tipo", label: "Tipo" },
+    { key: "tipo", label: "Tipo", placeholder: "Ex: Compressor, Caldeira, Chiller..." },
     { key: "localizacao", label: "Localização" },
     { key: "status", label: "Status", type: "select", required: true, options: [
       { value: "disponivel", label: "Disponível" },
-      { value: "ocupado", label: "Ocupado" },
       { value: "parado", label: "Parado" },
     ]},
     {
       key: "tag_nomes",
-      label: "Tags associadas",
+      label: "Tags monitoradas",
       type: "multiselect",
       options: tagOptions,
       placeholder: "Pesquise por nome, grupo ou unidade...",
       help: tags.isLoading
         ? "Carregando tags ao vivo..."
-        : `${tagOptions.length} tag(s) disponíveis em Tags Ao Vivo.`,
-    },
-    {
-      key: "utilidade_ids",
-      label: "Utilidades vinculadas",
-      type: "multiselect",
-      options: utilidadeOptions,
-      placeholder: "Pesquise por código ou nome da utilidade...",
-      help: utilidades.isLoading
-        ? "Carregando utilidades..."
-        : `${utilidadeOptions.length} utilidade(s) cadastradas. Aparecerão no acompanhamento da produção.`,
-    },
-    {
-      key: "tag_velocidade_producao",
-      label: "Tag de velocidade de produção (opcional)",
-      type: "select",
-      options: [{ value: "", label: "— nenhuma —" }, ...tagOptions],
-      help: "Tag exibida como velocidade instantânea no acompanhamento.",
-    },
-    {
-      key: "tag_producao_total",
-      label: "Tag de produção total (opcional)",
-      type: "select",
-      options: [{ value: "", label: "— nenhuma —" }, ...tagOptions],
-      help: "Tag usada para calcular o % de avanço vs. a quantidade planejada.",
+        : `${tagOptions.length} tag(s) disponíveis. Serão exibidas ao vivo no acompanhamento da produção.`,
     },
     { key: "ativo", label: "Ativo", type: "checkbox" },
   ];
@@ -106,14 +61,12 @@ function EquipamentosPage() {
     <CrudTable
       table="equipamentos"
       resourceType="equipamento"
-      title="Equipamentos"
-      description="Cadastro e gestão dos equipamentos de produção da planta."
+      title="Utilidades"
+      description="Equipamentos de utilidades (compressores, caldeiras, chillers...) que suportam a produção."
       searchKeys={["nome", "codigo", "tipo", "localizacao"]}
-      filter={{ categoria: "producao" }}
-      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [], utilidade_ids: [], tag_velocidade_producao: "", tag_producao_total: "" }}
+      filter={{ categoria: "utilidade" }}
+      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [] }}
       fields={fields}
-
-
       columns={[
         { key: "codigo", label: "Código" },
         { key: "nome", label: "Nome" },
@@ -134,17 +87,9 @@ function EquipamentosPage() {
         { key: "ativo", label: "Ativo", render: (r) => (r.ativo ? "Sim" : "Não") },
       ]}
       extraActions={(r) => (
-        <>
-          <Button asChild variant="ghost" size="icon" title="Processos (atividades)">
-            <Link to="/cadastros/equipamentos-atividades/$id" params={{ id: r.id }}><ListChecks className="h-4 w-4" /></Link>
-          </Button>
-          <Button asChild variant="ghost" size="icon" title="Diagrama PFD">
-            <Link to="/cadastros/equipamentos-pfd/$id" params={{ id: r.id }}><Workflow className="h-4 w-4" /></Link>
-          </Button>
-          <Button asChild variant="ghost" size="icon" title="Histórico">
-            <Link to="/cadastros/equipamentos/$id" params={{ id: r.id }}><History className="h-4 w-4" /></Link>
-          </Button>
-        </>
+        <Button asChild variant="ghost" size="icon" title="Histórico">
+          <Link to="/cadastros/equipamentos/$id" params={{ id: r.id }}><History className="h-4 w-4" /></Link>
+        </Button>
       )}
     />
   );
@@ -153,7 +98,6 @@ function EquipamentosPage() {
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; cls: string }> = {
     disponivel: { label: "Disponível", cls: "bg-success/20 text-success border-success/30" },
-    ocupado: { label: "Ocupado", cls: "bg-primary/20 text-primary border-primary/30" },
     parado: { label: "Parado", cls: "bg-warning/20 text-warning border-warning/30" },
   };
   const v = map[status] ?? { label: status, cls: "" };
