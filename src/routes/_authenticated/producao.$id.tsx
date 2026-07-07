@@ -1260,9 +1260,16 @@ function ProcessosSection({ ordemId, equipamentoId }: { ordemId: string; equipam
             const tipoInfo = TIPO_BADGE[a.tipo] ?? { label: a.tipo, cls: "" };
             const gatilhos: Array<{ tipo: string; tag_nome: string; operador: string; valor: unknown }> = Array.isArray(a.gatilhos) ? a.gatilhos : [];
             return (
-              <Card key={a.id}>
+              <Card key={a.id} style={a.cor ? { borderLeft: `4px solid ${a.cor}` } : undefined}>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-base">
+                    {a.cor ? (
+                      <span
+                        className="mr-2 inline-block h-3 w-3 rounded-full align-middle"
+                        style={{ background: a.cor }}
+                        aria-hidden
+                      />
+                    ) : null}
                     <span className="mr-2 font-mono text-xs text-muted-foreground">{idx + 1}.</span>
                     {a.nome}
                     {a.tempo_estimado_min != null ? (
