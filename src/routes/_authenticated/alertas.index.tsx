@@ -776,7 +776,7 @@ function AlertasPage() {
             )}
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="px-6 py-4 border-t shrink-0">
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button onClick={save}>{editing ? "Salvar" : "Criar"}</Button>
           </DialogFooter>
