@@ -176,6 +176,7 @@ function EquipAtividadesPage() {
       estab_pct: r.estab_pct?.toString() ?? "2",
       estab_janela_seg: r.estab_janela_seg?.toString() ?? "30",
       estab_min_estavel_seg: r.estab_min_estavel_seg?.toString() ?? "30",
+      cor: r.cor ?? "",
     });
     setOpen(true);
   }
