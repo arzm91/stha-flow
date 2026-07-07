@@ -512,6 +512,38 @@ function EquipAtividadesPage() {
               ))}
             </div>
 
+            <div className="rounded-md border p-3 bg-muted/30 grid gap-2">
+              <Label className="text-sm">Cor no acompanhamento</Label>
+              <p className="text-[11px] text-muted-foreground">
+                Usada para identificar visualmente este processo no acompanhamento da produção.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                {COR_PRESETS.map((c) => (
+                  <button
+                    key={c.value}
+                    type="button"
+                    title={c.label}
+                    onClick={() => setForm({ ...form, cor: c.value })}
+                    className={`h-7 w-7 rounded-full border-2 ${form.cor.toLowerCase() === c.value.toLowerCase() ? "border-foreground" : "border-transparent"}`}
+                    style={{ background: c.value }}
+                  />
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, cor: "" })}
+                  className={`h-7 rounded-full border px-2 text-[11px] ${!form.cor ? "border-foreground" : "border-border"}`}
+                >
+                  sem cor
+                </button>
+                <Input
+                  value={form.cor}
+                  onChange={(e) => setForm({ ...form, cor: e.target.value })}
+                  placeholder="#hex"
+                  className="h-7 w-28 text-xs"
+                />
+              </div>
+            </div>
+
             <div className="flex items-center gap-2">
               <Checkbox checked={form.ativo} onCheckedChange={(v) => setForm({ ...form, ativo: !!v })} />
               <Label>Ativo</Label>
