@@ -201,7 +201,7 @@ function AuthPage() {
           </Card>
         </div>
       </div>
-    </main>
+      </div>
 
       <Dialog open={showAccessDeniedDialog} onOpenChange={setShowAccessDeniedDialog}>
         <DialogContent>
@@ -226,6 +226,6 @@ function AuthPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </main>
   );
 }
