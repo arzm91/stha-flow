@@ -219,7 +219,7 @@ function OPPage() {
         </TabsList>
 
         <TabsContent value="processos">
-          <ProcessosSection ordemId={id} produtoId={(op.data as any).produto_id} disabled={isFinal} />
+          <ProcessosSection ordemId={id} equipamentoId={(op.data as any).equipamento_id ?? null} />
         </TabsContent>
 
 
