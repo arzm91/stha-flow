@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, CheckCircle2, Gauge, FlaskConical, MessageSquare, Activity, AlertTriangle, Play, Square, ListChecks, Clock, History, Maximize2, Minimize2, FileText, FileSpreadsheet } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Gauge, FlaskConical, MessageSquare, Activity, AlertTriangle, Play, Square, ListChecks, Clock, History, Maximize2, Minimize2, FileText, FileSpreadsheet, Table as TableIcon } from "lucide-react";
 import { toast } from "sonner";
 import { formatDate, formatNumber, durationFromNow, durationBetween } from "@/lib/format";
 import { ScadaViewer } from "@/components/scada/ScadaViewer";
@@ -223,6 +223,7 @@ function OPPage() {
           <TabsTrigger value="parametros"><Gauge className="mr-1 h-4 w-4" />Parâmetros</TabsTrigger>
           <TabsTrigger value="analises"><FlaskConical className="mr-1 h-4 w-4" />Análises</TabsTrigger>
           <TabsTrigger value="observacoes"><MessageSquare className="mr-1 h-4 w-4" />Observações</TabsTrigger>
+          <TabsTrigger value="tabelas"><TableIcon className="mr-1 h-4 w-4" />Tabelas</TabsTrigger>
           <TabsTrigger value="historico"><History className="mr-1 h-4 w-4" />Histórico</TabsTrigger>
         </TabsList>
 
@@ -287,6 +288,10 @@ function OPPage() {
               qc.invalidateQueries({ queryKey: ["obs", id] });
             }}
           />
+        </TabsContent>
+
+        <TabsContent value="tabelas">
+          <TabelasSection ordemId={id} equipamentoId={(op.data as any).equipamento_id ?? null} inicioEm={(op.data as any).inicio_em ?? null} fimEm={(op.data as any).fim_em ?? null} />
         </TabsContent>
 
         <TabsContent value="historico">
@@ -1005,6 +1010,129 @@ function ObservacoesSection({
     </div>
   );
 }
+
+function TabelasSection({
+  ordemId, equipamentoId, inicioEm, fimEm,
+}: {
+  ordemId: string;
+  equipamentoId: string | null;
+  inicioEm: string | null;
+  fimEm: string | null;
+}) {
+  const sheetsQ = useQuery({
+    queryKey: ["tabelas-section-sheets", equipamentoId],
+    enabled: !!equipamentoId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("custom_sheets")
+        .select("id,nome,columns")
+        .contains("equipamento_ids", [equipamentoId!] as never)
+        .order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const rowsQ = useQuery({
+    queryKey: ["tabelas-section-rows", ordemId, equipamentoId, inicioEm, fimEm, (sheetsQ.data ?? []).map((s) => s.id).join(",")],
+    enabled: !!equipamentoId && !!inicioEm && (sheetsQ.data?.length ?? 0) > 0,
+    queryFn: async () => {
+      const ids = (sheetsQ.data ?? []).map((s) => s.id);
+      let q = supabase
+        .from("custom_sheet_rows")
+        .select("id,sheet_id,data,created_at")
+        .in("sheet_id", ids)
+        .gte("created_at", inicioEm!)
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (fimEm) q = q.lte("created_at", fimEm);
+      const { data, error } = await q;
+      if (error) throw error;
+      return data ?? [];
+    },
+    refetchInterval: 15_000,
+  });
+
+  const sheets = sheetsQ.data ?? [];
+  const rowsBySheet = new Map<string, Array<{ id: string; data: Record<string, unknown>; created_at: string }>>();
+  for (const r of rowsQ.data ?? []) {
+    const list = rowsBySheet.get(r.sheet_id) ?? [];
+    list.push({ id: r.id, data: (r.data ?? {}) as Record<string, unknown>, created_at: r.created_at });
+    rowsBySheet.set(r.sheet_id, list);
+  }
+
+  const fmt = (v: unknown, type: SheetCol["type"]) => {
+    if (v === null || v === undefined || v === "") return "—";
+    if (type === "number") return formatNumber(Number(v));
+    if (type === "boolean") return v ? "Sim" : "Não";
+    if (type === "date") { try { return formatDate(String(v)); } catch { return String(v); } }
+    return String(v);
+  };
+
+  if (!equipamentoId) {
+    return <p className="mt-4 text-sm text-muted-foreground">Esta ordem não possui equipamento associado.</p>;
+  }
+  if (sheets.length === 0) {
+    return (
+      <Card className="mt-4">
+        <CardContent className="py-6 text-sm text-muted-foreground">
+          Nenhuma tabela associada a este equipamento. Associe tabelas em <Link to="/tabelas" className="underline">Tabelas</Link>.
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="mt-4 space-y-4">
+      {sheets.map((s) => {
+        const cols = (s.columns as unknown as SheetCol[]) ?? [];
+        const rows = (rowsBySheet.get(s.id) ?? []).slice(0, 20);
+        return (
+          <Card key={s.id}>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <TableIcon className="h-4 w-4" />{s.nome}
+                <Badge variant="secondary">{rows.length}</Badge>
+              </CardTitle>
+              <Button asChild variant="outline" size="sm">
+                <Link to="/tabelas/$id" params={{ id: s.id }}>Abrir tabela</Link>
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {rows.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum registro no período desta ordem.</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[170px]">Registrado em</TableHead>
+                        {cols.map((c) => (
+                          <TableHead key={c.key}>{c.label}</TableHead>
+                        ))}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {rows.map((r) => (
+                        <TableRow key={r.id}>
+                          <TableCell className="text-xs text-muted-foreground">{formatDate(r.created_at)}</TableCell>
+                          {cols.map((c) => (
+                            <TableCell key={c.key} className="text-sm">{fmt(r.data[c.key], c.type)}</TableCell>
+                          ))}
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
+  );
+}
+
 
 function FinalizarDialog({
   op, tanques, onDone,
