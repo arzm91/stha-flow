@@ -234,6 +234,8 @@ function AlertasPage() {
       severidade: (form.severidade ?? "warn") as Severidade,
       ativo: form.ativo ?? true,
       notificar_email: form.notificar_email ?? false,
+      email_recipients: form.notificar_email ? (form.email_recipients ?? []) : [],
+      email_template_key: form.email_template_key || "alert",
       cooldown_minutes: form.cooldown_minutes ?? 5,
     };
 
