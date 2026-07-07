@@ -347,30 +347,95 @@ async function runActionNode(
     const recipient = String(cfg.recipient ?? "").trim();
     if (!recipient) throw new Error("destinatário obrigatório");
 
-    // Base template data from cfg fields — passed straight into React Email
-    // component props. Falsy values are dropped so template defaults apply.
-    const base: Record<string, unknown> = {};
-    for (const k of [
-      "name", "severity", "alertTitle", "source", "detectedAt", "description", "actionUrl",
-      "reportName", "reportUrl", "generatedAt", "period",
-      "orderNumber", "productName", "quantity", "scheduledFor",
-      "subject", "body", "senderName",
-    ]) {
-      const v = (cfg as Record<string, unknown>)[k];
-      if (v !== undefined && v !== null && v !== "") base[k] = v;
+    const firedAt = String(ctx.__trigger_fired_at ?? new Date().toISOString());
+    const firedAtBR = (() => {
+      try { return new Date(firedAt).toLocaleString("pt-BR"); } catch { return firedAt; }
+    })();
+
+    // Auto-populate template props from the trigger context (alerta, produção,
+    // tag, agendamento). Values set in the node config act as OVERRIDES.
+    const auto: Record<string, unknown> = {};
+    const pick = (k: string) => (cfg as Record<string, unknown>)[k];
+    const asStr = (v: unknown) => (v === undefined || v === null ? "" : String(v));
+
+    // Common: recipient's display name override
+    if (pick("name")) auto.name = pick("name");
+
+    if (template === "alert") {
+      const evento = asStr(ctx.evento);
+      const tagNome = asStr(ctx.tag_nome);
+      const valor = asStr(ctx.valor ?? ctx.valor_num);
+      const unidade = asStr(ctx.unidade);
+      const ordemStatus = asStr(ctx.status);
+      const descBits: string[] = [];
+      if (tagNome) descBits.push(`Tag ${tagNome}${valor ? ` = ${valor}${unidade ? ` ${unidade}` : ""}` : ""}`);
+      if (evento) descBits.push(`Evento: ${evento}${ordemStatus ? ` (${ordemStatus})` : ""}`);
+
+      auto.severity = pick("severity") ?? "warning";
+      auto.alertTitle =
+        pick("alertTitle") ||
+        (evento ? `Evento: ${evento}` : tagNome ? `Alerta na tag ${tagNome}` : "Alerta da automação");
+      auto.source = pick("source") || (tagNome ? `Tag ${tagNome}` : evento ? "Produção" : "Automação");
+      auto.detectedAt = pick("detectedAt") || firedAtBR;
+      auto.description = pick("description") || descBits.join(" · ") || "Disparo automático";
+      if (pick("actionUrl")) auto.actionUrl = pick("actionUrl");
+    } else if (template === "report-ready") {
+      auto.reportTitle = pick("reportName") || pick("reportTitle") || "Relatório automático";
+      auto.period = pick("period") || firedAtBR;
+      auto.downloadUrl = pick("reportUrl") || pick("downloadUrl") || "https://sthapc.cloud/relatorios";
+    } else if (template === "order-confirmation") {
+      // Enrich from ordens_producao when the trigger carries an ordem_id
+      const ordemId = asStr(ctx.ordem_id);
+      let ordemNumero = asStr(pick("orderNumber"));
+      let produtoNome = asStr(pick("productName"));
+      let quantidade = asStr(pick("quantity"));
+      let scheduled = asStr(pick("scheduledFor"));
+
+      if (ordemId && (!ordemNumero || !produtoNome || !quantidade)) {
+        const { data: ordem } = await supabase
+          .from("ordens_producao")
+          .select("numero, qtd_planejada, data_inicio_planejada, produto:produto_id(nome, codigo)")
+          .eq("id", ordemId)
+          .maybeSingle();
+        if (ordem) {
+          if (!ordemNumero) ordemNumero = asStr(ordem.numero);
+          if (!produtoNome) {
+            const p = ordem.produto as { nome?: string; codigo?: string } | null;
+            produtoNome = asStr(p?.nome || p?.codigo);
+          }
+          if (!quantidade) quantidade = asStr(ordem.qtd_planejada);
+          if (!scheduled && ordem.data_inicio_planejada) {
+            try { scheduled = new Date(String(ordem.data_inicio_planejada)).toLocaleString("pt-BR"); }
+            catch { scheduled = asStr(ordem.data_inicio_planejada); }
+          }
+        }
+      }
+      auto.orderNumber = ordemNumero || "—";
+      auto.product = produtoNome || "—";
+      auto.quantity = quantidade || "—";
+      auto.scheduledFor = scheduled || firedAtBR;
+    } else if (template === "message") {
+      auto.fromName = pick("senderName") || "Automação STHApc";
+      auto.subject = pick("subject") || (ctx.evento ? `Evento: ${ctx.evento}` : "Nova mensagem do sistema");
+      const contextLine = ctx.evento
+        ? `Gatilho: ${ctx.evento}${ctx.ordem_id ? ` (ordem ${ctx.ordem_id})` : ""}`
+        : ctx.tag_nome
+          ? `Tag ${ctx.tag_nome}${ctx.valor ? ` = ${ctx.valor}${ctx.unidade ? ` ${ctx.unidade}` : ""}` : ""}`
+          : `Disparado em ${firedAtBR}`;
+      auto.body = pick("body") || contextLine;
+      if (pick("replyUrl")) auto.replyUrl = pick("replyUrl");
     }
-    // Merge with trigger context under a namespaced key for advanced templates.
-    const templateData = { ...base, trigger: ctx };
 
     const { enqueueTransactionalEmail } = await import("@/lib/email/enqueue.server");
     const res = await enqueueTransactionalEmail({
       templateName: template,
       recipientEmail: recipient,
-      templateData,
+      templateData: auto,
     });
     if (!res.ok) throw new Error(`e-mail não enfileirado: ${res.reason}${res.error ? ` (${res.error})` : ""}`);
     return { info: `e-mail (${template}) → ${recipient}` };
   }
+
 
   if (actionType === "aguardar") {
     const segundos = Math.min(Math.max(Number(cfg.segundos ?? 0), 0), 60);
