@@ -132,8 +132,22 @@ function ReportEditorPage() {
           <Button variant="ghost" size="sm" onClick={undo}><Undo2 className="w-4 h-4" /></Button>
           <Button variant="ghost" size="sm" onClick={redo}><Redo2 className="w-4 h-4" /></Button>
           <Button variant="outline" size="sm" onClick={() => setSchedulesOpen(true)}><CalendarClock className="w-4 h-4 mr-1" />Agendas</Button>
-          <Button variant="outline" size="sm" onClick={() => exportTablesToCsv(canvas, nome || 'relatorio')}><FileSpreadsheet className="w-4 h-4 mr-1" />CSV</Button>
-          <Button variant="outline" size="sm" onClick={() => { if (canvasRef.current) exportCanvasToPdf(canvasRef.current, nome || 'relatorio') }}><FileDown className="w-4 h-4 mr-1" />PDF</Button>
+          <Button variant="outline" size="sm" onClick={async () => {
+            try {
+              await exportTablesToCsv(canvas, nome || 'relatorio', scope)
+              toast.success('CSV exportado')
+            } catch (e: any) {
+              toast.error(e?.message || 'Falha ao exportar CSV')
+            }
+          }}><FileSpreadsheet className="w-4 h-4 mr-1" />CSV</Button>
+          <Button variant="outline" size="sm" onClick={async () => {
+            if (!canvasRef.current) return
+            try {
+              await exportCanvasToPdf(canvasRef.current, nome || 'relatorio')
+            } catch (e: any) {
+              toast.error(e?.message || 'Falha ao gerar PDF')
+            }
+          }}><FileDown className="w-4 h-4 mr-1" />PDF</Button>
           <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}><Save className="w-4 h-4 mr-1" />Salvar</Button>
         </div>
 
