@@ -31,7 +31,7 @@ function ResetPasswordPage() {
     <div className="dark flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Definir nova senha</CardTitle>
+          <CardTitle><h1 className="text-xl font-semibold leading-none tracking-tight">Definir nova senha</h1></CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
