@@ -13,7 +13,7 @@ import type { Fonte, ReportConfig, SourceKey } from "@/lib/relatorios/types";
 
 export const Route = createFileRoute("/_authenticated/relatorios/$id")({
   head: pageHead({ title: "Relatórios · Detalhes — STHApc", description: "Visualize detalhes no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: (params) => `/relatorios/${params.id}` }),
-  validateSearch: (s: Record<string, unknown>) => ({ edit: s.edit === 1 || s.edit === "1" ? 1 : undefined }); as { edit?: 1 },
+  validateSearch: (s: Record<string, unknown>) => ({ edit: s.edit === 1 || s.edit === "1" ? 1 : undefined }) as { edit?: 1 },
   component: RelatorioDetalhe,
 });
 
