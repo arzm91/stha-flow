@@ -5,6 +5,7 @@ import { AppSidebar } from "./AppSidebar";
 import { Button } from "@/components/ui/button";
 import { LogOut, User, Sun, Moon } from "lucide-react";
 import { useTheme } from "@/lib/theme";
+import { ChatPopup } from "@/components/chat/ChatPopup";
 
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -66,6 +67,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               >
                 {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
+
+              <ChatPopup />
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
