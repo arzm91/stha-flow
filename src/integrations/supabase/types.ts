@@ -1858,39 +1858,6 @@ export type Database = {
         }
         Relationships: []
       }
-      relatorio_templates: {
-        Row: {
-          config: Json
-          created_at: string
-          created_by: string
-          descricao: string | null
-          fonte: string
-          id: string
-          nome: string
-          updated_at: string
-        }
-        Insert: {
-          config?: Json
-          created_at?: string
-          created_by: string
-          descricao?: string | null
-          fonte: string
-          id?: string
-          nome: string
-          updated_at?: string
-        }
-        Update: {
-          config?: Json
-          created_at?: string
-          created_by?: string
-          descricao?: string | null
-          fonte?: string
-          id?: string
-          nome?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       relatorio_turno_eventos: {
         Row: {
           categoria: string
@@ -1929,6 +1896,185 @@ export type Database = {
           owner_id?: string
           responsavel?: string | null
           titulo?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      report_runs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          finished_at: string | null
+          id: string
+          owner_id: string
+          pdf_path: string | null
+          recipient_user_ids: string[]
+          report_id: string
+          schedule_id: string | null
+          status: string
+          triggered_by: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          owner_id: string
+          pdf_path?: string | null
+          recipient_user_ids?: string[]
+          report_id: string
+          schedule_id?: string | null
+          status?: string
+          triggered_by?: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          finished_at?: string | null
+          id?: string
+          owner_id?: string
+          pdf_path?: string | null
+          recipient_user_ids?: string[]
+          report_id?: string
+          schedule_id?: string | null
+          status?: string
+          triggered_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_runs_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "report_runs_schedule_id_fkey"
+            columns: ["schedule_id"]
+            isOneToOne: false
+            referencedRelation: "report_schedules"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_schedules: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          created_by: string | null
+          dia_mes: number | null
+          dias_semana: number[]
+          email_template_key: string
+          frequencia: string
+          hora: string
+          id: string
+          last_fired_at: string | null
+          nome: string
+          owner_id: string
+          recipient_user_ids: string[]
+          report_id: string
+          timezone: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          dia_mes?: number | null
+          dias_semana?: number[]
+          email_template_key?: string
+          frequencia?: string
+          hora?: string
+          id?: string
+          last_fired_at?: string | null
+          nome: string
+          owner_id: string
+          recipient_user_ids?: string[]
+          report_id: string
+          timezone?: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          dia_mes?: number | null
+          dias_semana?: number[]
+          email_template_key?: string
+          frequencia?: string
+          hora?: string
+          id?: string
+          last_fired_at?: string | null
+          nome?: string
+          owner_id?: string
+          recipient_user_ids?: string[]
+          report_id?: string
+          timezone?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "report_schedules_report_id_fkey"
+            columns: ["report_id"]
+            isOneToOne: false
+            referencedRelation: "report_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      report_templates: {
+        Row: {
+          canvas: Json
+          created_at: string
+          created_by: string | null
+          descricao: string | null
+          equipamento_ids: string[]
+          id: string
+          is_system_template: boolean
+          manutencao_ids: string[]
+          nome: string
+          orientation: string
+          owner_id: string
+          page_size: string
+          produto_ids: string[]
+          theme: Json
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          canvas?: Json
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          equipamento_ids?: string[]
+          id?: string
+          is_system_template?: boolean
+          manutencao_ids?: string[]
+          nome: string
+          orientation?: string
+          owner_id: string
+          page_size?: string
+          produto_ids?: string[]
+          theme?: Json
+          tipo?: string
+          updated_at?: string
+        }
+        Update: {
+          canvas?: Json
+          created_at?: string
+          created_by?: string | null
+          descricao?: string | null
+          equipamento_ids?: string[]
+          id?: string
+          is_system_template?: boolean
+          manutencao_ids?: string[]
+          nome?: string
+          orientation?: string
+          owner_id?: string
+          page_size?: string
+          produto_ids?: string[]
+          theme?: Json
+          tipo?: string
           updated_at?: string
         }
         Relationships: []
