@@ -453,7 +453,129 @@ export function NodeConfigPanel({
               </>
             )}
 
-            {cfg.type === "movimentacao_estoque" && (
+            {cfg.type === "enviar_email" && (
+              <>
+                <div className="space-y-1">
+                  <Label>Modelo de e-mail</Label>
+                  <Select value={String(cfg.template ?? "alert")} onValueChange={(v) => set({ template: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="alert">Alerta do sistema</SelectItem>
+                      <SelectItem value="report-ready">Relatório pronto</SelectItem>
+                      <SelectItem value="order-confirmation">Confirmação de ordem</SelectItem>
+                      <SelectItem value="message">Mensagem / notificação</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Destinatário (e-mail)</Label>
+                  <Input
+                    type="email"
+                    placeholder="pessoa@empresa.com"
+                    value={String(cfg.recipient ?? "")}
+                    onChange={(e) => set({ recipient: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label>Nome do destinatário (opcional)</Label>
+                  <Input value={String(cfg.name ?? "")} onChange={(e) => set({ name: e.target.value })} />
+                </div>
+
+                {cfg.template === "alert" && (
+                  <>
+                    <div className="space-y-1">
+                      <Label>Severidade</Label>
+                      <Select value={String(cfg.severity ?? "warning")} onValueChange={(v) => set({ severity: v })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="info">Informativo</SelectItem>
+                          <SelectItem value="warning">Atenção</SelectItem>
+                          <SelectItem value="critical">Crítico</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Título do alerta</Label>
+                      <Input value={String(cfg.alertTitle ?? "")} onChange={(e) => set({ alertTitle: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Origem</Label>
+                      <Input value={String(cfg.source ?? "")} onChange={(e) => set({ source: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Descrição</Label>
+                      <Textarea value={String(cfg.description ?? "")} onChange={(e) => set({ description: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Link de ação (opcional)</Label>
+                      <Input value={String(cfg.actionUrl ?? "")} onChange={(e) => set({ actionUrl: e.target.value })} />
+                    </div>
+                  </>
+                )}
+
+                {cfg.template === "report-ready" && (
+                  <>
+                    <div className="space-y-1">
+                      <Label>Nome do relatório</Label>
+                      <Input value={String(cfg.reportName ?? "")} onChange={(e) => set({ reportName: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Período</Label>
+                      <Input value={String(cfg.period ?? "")} onChange={(e) => set({ period: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>URL do relatório</Label>
+                      <Input value={String(cfg.reportUrl ?? "")} onChange={(e) => set({ reportUrl: e.target.value })} />
+                    </div>
+                  </>
+                )}
+
+                {cfg.template === "order-confirmation" && (
+                  <>
+                    <div className="space-y-1">
+                      <Label>Número da ordem</Label>
+                      <Input value={String(cfg.orderNumber ?? "")} onChange={(e) => set({ orderNumber: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Produto</Label>
+                      <Input value={String(cfg.productName ?? "")} onChange={(e) => set({ productName: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Quantidade</Label>
+                      <Input value={String(cfg.quantity ?? "")} onChange={(e) => set({ quantity: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Programada para</Label>
+                      <Input value={String(cfg.scheduledFor ?? "")} onChange={(e) => set({ scheduledFor: e.target.value })} />
+                    </div>
+                  </>
+                )}
+
+                {cfg.template === "message" && (
+                  <>
+                    <div className="space-y-1">
+                      <Label>Assunto</Label>
+                      <Input value={String(cfg.subject ?? "")} onChange={(e) => set({ subject: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Mensagem</Label>
+                      <Textarea value={String(cfg.body ?? "")} onChange={(e) => set({ body: e.target.value })} />
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Remetente</Label>
+                      <Input value={String(cfg.senderName ?? "")} onChange={(e) => set({ senderName: e.target.value })} />
+                    </div>
+                  </>
+                )}
+
+                <p className="text-[11px] text-muted-foreground">
+                  O e-mail é enfileirado e enviado pelo domínio verificado. Use este nó
+                  após qualquer gatilho (alerta, ordem iniciada/finalizada, evento de tag,
+                  agendamento, etc.).
+                </p>
+              </>
+            )}
+
               <>
                 <div className="space-y-1">
                   <Label>Tipo</Label>
