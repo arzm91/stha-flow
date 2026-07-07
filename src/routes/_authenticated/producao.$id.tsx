@@ -223,6 +223,7 @@ function OPPage() {
           <TabsTrigger value="parametros"><Gauge className="mr-1 h-4 w-4" />Parâmetros</TabsTrigger>
           <TabsTrigger value="analises"><FlaskConical className="mr-1 h-4 w-4" />Análises</TabsTrigger>
           <TabsTrigger value="observacoes"><MessageSquare className="mr-1 h-4 w-4" />Observações</TabsTrigger>
+          <TabsTrigger value="tabelas"><TableIcon className="mr-1 h-4 w-4" />Tabelas</TabsTrigger>
           <TabsTrigger value="historico"><History className="mr-1 h-4 w-4" />Histórico</TabsTrigger>
         </TabsList>
 
