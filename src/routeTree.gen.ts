@@ -20,7 +20,6 @@ import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe
 import { Route as AuthenticatedTurnosRouteImport } from './routes/_authenticated/turnos'
 import { Route as AuthenticatedTagsRouteImport } from './routes/_authenticated/tags'
 import { Route as AuthenticatedTabelasRouteImport } from './routes/_authenticated/tabelas'
-import { Route as AuthenticatedRelatoriosRouteImport } from './routes/_authenticated/relatorios'
 import { Route as AuthenticatedProducaoRouteImport } from './routes/_authenticated/producao'
 import { Route as AuthenticatedMonitoramentoRouteImport } from './routes/_authenticated/monitoramento'
 import { Route as AuthenticatedManutencaoRouteImport } from './routes/_authenticated/manutencao'
@@ -35,7 +34,6 @@ import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } fr
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as AuthenticatedTagsIndexRouteImport } from './routes/_authenticated/tags.index'
 import { Route as AuthenticatedTabelasIndexRouteImport } from './routes/_authenticated/tabelas.index'
-import { Route as AuthenticatedRelatoriosIndexRouteImport } from './routes/_authenticated/relatorios.index'
 import { Route as AuthenticatedProducaoIndexRouteImport } from './routes/_authenticated/producao.index'
 import { Route as AuthenticatedManutencaoIndexRouteImport } from './routes/_authenticated/manutencao.index'
 import { Route as AuthenticatedEstoqueIndexRouteImport } from './routes/_authenticated/estoque.index'
@@ -44,8 +42,6 @@ import { Route as AuthenticatedAlertasIndexRouteImport } from './routes/_authent
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
 import { Route as AuthenticatedTagsEndpointsRouteImport } from './routes/_authenticated/tags.endpoints'
 import { Route as AuthenticatedTabelasIdRouteImport } from './routes/_authenticated/tabelas.$id'
-import { Route as AuthenticatedRelatoriosNovoRouteImport } from './routes/_authenticated/relatorios.novo'
-import { Route as AuthenticatedRelatoriosIdRouteImport } from './routes/_authenticated/relatorios.$id'
 import { Route as AuthenticatedProducaoPcpRouteImport } from './routes/_authenticated/producao.pcp'
 import { Route as AuthenticatedProducaoNovaRouteImport } from './routes/_authenticated/producao.nova'
 import { Route as AuthenticatedProducaoDashboardRouteImport } from './routes/_authenticated/producao.dashboard'
@@ -129,11 +125,6 @@ const AuthenticatedTabelasRoute = AuthenticatedTabelasRouteImport.update({
   path: '/tabelas',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
-const AuthenticatedRelatoriosRoute = AuthenticatedRelatoriosRouteImport.update({
-  id: '/relatorios',
-  path: '/relatorios',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
 const AuthenticatedProducaoRoute = AuthenticatedProducaoRouteImport.update({
   id: '/producao',
   path: '/producao',
@@ -210,12 +201,6 @@ const AuthenticatedTabelasIndexRoute =
     path: '/',
     getParentRoute: () => AuthenticatedTabelasRoute,
   } as any)
-const AuthenticatedRelatoriosIndexRoute =
-  AuthenticatedRelatoriosIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => AuthenticatedRelatoriosRoute,
-  } as any)
 const AuthenticatedProducaoIndexRoute =
   AuthenticatedProducaoIndexRouteImport.update({
     id: '/',
@@ -262,18 +247,6 @@ const AuthenticatedTabelasIdRoute = AuthenticatedTabelasIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => AuthenticatedTabelasRoute,
 } as any)
-const AuthenticatedRelatoriosNovoRoute =
-  AuthenticatedRelatoriosNovoRouteImport.update({
-    id: '/novo',
-    path: '/novo',
-    getParentRoute: () => AuthenticatedRelatoriosRoute,
-  } as any)
-const AuthenticatedRelatoriosIdRoute =
-  AuthenticatedRelatoriosIdRouteImport.update({
-    id: '/$id',
-    path: '/$id',
-    getParentRoute: () => AuthenticatedRelatoriosRoute,
-  } as any)
 const AuthenticatedProducaoPcpRoute =
   AuthenticatedProducaoPcpRouteImport.update({
     id: '/pcp',
@@ -456,7 +429,6 @@ export interface FileRoutesByFullPath {
   '/manutencao': typeof AuthenticatedManutencaoRouteWithChildren
   '/monitoramento': typeof AuthenticatedMonitoramentoRoute
   '/producao': typeof AuthenticatedProducaoRouteWithChildren
-  '/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/tabelas': typeof AuthenticatedTabelasRouteWithChildren
   '/tags': typeof AuthenticatedTagsRouteWithChildren
   '/turnos': typeof AuthenticatedTurnosRoute
@@ -476,8 +448,6 @@ export interface FileRoutesByFullPath {
   '/producao/dashboard': typeof AuthenticatedProducaoDashboardRoute
   '/producao/nova': typeof AuthenticatedProducaoNovaRoute
   '/producao/pcp': typeof AuthenticatedProducaoPcpRoute
-  '/relatorios/$id': typeof AuthenticatedRelatoriosIdRoute
-  '/relatorios/novo': typeof AuthenticatedRelatoriosNovoRoute
   '/tabelas/$id': typeof AuthenticatedTabelasIdRoute
   '/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -486,7 +456,6 @@ export interface FileRoutesByFullPath {
   '/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/manutencao/': typeof AuthenticatedManutencaoIndexRoute
   '/producao/': typeof AuthenticatedProducaoIndexRoute
-  '/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/tabelas/': typeof AuthenticatedTabelasIndexRoute
   '/tags/': typeof AuthenticatedTagsIndexRoute
   '/cadastros/equipamentos-atividades/$id': typeof AuthenticatedCadastrosEquipamentosAtividadesIdRoute
@@ -534,8 +503,6 @@ export interface FileRoutesByTo {
   '/producao/dashboard': typeof AuthenticatedProducaoDashboardRoute
   '/producao/nova': typeof AuthenticatedProducaoNovaRoute
   '/producao/pcp': typeof AuthenticatedProducaoPcpRoute
-  '/relatorios/$id': typeof AuthenticatedRelatoriosIdRoute
-  '/relatorios/novo': typeof AuthenticatedRelatoriosNovoRoute
   '/tabelas/$id': typeof AuthenticatedTabelasIdRoute
   '/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -544,7 +511,6 @@ export interface FileRoutesByTo {
   '/estoque': typeof AuthenticatedEstoqueIndexRoute
   '/manutencao': typeof AuthenticatedManutencaoIndexRoute
   '/producao': typeof AuthenticatedProducaoIndexRoute
-  '/relatorios': typeof AuthenticatedRelatoriosIndexRoute
   '/tabelas': typeof AuthenticatedTabelasIndexRoute
   '/tags': typeof AuthenticatedTagsIndexRoute
   '/cadastros/equipamentos-atividades/$id': typeof AuthenticatedCadastrosEquipamentosAtividadesIdRoute
@@ -582,7 +548,6 @@ export interface FileRoutesById {
   '/_authenticated/manutencao': typeof AuthenticatedManutencaoRouteWithChildren
   '/_authenticated/monitoramento': typeof AuthenticatedMonitoramentoRoute
   '/_authenticated/producao': typeof AuthenticatedProducaoRouteWithChildren
-  '/_authenticated/relatorios': typeof AuthenticatedRelatoriosRouteWithChildren
   '/_authenticated/tabelas': typeof AuthenticatedTabelasRouteWithChildren
   '/_authenticated/tags': typeof AuthenticatedTagsRouteWithChildren
   '/_authenticated/turnos': typeof AuthenticatedTurnosRoute
@@ -602,8 +567,6 @@ export interface FileRoutesById {
   '/_authenticated/producao/dashboard': typeof AuthenticatedProducaoDashboardRoute
   '/_authenticated/producao/nova': typeof AuthenticatedProducaoNovaRoute
   '/_authenticated/producao/pcp': typeof AuthenticatedProducaoPcpRoute
-  '/_authenticated/relatorios/$id': typeof AuthenticatedRelatoriosIdRoute
-  '/_authenticated/relatorios/novo': typeof AuthenticatedRelatoriosNovoRoute
   '/_authenticated/tabelas/$id': typeof AuthenticatedTabelasIdRoute
   '/_authenticated/tags/endpoints': typeof AuthenticatedTagsEndpointsRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
@@ -612,7 +575,6 @@ export interface FileRoutesById {
   '/_authenticated/estoque/': typeof AuthenticatedEstoqueIndexRoute
   '/_authenticated/manutencao/': typeof AuthenticatedManutencaoIndexRoute
   '/_authenticated/producao/': typeof AuthenticatedProducaoIndexRoute
-  '/_authenticated/relatorios/': typeof AuthenticatedRelatoriosIndexRoute
   '/_authenticated/tabelas/': typeof AuthenticatedTabelasIndexRoute
   '/_authenticated/tags/': typeof AuthenticatedTagsIndexRoute
   '/_authenticated/cadastros/equipamentos-atividades/$id': typeof AuthenticatedCadastrosEquipamentosAtividadesIdRoute
@@ -650,7 +612,6 @@ export interface FileRouteTypes {
     | '/manutencao'
     | '/monitoramento'
     | '/producao'
-    | '/relatorios'
     | '/tabelas'
     | '/tags'
     | '/turnos'
@@ -670,8 +631,6 @@ export interface FileRouteTypes {
     | '/producao/dashboard'
     | '/producao/nova'
     | '/producao/pcp'
-    | '/relatorios/$id'
-    | '/relatorios/novo'
     | '/tabelas/$id'
     | '/tags/endpoints'
     | '/lovable/email/suppression'
@@ -680,7 +639,6 @@ export interface FileRouteTypes {
     | '/estoque/'
     | '/manutencao/'
     | '/producao/'
-    | '/relatorios/'
     | '/tabelas/'
     | '/tags/'
     | '/cadastros/equipamentos-atividades/$id'
@@ -728,8 +686,6 @@ export interface FileRouteTypes {
     | '/producao/dashboard'
     | '/producao/nova'
     | '/producao/pcp'
-    | '/relatorios/$id'
-    | '/relatorios/novo'
     | '/tabelas/$id'
     | '/tags/endpoints'
     | '/lovable/email/suppression'
@@ -738,7 +694,6 @@ export interface FileRouteTypes {
     | '/estoque'
     | '/manutencao'
     | '/producao'
-    | '/relatorios'
     | '/tabelas'
     | '/tags'
     | '/cadastros/equipamentos-atividades/$id'
@@ -775,7 +730,6 @@ export interface FileRouteTypes {
     | '/_authenticated/manutencao'
     | '/_authenticated/monitoramento'
     | '/_authenticated/producao'
-    | '/_authenticated/relatorios'
     | '/_authenticated/tabelas'
     | '/_authenticated/tags'
     | '/_authenticated/turnos'
@@ -795,8 +749,6 @@ export interface FileRouteTypes {
     | '/_authenticated/producao/dashboard'
     | '/_authenticated/producao/nova'
     | '/_authenticated/producao/pcp'
-    | '/_authenticated/relatorios/$id'
-    | '/_authenticated/relatorios/novo'
     | '/_authenticated/tabelas/$id'
     | '/_authenticated/tags/endpoints'
     | '/lovable/email/suppression'
@@ -805,7 +757,6 @@ export interface FileRouteTypes {
     | '/_authenticated/estoque/'
     | '/_authenticated/manutencao/'
     | '/_authenticated/producao/'
-    | '/_authenticated/relatorios/'
     | '/_authenticated/tabelas/'
     | '/_authenticated/tags/'
     | '/_authenticated/cadastros/equipamentos-atividades/$id'
@@ -926,13 +877,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTabelasRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
-    '/_authenticated/relatorios': {
-      id: '/_authenticated/relatorios'
-      path: '/relatorios'
-      fullPath: '/relatorios'
-      preLoaderRoute: typeof AuthenticatedRelatoriosRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
     '/_authenticated/producao': {
       id: '/_authenticated/producao'
       path: '/producao'
@@ -1031,13 +975,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTabelasIndexRouteImport
       parentRoute: typeof AuthenticatedTabelasRoute
     }
-    '/_authenticated/relatorios/': {
-      id: '/_authenticated/relatorios/'
-      path: '/'
-      fullPath: '/relatorios/'
-      preLoaderRoute: typeof AuthenticatedRelatoriosIndexRouteImport
-      parentRoute: typeof AuthenticatedRelatoriosRoute
-    }
     '/_authenticated/producao/': {
       id: '/_authenticated/producao/'
       path: '/'
@@ -1093,20 +1030,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/tabelas/$id'
       preLoaderRoute: typeof AuthenticatedTabelasIdRouteImport
       parentRoute: typeof AuthenticatedTabelasRoute
-    }
-    '/_authenticated/relatorios/novo': {
-      id: '/_authenticated/relatorios/novo'
-      path: '/novo'
-      fullPath: '/relatorios/novo'
-      preLoaderRoute: typeof AuthenticatedRelatoriosNovoRouteImport
-      parentRoute: typeof AuthenticatedRelatoriosRoute
-    }
-    '/_authenticated/relatorios/$id': {
-      id: '/_authenticated/relatorios/$id'
-      path: '/$id'
-      fullPath: '/relatorios/$id'
-      preLoaderRoute: typeof AuthenticatedRelatoriosIdRouteImport
-      parentRoute: typeof AuthenticatedRelatoriosRoute
     }
     '/_authenticated/producao/pcp': {
       id: '/_authenticated/producao/pcp'
@@ -1438,24 +1361,6 @@ const AuthenticatedProducaoRouteWithChildren =
     AuthenticatedProducaoRouteChildren,
   )
 
-interface AuthenticatedRelatoriosRouteChildren {
-  AuthenticatedRelatoriosIdRoute: typeof AuthenticatedRelatoriosIdRoute
-  AuthenticatedRelatoriosNovoRoute: typeof AuthenticatedRelatoriosNovoRoute
-  AuthenticatedRelatoriosIndexRoute: typeof AuthenticatedRelatoriosIndexRoute
-}
-
-const AuthenticatedRelatoriosRouteChildren: AuthenticatedRelatoriosRouteChildren =
-  {
-    AuthenticatedRelatoriosIdRoute: AuthenticatedRelatoriosIdRoute,
-    AuthenticatedRelatoriosNovoRoute: AuthenticatedRelatoriosNovoRoute,
-    AuthenticatedRelatoriosIndexRoute: AuthenticatedRelatoriosIndexRoute,
-  }
-
-const AuthenticatedRelatoriosRouteWithChildren =
-  AuthenticatedRelatoriosRoute._addFileChildren(
-    AuthenticatedRelatoriosRouteChildren,
-  )
-
 interface AuthenticatedTabelasRouteChildren {
   AuthenticatedTabelasIdRoute: typeof AuthenticatedTabelasIdRoute
   AuthenticatedTabelasIndexRoute: typeof AuthenticatedTabelasIndexRoute
@@ -1493,7 +1398,6 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedManutencaoRoute: typeof AuthenticatedManutencaoRouteWithChildren
   AuthenticatedMonitoramentoRoute: typeof AuthenticatedMonitoramentoRoute
   AuthenticatedProducaoRoute: typeof AuthenticatedProducaoRouteWithChildren
-  AuthenticatedRelatoriosRoute: typeof AuthenticatedRelatoriosRouteWithChildren
   AuthenticatedTabelasRoute: typeof AuthenticatedTabelasRouteWithChildren
   AuthenticatedTagsRoute: typeof AuthenticatedTagsRouteWithChildren
   AuthenticatedTurnosRoute: typeof AuthenticatedTurnosRoute
@@ -1510,7 +1414,6 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedManutencaoRoute: AuthenticatedManutencaoRouteWithChildren,
   AuthenticatedMonitoramentoRoute: AuthenticatedMonitoramentoRoute,
   AuthenticatedProducaoRoute: AuthenticatedProducaoRouteWithChildren,
-  AuthenticatedRelatoriosRoute: AuthenticatedRelatoriosRouteWithChildren,
   AuthenticatedTabelasRoute: AuthenticatedTabelasRouteWithChildren,
   AuthenticatedTagsRoute: AuthenticatedTagsRouteWithChildren,
   AuthenticatedTurnosRoute: AuthenticatedTurnosRoute,
