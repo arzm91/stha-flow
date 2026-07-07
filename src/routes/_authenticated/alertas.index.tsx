@@ -631,18 +631,19 @@ function AlertasPage() {
             {form.tipo === "processo_evento" && (
               <>
                 <div className="grid gap-2">
-                  <Label>Processo</Label>
+                  <Label>Atividade do equipamento</Label>
                   <Select
                     value={form.processo_id ?? ""}
                     onValueChange={(v) => setForm({ ...form, processo_id: v })}
                   >
-                    <SelectTrigger><SelectValue placeholder="Selecione um processo" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Selecione uma atividade" /></SelectTrigger>
                     <SelectContent>
                       {processos.map((p) => {
-                        const prod = produtos.find((x) => x.id === p.produto_id)?.nome;
+                        const eq = equipamentos.find((x) => x.id === p.equipamento_id);
+                        const eqLabel = eq ? (eq.codigo ? `${eq.codigo} — ${eq.nome}` : eq.nome) : null;
                         return (
                           <SelectItem key={p.id} value={p.id}>
-                            {p.nome}{prod ? ` — ${prod}` : ""}
+                            {p.nome}{eqLabel ? ` — ${eqLabel}` : ""}
                           </SelectItem>
                         );
                       })}
@@ -657,10 +658,9 @@ function AlertasPage() {
                   >
                     <SelectTrigger><SelectValue placeholder="Selecione um evento" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="entrou">Ordem entrou no processo</SelectItem>
-                      <SelectItem value="concluido">Processo concluído</SelectItem>
-                      <SelectItem value="demorou">Processo demorou mais que o limite</SelectItem>
-                      <SelectItem value="atividade_faltante">Atividade do processo não registrada</SelectItem>
+                      <SelectItem value="entrou">Atividade iniciada</SelectItem>
+                      <SelectItem value="concluido">Atividade concluída</SelectItem>
+                      <SelectItem value="demorou">Atividade demorou mais que o limite</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
