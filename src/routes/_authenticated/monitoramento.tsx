@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -47,6 +48,7 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/monitoramento")({
+  head: pageHead({ title: "Monitoramento — STHApc", description: "Acesse e gerencie Monitoramento no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/monitoramento" }),
   component: MonitoramentoPage,
 });
 

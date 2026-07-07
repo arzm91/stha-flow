@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -10,6 +11,7 @@ import { emptyDoc, migrateLegacy } from "@/components/scada/types";
 import { ScadaEditor } from "@/components/scada/ScadaEditor";
 
 export const Route = createFileRoute("/_authenticated/cadastros/equipamentos-pfd/$id")({
+  head: pageHead({ title: "Cadastros · PFD · Detalhes — STHApc", description: "Visualize detalhes no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: (params) => `/cadastros/equipamentos-pfd/${params.id}` }),
   component: ScadaEditorPage,
 });
 

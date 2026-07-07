@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -32,6 +33,7 @@ import { formatNumber, formatInt, formatDuration } from "@/lib/format";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/producao/dashboard")({
+  head: pageHead({ title: "Produção · Dashboard — STHApc", description: "Acesse e gerencie Produção · Dashboard no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/producao/dashboard" }),
   component: ProducaoDashboardPage,
 });
 

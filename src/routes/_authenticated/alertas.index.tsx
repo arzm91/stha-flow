@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,6 +25,7 @@ import { toast } from "sonner";
 import { RotinasSemanais } from "@/components/alertas/RotinasSemanais";
 
 export const Route = createFileRoute("/_authenticated/alertas/")({
+  head: pageHead({ title: "Alertas — STHApc", description: "Acesse e gerencie Alertas no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/alertas" }),
   component: AlertasPage,
 });
 

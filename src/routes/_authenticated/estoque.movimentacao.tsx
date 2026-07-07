@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -16,6 +17,7 @@ import { formatDate, formatNumber } from "@/lib/format";
 import { gerarRelatorioMovimentacaoPdf } from "@/lib/movimentacao-pdf";
 
 export const Route = createFileRoute("/_authenticated/estoque/movimentacao")({
+  head: pageHead({ title: "Estoque · Movimentação — STHApc", description: "Acesse e gerencie Estoque · Movimentação no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/estoque/movimentacao" }),
   component: MovimentacaoPage,
 });
 

@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/reset-password")({
+  head: pageHead({ title: "Nova senha — STHApc", description: "Defina uma nova senha de acesso ao STHApc para continuar usando o sistema.", path: "/reset-password" }),
   ssr: false,
   component: ResetPasswordPage,
 });

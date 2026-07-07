@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -54,6 +55,7 @@ import { formatRelative } from "@/lib/format";
 import { syncAllTagEndpoints, syncTagEndpointById } from "@/lib/tagEndpointSync";
 
 export const Route = createFileRoute("/_authenticated/tags/endpoints")({
+  head: pageHead({ title: "Tags · Endpoints — STHApc", description: "Acesse e gerencie Tags · Endpoints no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/tags/endpoints" }),
   component: EndpointsPage,
 });
 

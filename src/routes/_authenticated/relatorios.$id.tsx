@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,7 +12,8 @@ import { toast } from "sonner";
 import type { Fonte, ReportConfig, SourceKey } from "@/lib/relatorios/types";
 
 export const Route = createFileRoute("/_authenticated/relatorios/$id")({
-  validateSearch: (s: Record<string, unknown>) => ({ edit: s.edit === 1 || s.edit === "1" ? 1 : undefined }) as { edit?: 1 },
+  head: pageHead({ title: "Relatórios · Detalhes — STHApc", description: "Visualize detalhes no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: (params) => `/relatorios/${params.id}` }),
+  validateSearch: (s: Record<string, unknown>) => ({ edit: s.edit === 1 || s.edit === "1" ? 1 : undefined }); as { edit?: 1 },
   component: RelatorioDetalhe,
 });
 

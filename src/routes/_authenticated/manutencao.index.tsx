@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -26,6 +27,7 @@ import { gerarOSManutencaoPdf } from "@/lib/manutencao-pdf";
 import { guardAdmin, isAdminCancelled } from "@/lib/security/guard-admin";
 
 export const Route = createFileRoute("/_authenticated/manutencao/")({
+  head: pageHead({ title: "Manutenção — STHApc", description: "Acesse e gerencie Manutenção no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/manutencao" }),
   component: ManutencaoPage,
 });
 

@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -26,6 +27,7 @@ import { toast } from "sonner";
 import { NodeConfigPanel } from "@/components/automation/NodeConfigPanel";
 
 export const Route = createFileRoute("/_authenticated/automacoes/$id")({
+  head: pageHead({ title: "Automações · Detalhes — STHApc", description: "Visualize detalhes no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: (params) => `/automacoes/${params.id}` }),
   component: AutomacaoEditor,
 });
 

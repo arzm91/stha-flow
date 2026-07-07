@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -24,6 +25,7 @@ import { WIDGET_SOURCES, getSource, type WidgetSource } from "@/lib/dashboard/wi
 import { DashboardWidget } from "@/components/dashboard/DashboardWidget";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  head: pageHead({ title: "Dashboard — STHApc", description: "Acesse e gerencie Dashboard no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/dashboard" }),
   component: DashboardPage,
 });
 

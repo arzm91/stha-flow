@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -7,6 +8,7 @@ import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 
 export const Route = createFileRoute("/_authenticated/relatorios/novo")({
+  head: pageHead({ title: "Relatórios · Novo relatório — STHApc", description: "Acesse e gerencie Relatórios · Novo relatório no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/relatorios/novo" }),
   component: NovoRelatorio,
 });
 

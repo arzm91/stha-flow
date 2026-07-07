@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -47,6 +48,7 @@ import { formatRelative, formatNumber } from "@/lib/format";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/tags/")({
+  head: pageHead({ title: "Tags — STHApc", description: "Acesse e gerencie Tags no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/tags" }),
   component: TagsPage,
 });
 
