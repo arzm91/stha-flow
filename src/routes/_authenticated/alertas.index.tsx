@@ -736,15 +736,14 @@ function labelTipo(t: string) {
   if (t === "tag_stale") return "Tag (sem atualização)";
   if (t === "parametro_min_max") return "Parâmetro";
   if (t === "analise_min_max") return "Análise";
-  if (t === "processo_evento") return "Processo";
+  if (t === "processo_evento") return "Atividade";
   if (t === "custom") return "Personalizado";
   return t;
 }
 
 function labelEvento(e: string | null) {
-  if (e === "entrou") return "Entrou no processo";
-  if (e === "concluido") return "Concluído";
+  if (e === "entrou") return "Iniciada";
+  if (e === "concluido") return "Concluída";
   if (e === "demorou") return "Demorou";
-  if (e === "atividade_faltante") return "Atividade faltante";
   return e ?? "—";
 }
