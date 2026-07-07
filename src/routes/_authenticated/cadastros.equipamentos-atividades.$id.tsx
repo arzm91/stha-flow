@@ -423,7 +423,7 @@ function EquipAtividadesPage() {
                 </div>
                 {form.qtd_modo !== "fixa" && (
                   <div className="grid gap-2">
-                    <Label>Tag da dosagem</Label>
+                    <Label>{form.tipo === "processo" ? "Tag do processo" : "Tag da dosagem"}</Label>
                     <Select value={form.qtd_tag_nome} onValueChange={(v) => setForm({ ...form, qtd_tag_nome: v })}>
                       <SelectTrigger><SelectValue placeholder="Selecione a tag" /></SelectTrigger>
                       <SelectContent>
