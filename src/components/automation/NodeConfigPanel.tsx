@@ -488,6 +488,7 @@ export function NodeConfigPanel({
                   algum valor específico — deixe em branco para usar o valor do gatilho.
                 </div>
 
+                {cfg.template === "alert" && (
                   <>
                     <div className="space-y-1">
                       <Label>Severidade</Label>
