@@ -29,6 +29,21 @@ function ReportsListPage() {
   const remove = useServerFn(deleteReport)
   const [modelOpen, setModelOpen] = useState(false)
   const [scopeOpen, setScopeOpen] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleImportFile = async (file: File) => {
+    setImporting(true)
+    try {
+      const { nome, canvas } = await importCanvasFromFile(file)
+      createMut.mutate({ nome, descricao: `Modelo importado de ${file.name}`, canvas })
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Falha ao importar arquivo')
+    } finally {
+      setImporting(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
 
   const { data: reports = [], isLoading } = useQuery({ queryKey: ['reports'], queryFn: () => list() })
 
