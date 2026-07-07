@@ -11,9 +11,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, FileText, Trash2, Wand2, Pencil } from 'lucide-react'
-import { useState } from 'react'
+import { Plus, FileText, Trash2, Wand2, Pencil, Upload } from 'lucide-react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { importCanvasFromFile } from '@/lib/reports/import'
 
 export const Route = createFileRoute('/_authenticated/relatorios/')({
   head: pageHead({ title: 'Relatórios — STHApc', description: 'Crie, edite e agende relatórios visuais com dados do sistema.', path: '/relatorios' }),
