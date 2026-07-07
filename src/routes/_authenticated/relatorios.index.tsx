@@ -1,134 +1,103 @@
-import { pageHead } from "@/lib/seo";
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { usePagePermissions } from "@/hooks/usePagePermissions";
-import { PageHeader } from "@/components/PageHeader";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import {
-  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
-  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
-import { Plus, FileBarChart, Play, Pencil, Trash2 } from "lucide-react";
-import { FONTE_LABEL, sourceFor } from "@/lib/relatorios/sources";
-import type { Fonte, SourceKey } from "@/lib/relatorios/types";
-import { toast } from "sonner";
+import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
+import { pageHead } from '@/lib/seo'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useServerFn } from '@tanstack/react-start'
+import { listReports, createReport, deleteReport } from '@/lib/reports/reports.functions'
+import { SEED_TEMPLATES } from '@/lib/reports/seed-templates'
+import { PageHeader } from '@/components/PageHeader'
+import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Plus, FileText, Trash2, Wand2, Pencil } from 'lucide-react'
+import { useState } from 'react'
+import { toast } from 'sonner'
 
-export const Route = createFileRoute("/_authenticated/relatorios/")({
-  head: pageHead({ title: "Relatórios — STHApc", description: "Acesse e gerencie Relatórios no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/relatorios" }),
-  component: RelatoriosIndex,
-});
+export const Route = createFileRoute('/_authenticated/relatorios/')({
+  head: pageHead({ title: 'Relatórios — STHApc', description: 'Crie, edite e agende relatórios visuais com dados do sistema.', path: '/relatorios' }),
+  component: ReportsListPage,
+})
 
-type Template = {
-  id: string;
-  nome: string;
-  descricao: string | null;
-  fonte: Fonte;
-  config: { source: SourceKey } & Record<string, unknown>;
-  created_at: string;
-};
+function ReportsListPage() {
+  const qc = useQueryClient()
+  const navigate = useNavigate()
+  const list = useServerFn(listReports)
+  const create = useServerFn(createReport)
+  const remove = useServerFn(deleteReport)
+  const [modelOpen, setModelOpen] = useState(false)
 
-function RelatoriosIndex() {
-  const { isAdmin } = usePagePermissions();
-  const navigate = useNavigate();
-  const qc = useQueryClient();
+  const { data: reports = [], isLoading } = useQuery({ queryKey: ['reports'], queryFn: () => list() })
 
-  const q = useQuery({
-    queryKey: ["relatorio_templates"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("relatorio_templates")
-        .select("id, nome, descricao, fonte, config, created_at")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as unknown as Template[];
-    },
-  });
-
-  async function remove(id: string) {
-    const { error } = await supabase.from("relatorio_templates").delete().eq("id", id);
-    if (error) return toast.error(error.message);
-    toast.success("Relatório removido");
-    qc.invalidateQueries({ queryKey: ["relatorio_templates"] });
-  }
-
-  const groups = { producao: [] as Template[], estoque_qualidade: [] as Template[], manutencao_automacao: [] as Template[] };
-  for (const t of q.data ?? []) groups[t.fonte]?.push(t);
+  const createMut = useMutation({
+    mutationFn: (input: any) => create({ data: input }),
+    onSuccess: (r) => { qc.invalidateQueries({ queryKey: ['reports'] }); navigate({ to: '/relatorios/$id', params: { id: r.id } }) },
+    onError: (e: any) => toast.error(e.message),
+  })
+  const delMut = useMutation({
+    mutationFn: (id: string) => remove({ data: { id } }),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['reports'] }); toast.success('Excluído') },
+    onError: (e: any) => toast.error(e.message),
+  })
 
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Relatórios"
-        description="Crie relatórios personalizados com dados do seu sistema."
-        actions={isAdmin && (
-          <Button onClick={() => navigate({ to: "/relatorios/novo" })}>
-            <Plus className="mr-2 h-4 w-4" /> Novo relatório
+    <div className="flex flex-col h-full">
+      <PageHeader title="Relatórios" description="Crie relatórios visuais com dados do sistema, exporte em PDF/CSV e agende envios por e-mail." />
+      <div className="p-4 md:p-6 space-y-4">
+        <div className="flex gap-2 flex-wrap">
+          <Button onClick={() => createMut.mutate({ nome: 'Relatório em branco' })}>
+            <Plus className="w-4 h-4 mr-1" />Novo em branco
           </Button>
-        )}
-      />
+          <Button variant="outline" onClick={() => setModelOpen(true)}>
+            <Wand2 className="w-4 h-4 mr-1" />Novo a partir de modelo
+          </Button>
+        </div>
 
-      {q.isLoading && <div className="text-sm text-muted-foreground">Carregando…</div>}
-      {q.data && q.data.length === 0 && (
-        <Card className="p-8 text-center">
-          <FileBarChart className="mx-auto mb-3 h-10 w-10 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            Nenhum relatório personalizado ainda.
-            {isAdmin ? " Crie o primeiro clicando em \"Novo relatório\"." : " Peça a um administrador para criar."}
-          </p>
-        </Card>
-      )}
-
-      {(["producao", "estoque_qualidade", "manutencao_automacao"] as Fonte[]).map((f) =>
-        groups[f].length ? (
-          <div key={f}>
-            <h3 className="mb-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">{FONTE_LABEL[f]}</h3>
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {groups[f].map((t) => {
-                const src = sourceFor(t.config.source);
-                return (
-                  <Card key={t.id} className="flex flex-col gap-2 p-4">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="truncate font-semibold">{t.nome}</div>
-                        <div className="truncate text-xs text-muted-foreground">{src?.label ?? ""}</div>
-                      </div>
+        {isLoading ? (
+          <div className="text-sm text-muted-foreground">Carregando…</div>
+        ) : reports.length === 0 ? (
+          <Card><CardContent className="p-8 text-center text-muted-foreground">
+            <FileText className="w-10 h-10 mx-auto mb-3 opacity-40" />
+            Nenhum relatório ainda. Crie um em branco ou parta de um modelo pronto.
+          </CardContent></Card>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {reports.map((r: any) => (
+              <Card key={r.id} className="hover:shadow-md transition">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="font-semibold">{r.nome}</div>
+                      <Badge variant="secondary" className="mt-1 capitalize">{r.tipo}</Badge>
                     </div>
-                    {t.descricao && <p className="line-clamp-2 text-xs text-muted-foreground">{t.descricao}</p>}
-                    <div className="mt-auto flex items-center gap-2 pt-2">
-                      <Button asChild size="sm" variant="default" className="flex-1">
-                        <Link to="/relatorios/$id" params={{ id: t.id }}><Play className="mr-1 h-3 w-3" />Abrir</Link>
-                      </Button>
-                      {isAdmin && (
-                        <>
-                          <Button asChild size="icon" variant="outline">
-                            <Link to="/relatorios/$id" params={{ id: t.id }} search={{ edit: 1 }}><Pencil className="h-3 w-3" /></Link>
-                          </Button>
-                          <AlertDialog>
-                            <AlertDialogTrigger asChild>
-                              <Button size="icon" variant="outline"><Trash2 className="h-3 w-3" /></Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                              <AlertDialogHeader>
-                                <AlertDialogTitle>Excluir relatório?</AlertDialogTitle>
-                                <AlertDialogDescription>“{t.nome}” será removido.</AlertDialogDescription>
-                              </AlertDialogHeader>
-                              <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => remove(t.id)}>Excluir</AlertDialogAction>
-                              </AlertDialogFooter>
-                            </AlertDialogContent>
-                          </AlertDialog>
-                        </>
-                      )}
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
+                  </div>
+                  {r.descricao && <div className="text-xs text-muted-foreground line-clamp-2">{r.descricao}</div>}
+                  <div className="text-[11px] text-muted-foreground">Atualizado: {new Date(r.updated_at).toLocaleString('pt-BR')}</div>
+                  <div className="flex gap-2 pt-2">
+                    <Button asChild size="sm" className="flex-1"><Link to="/relatorios/$id" params={{ id: r.id }}><Pencil className="w-3 h-3 mr-1" />Abrir</Link></Button>
+                    <Button size="sm" variant="ghost" onClick={() => { if (confirm('Excluir este relatório?')) delMut.mutate(r.id) }}><Trash2 className="w-4 h-4" /></Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        ) : null,
-      )}
+        )}
+      </div>
+
+      <Dialog open={modelOpen} onOpenChange={setModelOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>Escolha um modelo</DialogTitle></DialogHeader>
+          <div className="space-y-2">
+            {SEED_TEMPLATES.map((t) => (
+              <button key={t.key} type="button"
+                className="w-full text-left border rounded p-3 hover:bg-muted transition"
+                onClick={() => { setModelOpen(false); createMut.mutate({ nome: t.nome, descricao: t.descricao, tipo: t.tipo, theme: t.theme, canvas: t.canvas }) }}>
+                <div className="font-medium">{t.nome}</div>
+                <div className="text-xs text-muted-foreground">{t.descricao}</div>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
-  );
+  )
 }

@@ -1,106 +1,108 @@
-# Construtor de Relatórios Personalizados
+# Novo módulo de Relatórios
 
-Reformulação completa da página `/relatorios` para um **builder de relatórios** onde admins criam templates reutilizáveis por toda a equipe, com filtros dinâmicos, agrupamentos, gráficos e exportação em vários formatos. Tudo isolado da lógica atual do sistema.
+Substituir totalmente a página `/relatorios` por um construtor visual de relatórios com dados reais do sistema, exportação e agendamento.
 
-## O que muda para o usuário
+## O que muda na experiência
 
-- `/relatorios` passa a ser uma **biblioteca de relatórios salvos** + botão "Novo relatório".
-- Admin abre o **construtor**, escolhe a fonte de dados (Produção, Estoque/Qualidade ou Manutenção/Automação), seleciona colunas, define filtros/agrupamentos e visualiza o resultado em tabela e gráfico.
-- Qualquer usuário abre um relatório salvo, ajusta os filtros (data, equipamento, produto, status…) e exporta em **Excel, PDF, CSV ou imprime**.
-- As páginas atuais de subrelatórios ficam removidas — tudo passa pelo builder.
+**Lista de relatórios (`/relatorios`)**
+- Grid de cards: nome, descrição, tipo (Manutenção / Produção / Personalizado), última atualização.
+- Botões: **Novo relatório em branco**, **Novo a partir de modelo** (OS Manutenção / Produtividade Diária), Duplicar, Editar, Agendar, Exportar (PDF/CSV), Excluir.
+- Filtro por associação (equipamento, produto, manutenção).
 
-## Fontes de dados (com campos e joins prontos)
+**Editor (`/relatorios/$id`)**
+- Canvas A4 (retrato/paisagem) com zoom, régua e grid de alinhamento.
+- Barra lateral esquerda com blocos arrastáveis:
+  - **Texto / Título / Parágrafo** (fonte, tamanho, cor, alinhamento)
+  - **Imagem / Logomarca** (upload em storage)
+  - **Linha divisória / Espaçador**
+  - **Campo dinâmico** (`{{data_hoje}}`, `{{nome_equipamento}}`, `{{ordem_numero}}`, etc.)
+  - **Tabela de dados** (escolhe fonte + colunas + filtros)
+  - **Gráfico** (barras, linhas, pizza) sobre uma fonte de dados
+  - **KPI / Indicador** (número grande + label + tendência)
+  - **Assinatura** (campo em branco para assinar)
+- Barra lateral direita: propriedades do bloco selecionado (posição, tamanho, cor, fonte, borda, fonte de dados).
+- Topo: nome do relatório, tema (cor primária + fonte), associações (equipamento/produto/manutenção — múltiplas), salvar, pré-visualizar, exportar.
+- Arrastar, redimensionar, alinhar, duplicar, deletar, camadas (frente/trás), desfazer/refazer.
 
-**Produção** — `ordens_producao` + `ordem_etapas` + `equipamento_atividades` + `produtos` + `equipamentos`. Campos: nº ordem, produto, equipamento, status, início/fim, duração, etapa, tipo (matéria-prima/parâmetro/análise), valor capturado, unidade, quantidade planejada vs. real.
+**Fontes de dados disponíveis** (blocos de tabela/gráfico/KPI puxam daqui)
+- Ordens de produção (com filtros de período, status, produto, equipamento)
+- Equipamentos e atividades
+- Ordens de manutenção e manutenções preventivas
+- Produtos e receitas
+- Análises registradas
+- Tags ao vivo / histórico de tags
+- Rotinas e disparos de alertas
 
-**Estoque e Qualidade** — `movimentacoes_estoque` + `tanques` + `tanque_ajustes_saldo` + `tanque_analises` + `analises_registradas` + `parametros_registrados`. Campos: data, tanque, produto, tipo movimentação, quantidade, saldo, análise, parâmetro, valor, dentro/fora de spec.
+Cada fonte tem um seletor de colunas, período (últimos 7/30 dias, mês atual, personalizado) e filtros básicos. Todos os fetches respeitam RLS do tenant.
 
-**Manutenção e Automação** — `ordens_manutencao` + `manutencao_atividades` + `manutencao_preventivas` + `automation_runs` + `alertas_disparos`. Campos: nº OM, equipamento, tipo, status, abertura/conclusão, tempo, executante, automação, gatilho, resultado.
+**Modelos prontos (seed)**
+- **OS de Manutenção** — cabeçalho com logo, dados do equipamento, descrição do serviço, materiais, tempo, técnico responsável, assinaturas.
+- **Produtividade Diária** — cabeçalho com data/turno, KPIs de produção, gráfico de barras por equipamento, tabela de ordens concluídas, observações.
 
-## Recursos do builder
+Ambos ficam disponíveis em "Novo a partir de modelo" e podem ser duplicados livremente.
 
-- **Colunas**: escolher, reordenar (drag), renomear label.
-- **Filtros dinâmicos**: intervalo de datas + filtros por campo (equipamento, produto, status, etc.), aplicados na hora de rodar.
-- **Agrupamento + agregações**: agrupar por 1–2 dimensões e agregar por SUM/AVG/COUNT/MIN/MAX/valor único.
-- **Gráficos**: barra, linha ou pizza sobre a saída agrupada (opcional; oculto se não fizer sentido).
-- **Preview ao vivo** enquanto configura.
-- **Salvar como template** (nome + descrição). Templates ficam listados na biblioteca.
+**Exportação**
+- **PDF** — renderiza o canvas fielmente (mesmo layout, cores, fontes).
+- **Excel/CSV** — exporta as tabelas de dados usadas no relatório (uma aba/arquivo por bloco de tabela).
 
-## Exportação
+**Agendamento e envio por e-mail**
+- Cada relatório pode ter N agendas: frequência (diária/semanal/mensal), horário, dias da semana, destinatários (multi-seleção da lista de usuários), template de e-mail (reutiliza os já cadastrados).
+- No horário marcado, o sistema gera o PDF, faz upload no storage e enfileira e-mail com link + anexo (usa a fila `transactional_emails` já em produção).
 
-- **XLSX** — reaproveita `exceljs` já instalado; inclui aba de filtros aplicados e, quando houver gráfico, imagem embutida (mesma técnica de `producao-xlsx.ts`).
-- **PDF** — via `jspdf` + `jspdf-autotable` (já usados no projeto).
-- **CSV** — download direto client-side.
-- **Impressão** — página de preview otimizada com `window.print()` e CSS `@media print`.
+## Fases de entrega (nesta rodada)
 
-## Permissões
+**Fase 1 — Fundação (esta entrega)**
+1. Migration: apaga `relatorio_templates` + `relatorio_turno_eventos` antigos, cria:
+   - `report_templates` (nome, descrição, tipo, tema JSON, canvas JSON, page_size, associações array)
+   - `report_associations` (relatório ↔ equipamento/produto/manutenção)
+   - `report_schedules` (relatório, cron/frequência, destinatários, template email, ativo)
+   - `report_runs` (histórico de execução: quando rodou, PDF gerado, status, erro)
+   - Bucket de storage `report-assets` (logos, imagens) e `report-exports` (PDFs gerados)
+   - Todas com RLS por `effective_owner(auth.uid())` e GRANTs corretos
+2. Seed dos 2 modelos prontos como registros marcados `is_system_template = true`.
 
-- Somente `admin` (via `has_role`) cria, edita ou apaga templates.
-- Todos os usuários autenticados listam, executam e exportam.
-- Consultas usam o client autenticado do Supabase → **RLS existente continua valendo** (usuário só vê o que já pode ver hoje).
+**Fase 2 — Editor visual**
+3. Nova página `/relatorios` (lista) e `/relatorios/$id` (editor) sob `_authenticated`.
+4. Componentes de canvas usando `dnd-kit` + `react-rnd` para arrastar/redimensionar.
+5. Blocos: Texto, Imagem, Divisória, Espaçador, Campo dinâmico, Tabela, Gráfico, KPI, Assinatura.
+6. Painel de propriedades por bloco + tema global (cor primária, fonte).
+7. Undo/redo via `zustand` com histórico.
+
+**Fase 3 — Dados**
+8. Server functions `report-data.functions.ts` com uma função por fonte (produção, equipamentos, manutenção, produtos, análises, tags). Todas com `requireSupabaseAuth`, filtros e projeção segura.
+9. Blocos de Tabela/Gráfico/KPI consomem essas fontes via TanStack Query.
+
+**Fase 4 — Exportação**
+10. PDF: `html2pdf.js` no cliente sobre o canvas (respeita CSS e imagens).
+11. CSV: exporta tabelas do relatório com `papaparse`.
+
+**Fase 5 — Agendamento por e-mail**
+12. Server route `/api/public/relatorios/dispatch` (autenticada por apikey no header).
+13. Trigger/pg_cron: varre `report_schedules` a cada 5 min, chama a rota.
+14. A rota gera o PDF via headless render server-side (fallback: envia link para gerar sob demanda), enfileira email com `enqueue_email` e registra em `report_runs`.
+15. UI de agenda: modal no editor + aba "Agendas" no card do relatório.
+
+## Segurança e limites
+
+- Toda tabela nova terá RLS por tenant (`effective_owner(auth.uid()) = effective_owner(owner_id)`), admin scope para gerenciar, usuários com permissão de relatórios para ver.
+- Storage buckets privados, URLs assinadas de curta duração para download.
+- Sem impacto nas páginas existentes — só a rota `/relatorios` é substituída.
+- Módulo de e-mail e usuários já existentes são reaproveitados (nada novo em `email_*`).
 
 ## Detalhes técnicos
 
-### Banco (1 migration)
+- Rotas: `src/routes/_authenticated/relatorios.index.tsx` (lista) e `src/routes/_authenticated/relatorios.$id.tsx` (editor). Removo o(s) arquivo(s) atuais.
+- Estado do editor: `zustand` + JSON serializado em `report_templates.canvas` (`{ pages: [{ blocks: [{id, type, x, y, w, h, props}] }] }`).
+- Libs a instalar: `@dnd-kit/core`, `react-rnd`, `html2pdf.js`, `papaparse`, `recharts` (já presente), `zustand` (verificar).
+- Server fns novos em `src/lib/reports/*.functions.ts`.
+- Route pública para agenda: `src/routes/api/public/relatorios.dispatch.ts` com verificação por `apikey` header (Supabase anon key) — mesmo padrão já usado em alertas.
+- Cron via `pg_cron` chamando a rota (5 min).
+- Migração destrutiva das tabelas antigas conforme escolhido ("apagar tudo").
 
-```sql
-CREATE TABLE public.relatorio_templates (
-  id uuid PK default gen_random_uuid(),
-  nome text NOT NULL,
-  descricao text,
-  fonte text NOT NULL,          -- 'producao' | 'estoque_qualidade' | 'manutencao_automacao'
-  config jsonb NOT NULL,        -- { columns, filters, groupBy[], aggregations[], chart }
-  created_by uuid NOT NULL,
-  created_at timestamptz default now(),
-  updated_at timestamptz default now()
-);
--- GRANT authenticated + service_role
--- RLS: SELECT para todos autenticados; INSERT/UPDATE/DELETE só has_role(uid,'admin')
--- Trigger updated_at
-```
+## Fora de escopo (fases futuras)
 
-Nenhuma tabela existente é alterada.
-
-### Arquitetura de código
-
-```
-src/lib/relatorios/
-  sources.ts              catálogo (fonte → campos, tipos, filtros suportados)
-  fetch.ts                executa a query no Supabase para cada fonte
-  aggregate.ts            group-by + agregações em memória
-  export-xlsx.ts          XLSX (com gráfico opcional)
-  export-pdf.ts           PDF
-  export-csv.ts           CSV
-  types.ts
-
-src/components/relatorios/
-  ReportBuilder.tsx       painel principal (colunas / filtros / agrupamento / gráfico)
-  ReportRunner.tsx        executa template salvo com filtros ajustáveis
-  ReportPreview.tsx       tabela + gráfico (recharts, já no projeto)
-  ColumnPicker.tsx, FilterBar.tsx, GroupByPicker.tsx, ChartConfig.tsx, ExportMenu.tsx
-
-src/routes/_authenticated/
-  relatorios.index.tsx    biblioteca de templates (substitui a atual)
-  relatorios.novo.tsx     builder (admin)
-  relatorios.$id.tsx      executar/editar template
-  relatorios.tsx          layout com Outlet
-```
-
-Rotas atuais `relatorios.estoque.tsx`, `relatorios.producao.tsx`, `relatorios.qualidade.tsx` **serão removidas** (substituídas pelo builder).
-
-### Segurança
-
-- Escrita de template gated por `has_role(auth.uid(),'admin')` na RLS.
-- Consultas de dados via `supabase` do cliente → RLS de cada tabela aplica normalmente.
-- Nenhuma edge function nova; nenhum uso de service role.
-
-### Impacto no restante do sistema
-
-Zero. Nenhuma tabela ou rota fora de `/relatorios` é tocada; nenhuma dependência nova além do que já está instalado (`exceljs`, `jspdf`, `recharts`).
-
-## Entrega em 2 etapas
-
-1. **Migration** `relatorio_templates` + RLS.
-2. Após aprovação da migration: builder, runner, biblioteca, exportadores e remoção das rotas antigas de subrelatórios.
-
-Confirma que posso seguir por esse caminho?
+- Import de PDF/imagem como fundo de template
+- Import de planilhas Excel como base
+- Assinatura eletrônica com validação
+- Fluxo de aprovação multi-nível de relatórios
+- Versionamento visual de templates
