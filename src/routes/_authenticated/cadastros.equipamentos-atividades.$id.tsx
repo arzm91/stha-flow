@@ -408,7 +408,7 @@ function EquipAtividadesPage() {
               </div>
             )}
 
-            {form.tipo === "materia_prima" && (
+            {(form.tipo === "materia_prima" || form.tipo === "processo") && (
               <div className="grid gap-3 rounded-md border p-3 bg-muted/30">
                 <div className="grid gap-2">
                   <Label>Como obter a quantidade</Label>
