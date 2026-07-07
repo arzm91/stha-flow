@@ -9,12 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as SitemapXmlRouteImport } from './routes/sitemap.xml'
 import { Route as AuthenticatedTurnosRouteImport } from './routes/_authenticated/turnos'
 import { Route as AuthenticatedTagsRouteImport } from './routes/_authenticated/tags'
 import { Route as AuthenticatedTabelasRouteImport } from './routes/_authenticated/tabelas'
@@ -67,6 +67,11 @@ import { Route as AuthenticatedCadastrosEquipamentosIdRouteImport } from './rout
 import { Route as AuthenticatedCadastrosEquipamentosPfdIdRouteImport } from './routes/_authenticated/cadastros.equipamentos-pfd.$id'
 import { Route as AuthenticatedCadastrosEquipamentosAtividadesIdRouteImport } from './routes/_authenticated/cadastros.equipamentos-atividades.$id'
 
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -89,11 +94,6 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SitemapXmlRoute = SitemapXmlRouteImport.update({
-  id: '/sitemap/xml',
-  path: '/sitemap/xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedTurnosRoute = AuthenticatedTurnosRouteImport.update({
@@ -391,6 +391,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/alertas': typeof AuthenticatedAlertasRouteWithChildren
@@ -407,7 +408,6 @@ export interface FileRoutesByFullPath {
   '/tabelas': typeof AuthenticatedTabelasRouteWithChildren
   '/tags': typeof AuthenticatedTagsRouteWithChildren
   '/turnos': typeof AuthenticatedTurnosRoute
-  '/sitemap/xml': typeof SitemapXmlRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/automacoes/$id': typeof AuthenticatedAutomacoesIdRoute
@@ -449,6 +449,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/cadastros': typeof AuthenticatedCadastrosRouteWithChildren
@@ -457,7 +458,6 @@ export interface FileRoutesByTo {
   '/indicadores': typeof AuthenticatedIndicadoresRoute
   '/monitoramento': typeof AuthenticatedMonitoramentoRoute
   '/turnos': typeof AuthenticatedTurnosRoute
-  '/sitemap/xml': typeof SitemapXmlRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/automacoes/$id': typeof AuthenticatedAutomacoesIdRoute
@@ -501,6 +501,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/_authenticated/alertas': typeof AuthenticatedAlertasRouteWithChildren
@@ -517,7 +518,6 @@ export interface FileRoutesById {
   '/_authenticated/tabelas': typeof AuthenticatedTabelasRouteWithChildren
   '/_authenticated/tags': typeof AuthenticatedTagsRouteWithChildren
   '/_authenticated/turnos': typeof AuthenticatedTurnosRoute
-  '/sitemap/xml': typeof SitemapXmlRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/automacoes/$id': typeof AuthenticatedAutomacoesIdRoute
@@ -561,6 +561,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mcp'
     | '/reset-password'
+    | '/sitemap.xml'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/alertas'
@@ -577,7 +578,6 @@ export interface FileRouteTypes {
     | '/tabelas'
     | '/tags'
     | '/turnos'
-    | '/sitemap/xml'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/automacoes/$id'
@@ -619,6 +619,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mcp'
     | '/reset-password'
+    | '/sitemap.xml'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/cadastros'
@@ -627,7 +628,6 @@ export interface FileRouteTypes {
     | '/indicadores'
     | '/monitoramento'
     | '/turnos'
-    | '/sitemap/xml'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/automacoes/$id'
@@ -670,6 +670,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/mcp'
     | '/reset-password'
+    | '/sitemap.xml'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
     | '/_authenticated/alertas'
@@ -686,7 +687,6 @@ export interface FileRouteTypes {
     | '/_authenticated/tabelas'
     | '/_authenticated/tags'
     | '/_authenticated/turnos'
-    | '/sitemap/xml'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/automacoes/$id'
@@ -730,9 +730,9 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   McpRoute: typeof McpRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
-  SitemapXmlRoute: typeof SitemapXmlRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicTagsPollRoute: typeof ApiPublicTagsPollRoute
@@ -742,6 +742,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/reset-password': {
       id: '/reset-password'
       path: '/reset-password'
@@ -775,13 +782,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/sitemap/xml': {
-      id: '/sitemap/xml'
-      path: '/sitemap/xml'
-      fullPath: '/sitemap/xml'
-      preLoaderRoute: typeof SitemapXmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/turnos': {
@@ -1362,10 +1362,10 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   McpRoute: McpRoute,
   ResetPasswordRoute: ResetPasswordRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
-  SitemapXmlRoute: SitemapXmlRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicTagsPollRoute: ApiPublicTagsPollRoute,
