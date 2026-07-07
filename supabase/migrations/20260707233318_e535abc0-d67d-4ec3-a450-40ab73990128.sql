@@ -1,0 +1,1 @@
+ANALYZE public.producao_tag_historico;
