@@ -28,7 +28,7 @@ function ResetPasswordPage() {
   };
 
   return (
-    <div className="dark flex min-h-screen items-center justify-center bg-background p-4">
+    <main className="dark flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle><h1 className="text-xl font-semibold leading-none tracking-tight">Definir nova senha</h1></CardTitle>
@@ -43,6 +43,6 @@ function ResetPasswordPage() {
           </form>
         </CardContent>
       </Card>
-    </div>
+    </main>
   );
 }
