@@ -77,6 +77,9 @@ function ConfiguracoesPage() {
           </CardContent>
         </Card>
       </div>
+      <div className="mt-4">
+        <EmailTemplatesCard />
+      </div>
       {isAdmin && (
         <div className="mt-4">
           <UserManagementCard />
