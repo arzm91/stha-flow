@@ -1250,9 +1250,12 @@ function ProcessosSection({ ordemId, equipamentoId }: { ordemId: string; equipam
           <Card><CardContent className="p-4 text-sm text-muted-foreground">Nenhuma atividade cadastrada para este equipamento.</CardContent></Card>
         ) : (
           (atividades.data ?? []).map((a: any, idx: number) => {
-            const arr = etapasPorAtividade.get(a.id) ?? [];
+            const arrTodas = etapasPorAtividade.get(a.id) ?? [];
+            // Ignora linhas "sombra" de estabilização (fase amostrando, ainda sem variação detectada).
+            const arr = arrTodas.filter((e) => !(e.estab_fase === "aguardando_atividade" && !e.finalizado_em));
             const aberta = arr.find((e) => !e.finalizado_em);
             const ultimaFechada = arr.find((e) => !!e.finalizado_em);
+            const execucoesConcluidas = arr.filter((e) => !!e.finalizado_em).length;
             const tipoInfo = TIPO_BADGE[a.tipo] ?? { label: a.tipo, cls: "" };
             const gatilhos: Array<{ tipo: string; tag_nome: string; operador: string; valor: unknown }> = Array.isArray(a.gatilhos) ? a.gatilhos : [];
             return (
