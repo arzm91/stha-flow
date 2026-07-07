@@ -53,6 +53,7 @@ type AtividadeRow = {
   estab_janela_seg: number;
   estab_min_estavel_seg: number;
   ordem: number;
+  cor: string | null;
 };
 
 type Form = {
@@ -75,10 +76,12 @@ type Form = {
   estab_pct: string;
   estab_janela_seg: string;
   estab_min_estavel_seg: string;
+  cor: string;
 };
 
 const TIPO_LABEL: Record<Tipo, string> = {
   materia_prima: "Matéria-prima / dosagem",
+  processo: "Processo (variação de tag)",
   acao: "Ação / tarefa",
   tag_captura: "Captação de tag",
   medicao: "Medição",
@@ -86,8 +89,22 @@ const TIPO_LABEL: Record<Tipo, string> = {
 
 const OP_LABEL: Record<Op, string> = {
   gt: "maior que (>)", lt: "menor que (<)",
-  gte: "≥", lte: "≤", eq: "=", neq: "≠", change: "qualquer mudança",
+  gte: "≥", lte: "≤", eq: "=", neq: "≠",
+  cross_up: "cruzou para cima (subida atingiu)",
+  cross_down: "cruzou para baixo (descida atingiu)",
+  change: "qualquer mudança",
 };
+
+const COR_PRESETS: Array<{ value: string; label: string }> = [
+  { value: "#22c55e", label: "Verde" },
+  { value: "#eab308", label: "Amarelo" },
+  { value: "#ef4444", label: "Vermelho" },
+  { value: "#3b82f6", label: "Azul" },
+  { value: "#a855f7", label: "Roxo" },
+  { value: "#f97316", label: "Laranja" },
+  { value: "#06b6d4", label: "Ciano" },
+  { value: "#64748b", label: "Cinza" },
+];
 
 function emptyForm(): Form {
   return {
