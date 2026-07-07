@@ -154,13 +154,13 @@ export const DATA_SOURCE_LABELS: Record<DataSourceKey, string> = {
 }
 
 export const DATA_SOURCE_COLUMNS: Record<DataSourceKey, string[]> = {
-  ordens_producao: ['numero', 'produto_nome', 'quantidade', 'status', 'iniciado_em', 'finalizado_em'],
-  equipamentos: ['nome', 'tipo', 'status', 'localizacao'],
-  ordens_manutencao: ['numero', 'equipamento_nome', 'tipo', 'status', 'prioridade', 'iniciado_em'],
-  manutencao_preventivas: ['nome', 'equipamento_nome', 'periodicidade_dias', 'proxima_execucao'],
-  produtos: ['codigo', 'nome', 'unidade', 'categoria'],
-  analises_registradas: ['analise_nome', 'resultado', 'unidade', 'created_at'],
-  tags_live: ['nome', 'valor', 'unidade', 'grupo', 'atualizado_em'],
+  ordens_producao: ['numero', 'status', 'prioridade', 'qtd_planejada', 'qtd_produzida', 'inicio_em', 'fim_em', 'created_at'],
+  equipamentos: ['codigo', 'nome', 'tipo', 'status', 'localizacao', 'categoria'],
+  ordens_manutencao: ['numero', 'tipo', 'status', 'prioridade', 'responsavel', 'data_abertura', 'data_inicio', 'data_conclusao', 'custo'],
+  manutencao_preventivas: ['nome', 'descricao', 'tipo_recorrencia', 'intervalo_dias', 'proxima_execucao', 'ultima_execucao', 'ativo'],
+  produtos: ['codigo', 'nome', 'unidade', 'categoria', 'ativo'],
+  analises_registradas: ['resultado', 'registrado_em', 'created_at'],
+  tags_live: ['nome', 'nome_amigavel', 'valor', 'valor_num', 'unidade', 'grupo', 'qualidade', 'atualizado_em'],
 }
 
 export const DYNAMIC_FIELDS = [
