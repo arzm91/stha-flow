@@ -11,9 +11,10 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { Plus, FileText, Trash2, Wand2, Pencil } from 'lucide-react'
-import { useState } from 'react'
+import { Plus, FileText, Trash2, Wand2, Pencil, Upload } from 'lucide-react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
+import { importCanvasFromFile } from '@/lib/reports/import'
 
 export const Route = createFileRoute('/_authenticated/relatorios/')({
   head: pageHead({ title: 'Relatórios — STHApc', description: 'Crie, edite e agende relatórios visuais com dados do sistema.', path: '/relatorios' }),
@@ -28,6 +29,21 @@ function ReportsListPage() {
   const remove = useServerFn(deleteReport)
   const [modelOpen, setModelOpen] = useState(false)
   const [scopeOpen, setScopeOpen] = useState(false)
+  const [importing, setImporting] = useState(false)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const handleImportFile = async (file: File) => {
+    setImporting(true)
+    try {
+      const { nome, canvas } = await importCanvasFromFile(file)
+      createMut.mutate({ nome, descricao: `Modelo importado de ${file.name}`, canvas })
+    } catch (e: any) {
+      toast.error(e?.message ?? 'Falha ao importar arquivo')
+    } finally {
+      setImporting(false)
+      if (fileRef.current) fileRef.current.value = ''
+    }
+  }
 
   const { data: reports = [], isLoading } = useQuery({ queryKey: ['reports'], queryFn: () => list() })
 
@@ -53,6 +69,20 @@ function ReportsListPage() {
           <Button variant="outline" onClick={() => setModelOpen(true)}>
             <Wand2 className="w-4 h-4 mr-1" />A partir de modelo
           </Button>
+          <Button variant="outline" disabled={importing} onClick={() => fileRef.current?.click()}>
+            <Upload className="w-4 h-4 mr-1" />
+            {importing ? 'Importando…' : 'Importar PDF / Excel'}
+          </Button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".pdf,.xlsx,.xls,.csv"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) handleImportFile(f)
+            }}
+          />
         </div>
 
         {isLoading ? (
