@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { MessageCircle, X, ArrowLeft, Send, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -211,8 +212,9 @@ export function ChatPopup() {
         )}
       </Button>
 
-      {open && (
-        <div className="fixed bottom-4 right-4 z-50 flex h-[520px] w-[360px] max-w-[calc(100vw-2rem)] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl animate-in slide-in-from-bottom-4">
+      {open && typeof document !== "undefined" && createPortal(
+        <div className="fixed inset-x-2 bottom-2 z-[9999] flex h-[min(80vh,560px)] flex-col overflow-hidden rounded-xl border border-border bg-card shadow-2xl animate-in slide-in-from-bottom-4 sm:inset-auto sm:bottom-4 sm:right-4 sm:h-[520px] sm:w-[360px]">
+
           <div className="flex h-12 items-center gap-2 border-b border-border bg-card px-3">
             {activeContact ? (
               <>
@@ -343,7 +345,8 @@ export function ChatPopup() {
               </form>
             </>
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
