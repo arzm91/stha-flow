@@ -309,6 +309,7 @@ export function NodeConfigPanel({
                   <SelectItem value="criar_tarefa">☑ Criar tarefa (popup)</SelectItem>
                   <SelectItem value="enviar_alerta">⚠ Disparar alerta</SelectItem>
                   <SelectItem value="gerar_relatorio">📄 Gerar relatório</SelectItem>
+                  <SelectItem value="enviar_email">✉ Enviar e-mail</SelectItem>
                   <SelectItem value="movimentacao_estoque">📦 Movimentação de estoque</SelectItem>
                   <SelectItem value="webhook_http">🌐 Chamar webhook HTTP</SelectItem>
                   <SelectItem value="aguardar">⏱ Aguardar (segundos)</SelectItem>
