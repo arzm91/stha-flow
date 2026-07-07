@@ -576,6 +576,7 @@ export function NodeConfigPanel({
               </>
             )}
 
+            {cfg.type === "movimentacao_estoque" && (
               <>
                 <div className="space-y-1">
                   <Label>Tipo</Label>
