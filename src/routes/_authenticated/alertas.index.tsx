@@ -475,12 +475,12 @@ function AlertasPage() {
 
       {/* Form dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-xl">
-          <DialogHeader>
+        <DialogContent className="max-w-xl max-h-[90vh] w-[calc(100vw-2rem)] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
             <DialogTitle>{editing ? "Editar regra" : "Nova regra"}</DialogTitle>
           </DialogHeader>
 
-          <div className="grid gap-4">
+          <div className="grid gap-4 overflow-y-auto px-6 py-4 flex-1 min-h-0">
             <div className="grid gap-2">
               <Label>Nome</Label>
               <Input
