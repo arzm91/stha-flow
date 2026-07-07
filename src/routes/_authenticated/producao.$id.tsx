@@ -1187,37 +1187,25 @@ function formatDuracao(seg: number) {
   return h > 0 ? `${h}h ${m}m ${s}s` : `${m}m ${s}s`;
 }
 
-function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; produtoId: string; disabled: boolean }) {
-  const qc = useQueryClient();
+function ProcessosSection({ ordemId, equipamentoId }: { ordemId: string; equipamentoId: string | null }) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(t);
   }, []);
 
-  const processos = useQuery({
-    queryKey: ["produto-processos", produtoId],
-    enabled: !!produtoId,
+  const atividades = useQuery({
+    queryKey: ["equipamento-atividades", equipamentoId],
+    enabled: !!equipamentoId,
     queryFn: async () => {
-      const { data: ps, error } = await supabase
-        .from("produto_processos")
-        .select("id, nome, ordem, tempo_limite_min")
-        .eq("produto_id", produtoId)
+      const { data, error } = await supabase
+        .from("equipamento_atividades" as any)
+        .select("id, nome, descricao, tipo, ordem, tempo_estimado_min, unidade, tag_nome, gatilhos, ativo")
+        .eq("equipamento_id", equipamentoId as string)
         .eq("ativo", true)
         .order("ordem", { ascending: true });
       if (error) throw error;
-      const ids = (ps ?? []).map((p) => p.id);
-      const { data: ats } = ids.length
-        ? await supabase
-            .from("produto_atividades")
-            .select("id, processo_id, descricao, ordem, tipo, quantidade, unidade, tempo_estimado_min, tag_nome")
-            .in("processo_id", ids)
-            .order("ordem", { ascending: true })
-        : { data: [] };
-      return (ps ?? []).map((p) => ({
-        ...p,
-        atividades: ((ats ?? []) as any[]).filter((a) => a.processo_id === p.id),
-      }));
+      return (data ?? []) as any[];
     },
   });
 
@@ -1235,122 +1223,13 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
     refetchInterval: 5_000,
   });
 
-  const iniciar = async (params: {
-    processoId: string; processoNome: string; ordemProcesso: number;
-    atividadeId?: string | null; descricao?: string | null; tipo?: string | null; ordemAtividade?: number;
-  }) => {
-    if (disabled) return toast.error("Ordem finalizada.");
-    try {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("Não autenticado");
-      const { error } = await supabase.from("ordem_etapas").insert({
-        owner_id: u.user.id,
-        ordem_id: ordemId,
-        processo_id: params.processoId,
-        processo_nome: params.processoNome,
-        ordem_processo: params.ordemProcesso,
-        atividade_id: params.atividadeId ?? null,
-        atividade_descricao: params.descricao ?? null,
-        tipo: params.tipo ?? null,
-        ordem_atividade: params.ordemAtividade ?? 0,
-      });
-      if (error) throw error;
-      toast.success("Etapa iniciada");
-      qc.invalidateQueries({ queryKey: ["ordem-etapas", ordemId] });
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
-  };
-
-  const finalizar = async (etapaId: string, iniciadoEm: string, motivo?: string) => {
-    try {
-      const { data: nowData, error: nowErr } = await supabase.rpc("server_now");
-      if (nowErr) throw nowErr;
-      const fim = new Date(nowData as unknown as string);
-      const dur = Math.max(0, Math.floor((fim.getTime() - new Date(iniciadoEm).getTime()) / 1000));
-      const { error } = await supabase
-        .from("ordem_etapas")
-        .update({
-          finalizado_em: fim.toISOString(),
-          duracao_seg: dur,
-          ...(motivo ? { motivo_atraso: motivo } : {}),
-        })
-        .eq("id", etapaId);
-      if (error) throw error;
-      toast.success(`Etapa finalizada (${formatDuracao(dur)})`);
-      qc.invalidateQueries({ queryKey: ["ordem-etapas", ordemId] });
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
-  };
-
-  // Modal de motivo para atraso de processo
-  const [motivoDialog, setMotivoDialog] = useState<{
-    etapaId: string; iniciadoEm: string; processoNome: string; duracaoSeg: number; limiteMin: number;
-  } | null>(null);
-  const [motivoTexto, setMotivoTexto] = useState("");
-
-  const tentarFinalizarProcesso = (etapa: any, processo: any) => {
-    const durSeg = Math.floor((Date.now() - new Date(etapa.iniciado_em).getTime()) / 1000);
-    const limiteMin = processo.tempo_limite_min;
-    if (limiteMin != null && durSeg > limiteMin * 60) {
-      setMotivoTexto("");
-      setMotivoDialog({
-        etapaId: etapa.id, iniciadoEm: etapa.iniciado_em,
-        processoNome: processo.nome, duracaoSeg: durSeg, limiteMin,
-      });
-      return;
-    }
-    finalizar(etapa.id, etapa.iniciado_em);
-  };
-
-  // Captação imediata de uma tag (cria uma etapa já finalizada com o valor lido)
-  const capturarTag = async (processo: any, atividade: any) => {
-    if (disabled) return toast.error("Ordem finalizada.");
-    if (!atividade.tag_nome) return toast.error("Atividade sem tag associada.");
-    try {
-      const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("Não autenticado");
-      const { data: tag, error: te } = await supabase
-        .from("tags_live")
-        .select("nome, valor, valor_num, unidade, atualizado_em")
-        .eq("nome", atividade.tag_nome)
-        .maybeSingle();
-      if (te) throw te;
-      if (!tag) throw new Error("Tag não encontrada nos dados recebidos.");
-      const { data: nowData, error: nowErr } = await supabase.rpc("server_now");
-      if (nowErr) throw nowErr;
-      const agora = new Date(nowData as unknown as string).toISOString();
-      const valorTxt = tag.valor_num != null ? String(tag.valor_num) : (tag.valor ?? "—");
-      const obs = `Tag ${tag.nome} = ${valorTxt}${tag.unidade ? ` ${tag.unidade}` : ""} (leitura em ${new Date(tag.atualizado_em).toLocaleString("pt-BR")})`;
-      const { error } = await supabase.from("ordem_etapas").insert({
-        owner_id: u.user.id,
-        ordem_id: ordemId,
-        processo_id: processo.id,
-        processo_nome: processo.nome,
-        ordem_processo: processo.ordem,
-        atividade_id: atividade.id,
-        atividade_descricao: atividade.descricao,
-        tipo: "tag_captura",
-        ordem_atividade: atividade.ordem ?? 0,
-        iniciado_em: agora,
-        finalizado_em: agora,
-        duracao_seg: 0,
-        observacao: obs,
-      });
-      if (error) throw error;
-      toast.success("Leitura da tag registrada");
-      qc.invalidateQueries({ queryKey: ["ordem-etapas", ordemId] });
-    } catch (err) {
-      toast.error((err as Error).message);
-    }
-  };
-
-  const abertas = (etapas.data ?? []).filter((e: any) => !e.finalizado_em);
-  const abertaPorChave = new Map<string, any>();
-  for (const e of abertas) {
-    const key = `${e.processo_id ?? ""}|${e.atividade_id ?? ""}`;
-    if (!abertaPorChave.has(key)) abertaPorChave.set(key, e);
+  // Agrupa etapas por equipamento_atividade_id (mais recente primeiro).
+  const etapasPorAtividade = new Map<string, any[]>();
+  for (const e of (etapas.data ?? []) as any[]) {
+    const key = e.equipamento_atividade_id;
+    if (!key) continue;
+    if (!etapasPorAtividade.has(key)) etapasPorAtividade.set(key, []);
+    etapasPorAtividade.get(key)!.push(e);
   }
 
   return (
@@ -1358,80 +1237,89 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
       <div className="space-y-3 lg:col-span-2">
         <Card>
           <CardContent className="p-3 text-xs text-muted-foreground">
-            Os processos abaixo iniciam e finalizam automaticamente conforme tarefas, tempos e tags configurados em <span className="font-medium text-foreground">Cadastros &gt; Produtos</span>. Sem intervenção do operador.
+            As atividades abaixo pertencem ao equipamento desta ordem e iniciam/encerram automaticamente
+            conforme os gatilhos configurados em <span className="font-medium text-foreground">Cadastros &gt; Equipamentos &gt; Processos</span>.
           </CardContent>
         </Card>
-        {processos.isLoading ? <p className="text-sm text-muted-foreground">Carregando...</p> : null}
-        {processos.data && processos.data.length === 0 ? (
-          <Card><CardContent className="p-4 text-sm text-muted-foreground">Nenhum processo cadastrado para este produto.</CardContent></Card>
-        ) : null}
-        {(processos.data ?? []).map((p: any) => {
-          const procKey = `${p.id}|`;
-          const procAberta = abertaPorChave.get(procKey);
-          return (
-            <Card key={p.id}>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-base">
-                  <span className="mr-2 font-mono text-xs text-muted-foreground">{p.ordem + 1}.</span>
-                  {p.nome}
-                  {p.tempo_limite_min != null ? (
-                    <span className="ml-2 text-[10px] font-normal text-muted-foreground">
-                      (limite {p.tempo_limite_min} min)
-                    </span>
-                  ) : null}
-                </CardTitle>
-                {procAberta ? (() => {
-                  const durSeg = Math.floor((now - new Date(procAberta.iniciado_em).getTime()) / 1000);
-                  const excedido = p.tempo_limite_min != null && durSeg > p.tempo_limite_min * 60;
-                  return (
-                    <Badge variant="outline" className={excedido ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-primary/40 bg-primary/5 text-primary"}>
-                      em andamento · <span className="ml-1 font-mono">{formatDuracao(durSeg)}</span>
-                    </Badge>
-                  );
-                })() : (
-                  <Badge variant="outline" className="text-[10px]">automático</Badge>
-                )}
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {p.atividades.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Sem atividades.</p>
-                ) : p.atividades.map((a: any) => {
-                  const key = `${p.id}|${a.id}`;
-                  const aberta = abertaPorChave.get(key);
-                  const tipoInfo = TIPO_BADGE[a.tipo] ?? { label: a.tipo, cls: "" };
-                  const isTag = a.tipo === "tag_captura";
-                  return (
-                    <div key={a.id} className="flex items-center gap-2 rounded border border-border/60 p-2">
-                      <span className="font-mono text-xs text-muted-foreground">{p.ordem + 1}.{a.ordem + 1}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm">{a.descricao}</span>
-                          <Badge variant="outline" className={`text-[10px] ${tipoInfo.cls}`}>{tipoInfo.label}</Badge>
-                          {isTag && a.tag_nome ? (
-                            <Badge variant="outline" className="text-[10px]">tag: {a.tag_nome}</Badge>
-                          ) : null}
-                        </div>
-                        <div className="flex flex-wrap gap-3 text-[10px] text-muted-foreground">
-                          {!isTag && a.quantidade != null ? <span>{a.quantidade}{a.unidade ? ` ${a.unidade}` : ""}</span> : null}
-                          {a.tempo_estimado_min != null ? <span>~{a.tempo_estimado_min} min</span> : null}
-                        </div>
-                      </div>
-                      {aberta ? (
-                        <span className="font-mono text-xs text-primary">
-                          {formatDuracao(Math.floor((now - new Date(aberta.iniciado_em).getTime()) / 1000))}
-                        </span>
-                      ) : (
-                        <Badge variant="outline" className="text-[10px] text-muted-foreground">aguardando</Badge>
-                      )}
-                    </div>
-                  );
-                })}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
 
+        {!equipamentoId ? (
+          <Card><CardContent className="p-4 text-sm text-muted-foreground">Esta ordem não está vinculada a um equipamento.</CardContent></Card>
+        ) : atividades.isLoading ? (
+          <p className="text-sm text-muted-foreground">Carregando...</p>
+        ) : (atividades.data ?? []).length === 0 ? (
+          <Card><CardContent className="p-4 text-sm text-muted-foreground">Nenhuma atividade cadastrada para este equipamento.</CardContent></Card>
+        ) : (
+          (atividades.data ?? []).map((a: any, idx: number) => {
+            const arr = etapasPorAtividade.get(a.id) ?? [];
+            const aberta = arr.find((e) => !e.finalizado_em);
+            const ultimaFechada = arr.find((e) => !!e.finalizado_em);
+            const tipoInfo = TIPO_BADGE[a.tipo] ?? { label: a.tipo, cls: "" };
+            const gatilhos: Array<{ tipo: string; tag_nome: string; operador: string; valor: unknown }> = Array.isArray(a.gatilhos) ? a.gatilhos : [];
+            return (
+              <Card key={a.id}>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-base">
+                    <span className="mr-2 font-mono text-xs text-muted-foreground">{idx + 1}.</span>
+                    {a.nome}
+                    {a.tempo_estimado_min != null ? (
+                      <span className="ml-2 text-[10px] font-normal text-muted-foreground">
+                        (~{a.tempo_estimado_min} min)
+                      </span>
+                    ) : null}
+                  </CardTitle>
+                  {aberta ? (() => {
+                    const durSeg = Math.floor((now - new Date(aberta.iniciado_em).getTime()) / 1000);
+                    const excedido = a.tempo_estimado_min != null && durSeg > a.tempo_estimado_min * 60;
+                    return (
+                      <Badge variant="outline" className={excedido ? "border-destructive/40 bg-destructive/10 text-destructive" : "border-primary/40 bg-primary/5 text-primary"}>
+                        em andamento · <span className="ml-1 font-mono">{formatDuracao(durSeg)}</span>
+                      </Badge>
+                    );
+                  })() : ultimaFechada ? (
+                    <Badge variant="outline" className="text-[10px]">
+                      concluída · <span className="ml-1 font-mono">{formatDuracao(ultimaFechada.duracao_seg ?? 0)}</span>
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-[10px] text-muted-foreground">aguardando gatilho</Badge>
+                  )}
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    <Badge variant="outline" className={`text-[10px] ${tipoInfo.cls}`}>{tipoInfo.label}</Badge>
+                    {a.tag_nome ? (
+                      <Badge variant="outline" className="text-[10px]">tag: {a.tag_nome}</Badge>
+                    ) : null}
+                    {a.unidade ? (
+                      <span className="text-[10px] text-muted-foreground">un: {a.unidade}</span>
+                    ) : null}
+                  </div>
+                  {a.descricao ? (
+                    <p className="text-xs text-muted-foreground">{a.descricao}</p>
+                  ) : null}
+                  {gatilhos.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {gatilhos.map((g, gi) => (
+                        <Badge key={gi} variant="outline" className="text-[10px]">
+                          {g.tipo}: {g.tag_nome} {String(g.operador)} {g.valor != null ? String(g.valor) : ""}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">
+                      Sem gatilho cadastrado — atividade dormente até que um gatilho seja definido.
+                    </p>
+                  )}
+                  {arr.length > 1 ? (
+                    <p className="text-[11px] text-muted-foreground">
+                      Execuções nesta ordem: {arr.length}
+                    </p>
+                  ) : null}
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
+      </div>
 
       <Card className="lg:col-span-1">
         <CardHeader className="pb-2">
@@ -1486,44 +1374,8 @@ function ProcessosSection({ ordemId, produtoId, disabled }: { ordemId: string; p
           })}
         </CardContent>
       </Card>
-
-      <Dialog open={!!motivoDialog} onOpenChange={(o) => { if (!o) setMotivoDialog(null); }}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tempo limite excedido</DialogTitle>
-          </DialogHeader>
-          {motivoDialog ? (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
-                O processo <span className="font-medium text-foreground">{motivoDialog.processoNome}</span> levou{" "}
-                <span className="font-mono">{formatDuracao(motivoDialog.duracaoSeg)}</span>, acima do limite de{" "}
-                <span className="font-mono">{motivoDialog.limiteMin} min</span>. Informe o motivo para registrar no relatório:
-              </p>
-              <textarea
-                value={motivoTexto}
-                onChange={(e) => setMotivoTexto(e.target.value)}
-                autoFocus
-                className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                placeholder="Ex.: aguardando matéria-prima, falha de equipamento, troca de turno..."
-              />
-            </div>
-          ) : null}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setMotivoDialog(null)}>Cancelar</Button>
-            <Button
-              onClick={async () => {
-                if (!motivoDialog) return;
-                if (!motivoTexto.trim()) return toast.error("Informe o motivo do atraso.");
-                await finalizar(motivoDialog.etapaId, motivoDialog.iniciadoEm, motivoTexto.trim());
-                setMotivoDialog(null);
-              }}
-            >
-              Registrar e finalizar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
+
 
