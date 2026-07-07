@@ -415,7 +415,7 @@ function EquipAtividadesPage() {
                   <Select value={form.qtd_modo} onValueChange={(v) => setForm({ ...form, qtd_modo: v as QtdModo })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="fixa">Valor fixo (informado manualmente)</SelectItem>
+                      <SelectItem value="fixa">{form.tipo === "processo" ? "Sem quantidade (só duração)" : "Valor fixo (informado manualmente)"}</SelectItem>
                       <SelectItem value="tag_valor">Valor da tag no encerramento</SelectItem>
                       <SelectItem value="tag_diferenca">Diferença da tag (fim − início)</SelectItem>
                     </SelectContent>
