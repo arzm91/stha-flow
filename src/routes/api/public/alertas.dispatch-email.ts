@@ -47,6 +47,27 @@ function buildTemplateData(key: string, body: Body): Record<string, unknown> {
       downloadUrl: 'https://sthapc.cloud/relatorios',
     }
   }
+  if (key === 'rotina-evento') {
+    const weekdayNames = [
+      'Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira',
+      'Quinta-feira', 'Sexta-feira', 'Sábado',
+    ]
+    let weekday: string | undefined
+    const scheduledAt = ctx.scheduled_at as string | undefined
+    if (scheduledAt) {
+      const d = new Date(scheduledAt)
+      if (!isNaN(d.getTime())) weekday = weekdayNames[d.getDay()]
+    }
+    return {
+      routineName: body.alerta_nome ?? 'Rotina',
+      description: (ctx.descricao as string) ?? body.mensagem ?? '',
+      eventDate: (ctx.scheduled_date_br as string) ?? '',
+      eventTime: (ctx.scheduled_time_br as string) ?? '',
+      timezone: (ctx.timezone as string) ?? '',
+      weekday: weekday ?? '',
+      severity: body.severidade ?? 'info',
+    }
+  }
   return { ...ctx, mensagem: body.mensagem }
 }
 

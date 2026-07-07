@@ -27,6 +27,9 @@ type Rotina = {
   timezone: string;
   severidade: Sev;
   ativo: boolean;
+  notificar_email: boolean;
+  email_recipients: string[];
+  email_template_key: string;
 };
 
 const DIAS = [
@@ -53,16 +56,18 @@ export function RotinasSemanais() {
   const [rotinas, setRotinas] = useState<Rotina[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Rotina | null>(null);
+  const [users, setUsers] = useState<{ id: string; nome: string; email: string }[]>([]);
   const blank: Partial<Rotina> = {
     nome: "", descricao: "", dias_semana: [1], hora: "08:00",
     timezone: "America/Sao_Paulo", severidade: "info", ativo: true,
+    notificar_email: false, email_recipients: [], email_template_key: "rotina-evento",
   };
   const [form, setForm] = useState<Partial<Rotina>>(blank);
 
   async function load() {
     const { data, error } = await supabase
       .from("rotinas_atividades")
-      .select("id,nome,descricao,dias_semana,hora,timezone,severidade,ativo")
+      .select("id,nome,descricao,dias_semana,hora,timezone,severidade,ativo,notificar_email,email_recipients,email_template_key")
       .order("hora");
     if (error) { toast.error(error.message); return; }
     setRotinas((data ?? []) as Rotina[]);
@@ -70,6 +75,9 @@ export function RotinasSemanais() {
 
   useEffect(() => {
     load();
+    import("@/lib/permissions/list-users.functions").then(({ listAccountUsers }) =>
+      listAccountUsers().then(setUsers).catch(() => setUsers([])),
+    );
     const ch = supabase
       .channel("rotinas_atividades_ui")
       .on("postgres_changes", { event: "*", schema: "public", table: "rotinas_atividades" }, () => load())
@@ -105,6 +113,9 @@ export function RotinasSemanais() {
       timezone: form.timezone || "America/Sao_Paulo",
       severidade: (form.severidade ?? "info") as Sev,
       ativo: form.ativo ?? true,
+      notificar_email: form.notificar_email ?? false,
+      email_recipients: form.notificar_email ? (form.email_recipients ?? []) : [],
+      email_template_key: form.email_template_key || "rotina-evento",
     };
 
     const q = editing
@@ -213,11 +224,11 @@ export function RotinasSemanais() {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
+        <DialogContent className="max-w-lg max-h-[90vh] w-[calc(100vw-2rem)] flex flex-col p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b shrink-0">
             <DialogTitle>{editing ? "Editar rotina" : "Nova rotina"}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="overflow-y-auto px-6 py-4 flex-1 min-h-0 space-y-3">
             <div>
               <Label>Nome</Label>
               <Input value={form.nome ?? ""} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Ex.: Ronda de campo" />
@@ -266,8 +277,73 @@ export function RotinasSemanais() {
               <Switch id="ativo-rot" checked={form.ativo ?? true} onCheckedChange={(v) => setForm({ ...form, ativo: v })} />
               <Label htmlFor="ativo-rot">Ativo</Label>
             </div>
+
+            <div className="flex items-center justify-between rounded-md border p-2">
+              <span className="text-sm">Enviar por e-mail</span>
+              <Switch
+                checked={form.notificar_email ?? false}
+                onCheckedChange={(v) => setForm({ ...form, notificar_email: v })}
+              />
+            </div>
+
+            {form.notificar_email && (
+              <div className="grid gap-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+                <div className="grid gap-2">
+                  <Label>Modelo de e-mail</Label>
+                  <Select
+                    value={form.email_template_key ?? "rotina-evento"}
+                    onValueChange={(v) => setForm({ ...form, email_template_key: v })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="rotina-evento">Evento de rotina (data e hora)</SelectItem>
+                      <SelectItem value="alert">Alerta do sistema</SelectItem>
+                      <SelectItem value="message">Mensagem interna</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    O modelo <b>Evento de rotina</b> traz título, data, hora, dia da semana e descrição.
+                  </p>
+                </div>
+                <div className="grid gap-2">
+                  <Label>
+                    Destinatários ({(form.email_recipients ?? []).length} selecionado{(form.email_recipients ?? []).length === 1 ? "" : "s"})
+                  </Label>
+                  {users.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Nenhum usuário disponível.</p>
+                  ) : (
+                    <div className="max-h-40 space-y-1 overflow-auto rounded border border-border bg-background p-2">
+                      {users.map((u) => {
+                        const selected = (form.email_recipients ?? []).includes(u.id);
+                        return (
+                          <label key={u.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-muted/50">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 accent-primary"
+                              checked={selected}
+                              onChange={() => {
+                                const cur = form.email_recipients ?? [];
+                                setForm({
+                                  ...form,
+                                  email_recipients: selected ? cur.filter((x) => x !== u.id) : [...cur, u.id],
+                                });
+                              }}
+                            />
+                            <span className="flex-1 truncate">{u.nome || u.email}</span>
+                            <span className="truncate text-xs text-muted-foreground">{u.email}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Cada destinatário recebe o e-mail quando a rotina disparar no horário programado.
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
-          <DialogFooter>
+          <DialogFooter className="px-6 py-4 border-t shrink-0">
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button onClick={save}>{editing ? "Salvar" : "Criar"}</Button>
           </DialogFooter>

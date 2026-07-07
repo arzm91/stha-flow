@@ -1939,10 +1939,13 @@ export type Database = {
           created_at: string
           descricao: string | null
           dias_semana: number[]
+          email_recipients: string[]
+          email_template_key: string
           hora: string
           id: string
           last_fired_at: string | null
           nome: string
+          notificar_email: boolean
           owner_id: string
           severidade: string
           timezone: string
@@ -1953,10 +1956,13 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           dias_semana?: number[]
+          email_recipients?: string[]
+          email_template_key?: string
           hora: string
           id?: string
           last_fired_at?: string | null
           nome: string
+          notificar_email?: boolean
           owner_id: string
           severidade?: string
           timezone?: string
@@ -1967,10 +1973,13 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           dias_semana?: number[]
+          email_recipients?: string[]
+          email_template_key?: string
           hora?: string
           id?: string
           last_fired_at?: string | null
           nome?: string
+          notificar_email?: boolean
           owner_id?: string
           severidade?: string
           timezone?: string
