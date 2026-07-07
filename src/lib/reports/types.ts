@@ -18,13 +18,24 @@ export type DataSourceKey =
   | 'produtos'
   | 'analises_registradas'
   | 'tags_live'
+  | 'movimentacoes_estoque'
+  | 'tanque_analises'
+  | 'tanques'
 
 export interface DataSourceConfig {
   source: DataSourceKey
   columns: string[]
-  period?: '7d' | '30d' | 'month' | 'all'
+  period?: '24h' | '7d' | '30d' | 'month' | 'all'
   limit?: number
   filters?: Record<string, string | number | null>
+  /** When true (default), applies the report scope (equipamentos/produtos/tanques/análises). */
+  useScope?: boolean
+  scope?: {
+    equipamentoIds?: string[]
+    produtoIds?: string[]
+    tanqueIds?: string[]
+    analiseIds?: string[]
+  }
 }
 
 export interface BlockBase {
