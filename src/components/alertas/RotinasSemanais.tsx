@@ -27,6 +27,9 @@ type Rotina = {
   timezone: string;
   severidade: Sev;
   ativo: boolean;
+  notificar_email: boolean;
+  email_recipients: string[];
+  email_template_key: string;
 };
 
 const DIAS = [
@@ -53,16 +56,18 @@ export function RotinasSemanais() {
   const [rotinas, setRotinas] = useState<Rotina[]>([]);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Rotina | null>(null);
+  const [users, setUsers] = useState<{ id: string; nome: string; email: string }[]>([]);
   const blank: Partial<Rotina> = {
     nome: "", descricao: "", dias_semana: [1], hora: "08:00",
     timezone: "America/Sao_Paulo", severidade: "info", ativo: true,
+    notificar_email: false, email_recipients: [], email_template_key: "rotina-evento",
   };
   const [form, setForm] = useState<Partial<Rotina>>(blank);
 
   async function load() {
     const { data, error } = await supabase
       .from("rotinas_atividades")
-      .select("id,nome,descricao,dias_semana,hora,timezone,severidade,ativo")
+      .select("id,nome,descricao,dias_semana,hora,timezone,severidade,ativo,notificar_email,email_recipients,email_template_key")
       .order("hora");
     if (error) { toast.error(error.message); return; }
     setRotinas((data ?? []) as Rotina[]);
@@ -70,6 +75,9 @@ export function RotinasSemanais() {
 
   useEffect(() => {
     load();
+    import("@/lib/permissions/list-users.functions").then(({ listAccountUsers }) =>
+      listAccountUsers().then(setUsers).catch(() => setUsers([])),
+    );
     const ch = supabase
       .channel("rotinas_atividades_ui")
       .on("postgres_changes", { event: "*", schema: "public", table: "rotinas_atividades" }, () => load())
@@ -105,6 +113,9 @@ export function RotinasSemanais() {
       timezone: form.timezone || "America/Sao_Paulo",
       severidade: (form.severidade ?? "info") as Sev,
       ativo: form.ativo ?? true,
+      notificar_email: form.notificar_email ?? false,
+      email_recipients: form.notificar_email ? (form.email_recipients ?? []) : [],
+      email_template_key: form.email_template_key || "rotina-evento",
     };
 
     const q = editing
