@@ -25,8 +25,8 @@ export const Route = createFileRoute("/_authenticated/cadastros/equipamentos-ati
   component: EquipAtividadesPage,
 });
 
-type Tipo = "materia_prima" | "acao" | "tag_captura" | "medicao";
-type Op = "gt" | "lt" | "gte" | "lte" | "eq" | "neq" | "change";
+type Tipo = "materia_prima" | "processo" | "acao" | "tag_captura" | "medicao";
+type Op = "gt" | "lt" | "gte" | "lte" | "eq" | "neq" | "change" | "cross_up" | "cross_down";
 type Gatilho = { tipo: "inicio" | "fim"; tag_nome: string; operador: Op; valor: string };
 type QtdModo = "fixa" | "tag_valor" | "tag_diferenca";
 type CapturaModo = "na_execucao" | "gatilho_valor";
