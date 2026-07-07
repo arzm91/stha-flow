@@ -48,6 +48,8 @@ type Alerta = {
   severidade: Severidade;
   ativo: boolean;
   notificar_email: boolean;
+  email_recipients: string[] | null;
+  email_template_key: string | null;
   cooldown_minutes: number;
   last_fired_at: string | null;
 };
