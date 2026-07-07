@@ -1329,9 +1329,12 @@ function ProcessosSection({ ordemId, equipamentoId }: { ordemId: string; equipam
           <CardTitle className="flex items-center gap-2 text-base"><Clock className="h-4 w-4" />Histórico de etapas</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {(etapas.data ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma etapa registrada.</p>
-          ) : (etapas.data ?? []).map((e: any) => {
+          {(() => {
+            const lista = (etapas.data ?? []).filter((e: any) => !(e.estab_fase === "aguardando_atividade" && !e.finalizado_em));
+            if (lista.length === 0) {
+              return <p className="text-sm text-muted-foreground">Nenhuma etapa registrada.</p>;
+            }
+            return lista.map((e: any) => {
             const dur = e.duracao_seg != null
               ? formatDuracao(e.duracao_seg)
               : formatDuracao(Math.floor((now - new Date(e.iniciado_em).getTime()) / 1000));
