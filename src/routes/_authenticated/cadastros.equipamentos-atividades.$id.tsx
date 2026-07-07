@@ -273,7 +273,16 @@ function EquipAtividadesPage() {
               <TableBody>
                 {list.data!.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.nome}</TableCell>
+                    <TableCell className="font-medium">
+                      <span className="inline-flex items-center gap-2">
+                        <span
+                          className="inline-block h-3 w-3 rounded-full border"
+                          style={{ background: r.cor || "transparent", borderColor: r.cor ? r.cor : "hsl(var(--border))" }}
+                          aria-hidden
+                        />
+                        {r.nome}
+                      </span>
+                    </TableCell>
                     <TableCell>{TIPO_LABEL[r.tipo]}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{r.modo_execucao === "continuo" ? "Contínuo" : "Durante ordem"}</Badge>
