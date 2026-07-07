@@ -50,5 +50,5 @@ export const fetchReportData = createServerFn({ method: 'POST' })
     if (dateCol) q = q.order(dateCol, { ascending: false })
     const { data: rows, error } = await q
     if (error) throw new Error(error.message)
-    return { rows: (rows ?? []) as Record<string, unknown>[] }
+    return { rows: (rows ?? []) as Array<Record<string, any>> }
   })
