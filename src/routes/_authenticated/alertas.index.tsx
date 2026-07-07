@@ -102,9 +102,12 @@ function AlertasPage() {
     severidade: "warn",
     ativo: true,
     notificar_email: false,
+    email_recipients: [],
+    email_template_key: "alert",
     cooldown_minutes: 5,
   };
   const [form, setForm] = useState<Partial<Alerta>>(blank);
+  const [users, setUsers] = useState<{ id: string; nome: string; email: string }[]>([]);
 
   async function loadAlertas() {
     const { data, error } = await supabase
