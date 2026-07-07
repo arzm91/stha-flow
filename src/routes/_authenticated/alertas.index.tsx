@@ -52,8 +52,9 @@ type Alerta = {
 
 type Parametro = { id: string; nome: string; unidade: string | null; valor_min: number | null; valor_max: number | null };
 type Analise = { id: string; nome: string; unidade: string | null; valor_min: number | null; valor_max: number | null };
-type Processo = { id: string; nome: string; produto_id: string };
+type Processo = { id: string; nome: string; equipamento_id: string };
 type Produto = { id: string; nome: string };
+type Equipamento = { id: string; nome: string; codigo: string | null };
 
 
 type Disparo = {
