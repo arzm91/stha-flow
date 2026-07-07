@@ -640,15 +640,22 @@ function ProgramarOrdemDialog({
     },
   });
 
-  // Pré-preenche duração com soma dos processos do produto
+  // Pré-preenche duração com soma das atividades cadastradas no equipamento
   useEffect(() => {
-    if (!produtoId || editing) return;
+    if (!equipamentoId || editing) return;
     (async () => {
-      const { data } = await supabase.from("produto_processos").select("tempo_limite_min").eq("produto_id", produtoId);
-      const soma = (data ?? []).reduce((a, p) => a + (Number((p as { tempo_limite_min: number | null }).tempo_limite_min) || 0), 0);
+      const { data } = await supabase
+        .from("equipamento_atividades")
+        .select("tempo_estimado_min")
+        .eq("equipamento_id", equipamentoId)
+        .eq("ativo", true);
+      const soma = (data ?? []).reduce(
+        (a, p) => a + (Number((p as { tempo_estimado_min: number | null }).tempo_estimado_min) || 0),
+        0,
+      );
       if (soma > 0) setDuracao(soma);
     })();
-  }, [produtoId, editing]);
+  }, [equipamentoId, editing]);
 
   const save = useMutation({
     mutationFn: async () => {

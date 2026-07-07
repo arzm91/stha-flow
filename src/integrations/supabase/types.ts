@@ -103,7 +103,7 @@ export type Database = {
             foreignKeyName: "alertas_processo_id_fkey"
             columns: ["processo_id"]
             isOneToOne: false
-            referencedRelation: "produto_processos"
+            referencedRelation: "equipamento_atividades"
             referencedColumns: ["id"]
           },
         ]
@@ -2273,10 +2273,6 @@ export type Database = {
       ingest_tags: { Args: { payload: Json }; Returns: number }
       poll_tag_endpoints_fire: { Args: never; Returns: number }
       poll_tag_endpoints_process: { Args: never; Returns: number }
-      save_produto_processo: {
-        Args: { p_atividades: Json; p_nome: string; p_produto_id: string }
-        Returns: string
-      }
       server_now: { Args: never; Returns: string }
       sync_tag_endpoint_now: { Args: { p_endpoint_id: string }; Returns: Json }
     }

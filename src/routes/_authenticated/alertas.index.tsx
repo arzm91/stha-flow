@@ -52,8 +52,9 @@ type Alerta = {
 
 type Parametro = { id: string; nome: string; unidade: string | null; valor_min: number | null; valor_max: number | null };
 type Analise = { id: string; nome: string; unidade: string | null; valor_min: number | null; valor_max: number | null };
-type Processo = { id: string; nome: string; produto_id: string };
+type Processo = { id: string; nome: string; equipamento_id: string };
 type Produto = { id: string; nome: string };
+type Equipamento = { id: string; nome: string; codigo: string | null };
 
 
 type Disparo = {
@@ -83,6 +84,7 @@ function AlertasPage() {
   const [analises, setAnalises] = useState<Analise[]>([]);
   const [processos, setProcessos] = useState<Processo[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("todos");
 
   // form state
@@ -125,16 +127,18 @@ function AlertasPage() {
     setTagOptions(Array.from(new Set((data ?? []).map((t) => t.nome))));
   }
   async function loadCadastros() {
-    const [p, a, pr, pd] = await Promise.all([
+    const [p, a, pr, pd, eq] = await Promise.all([
       supabase.from("parametros_cadastro").select("id,nome,unidade,valor_min,valor_max").order("nome"),
       supabase.from("analises_cadastro").select("id,nome,unidade,valor_min,valor_max").order("nome"),
-      supabase.from("produto_processos").select("id,nome,produto_id").order("nome"),
+      supabase.from("equipamento_atividades").select("id,nome,equipamento_id").eq("ativo", true).order("nome"),
       supabase.from("produtos").select("id,nome").order("nome"),
+      supabase.from("equipamentos").select("id,nome,codigo").order("nome"),
     ]);
     setParametros((p.data ?? []) as Parametro[]);
     setAnalises((a.data ?? []) as Analise[]);
     setProcessos((pr.data ?? []) as Processo[]);
     setProdutos((pd.data ?? []) as Produto[]);
+    setEquipamentos((eq.data ?? []) as Equipamento[]);
   }
 
   useEffect(() => {
@@ -627,18 +631,19 @@ function AlertasPage() {
             {form.tipo === "processo_evento" && (
               <>
                 <div className="grid gap-2">
-                  <Label>Processo</Label>
+                  <Label>Atividade do equipamento</Label>
                   <Select
                     value={form.processo_id ?? ""}
                     onValueChange={(v) => setForm({ ...form, processo_id: v })}
                   >
-                    <SelectTrigger><SelectValue placeholder="Selecione um processo" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder="Selecione uma atividade" /></SelectTrigger>
                     <SelectContent>
                       {processos.map((p) => {
-                        const prod = produtos.find((x) => x.id === p.produto_id)?.nome;
+                        const eq = equipamentos.find((x) => x.id === p.equipamento_id);
+                        const eqLabel = eq ? (eq.codigo ? `${eq.codigo} — ${eq.nome}` : eq.nome) : null;
                         return (
                           <SelectItem key={p.id} value={p.id}>
-                            {p.nome}{prod ? ` — ${prod}` : ""}
+                            {p.nome}{eqLabel ? ` — ${eqLabel}` : ""}
                           </SelectItem>
                         );
                       })}
@@ -653,10 +658,9 @@ function AlertasPage() {
                   >
                     <SelectTrigger><SelectValue placeholder="Selecione um evento" /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="entrou">Ordem entrou no processo</SelectItem>
-                      <SelectItem value="concluido">Processo concluído</SelectItem>
-                      <SelectItem value="demorou">Processo demorou mais que o limite</SelectItem>
-                      <SelectItem value="atividade_faltante">Atividade do processo não registrada</SelectItem>
+                      <SelectItem value="entrou">Atividade iniciada</SelectItem>
+                      <SelectItem value="concluido">Atividade concluída</SelectItem>
+                      <SelectItem value="demorou">Atividade demorou mais que o limite</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -732,15 +736,14 @@ function labelTipo(t: string) {
   if (t === "tag_stale") return "Tag (sem atualização)";
   if (t === "parametro_min_max") return "Parâmetro";
   if (t === "analise_min_max") return "Análise";
-  if (t === "processo_evento") return "Processo";
+  if (t === "processo_evento") return "Atividade";
   if (t === "custom") return "Personalizado";
   return t;
 }
 
 function labelEvento(e: string | null) {
-  if (e === "entrou") return "Entrou no processo";
-  if (e === "concluido") return "Concluído";
+  if (e === "entrou") return "Iniciada";
+  if (e === "concluido") return "Concluída";
   if (e === "demorou") return "Demorou";
-  if (e === "atividade_faltante") return "Atividade faltante";
   return e ?? "—";
 }
