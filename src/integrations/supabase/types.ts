@@ -559,6 +559,7 @@ export type Database = {
           ativo: boolean
           captura_gatilho: Json | null
           captura_modo: string
+          cor: string | null
           created_at: string
           descricao: string | null
           equipamento_id: string
@@ -585,6 +586,7 @@ export type Database = {
           ativo?: boolean
           captura_gatilho?: Json | null
           captura_modo?: string
+          cor?: string | null
           created_at?: string
           descricao?: string | null
           equipamento_id: string
@@ -611,6 +613,7 @@ export type Database = {
           ativo?: boolean
           captura_gatilho?: Json | null
           captura_modo?: string
+          cor?: string | null
           created_at?: string
           descricao?: string | null
           equipamento_id?: string
@@ -1946,6 +1949,7 @@ export type Database = {
           valor_min: number | null
           valor_num: number | null
           valor_num_bruto: number | null
+          valor_num_prev: number | null
         }
         Insert: {
           atualizado_em?: string
@@ -1963,6 +1967,7 @@ export type Database = {
           valor_min?: number | null
           valor_num?: number | null
           valor_num_bruto?: number | null
+          valor_num_prev?: number | null
         }
         Update: {
           atualizado_em?: string
@@ -1980,6 +1985,7 @@ export type Database = {
           valor_min?: number | null
           valor_num?: number | null
           valor_num_bruto?: number | null
+          valor_num_prev?: number | null
         }
         Relationships: []
       }
@@ -2231,6 +2237,10 @@ export type Database = {
       _estab_variacao_pct: { Args: { p_amostras: Json }; Returns: number }
       _gatilho_match: {
         Args: { p_op: string; p_ref: number; p_val: number }
+        Returns: boolean
+      }
+      _gatilho_match_dir: {
+        Args: { p_cur: number; p_op: string; p_prev: number; p_ref: number }
         Returns: boolean
       }
       auto_advance_equipamento_atividades: { Args: never; Returns: number }

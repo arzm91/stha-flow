@@ -1178,6 +1178,7 @@ const TIPO_BADGE: Record<string, { label: string; cls: string }> = {
   medicao: { label: "Medição", cls: "bg-blue-500/15 text-blue-700 border-blue-500/30" },
   acao: { label: "Ação", cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30" },
   tag_captura: { label: "Captação de tag", cls: "bg-purple-500/15 text-purple-700 border-purple-500/30" },
+  processo: { label: "Processo", cls: "bg-cyan-500/15 text-cyan-700 border-cyan-500/30" },
 };
 
 function formatDuracao(seg: number) {
@@ -1201,7 +1202,7 @@ function ProcessosSection({ ordemId, equipamentoId }: { ordemId: string; equipam
     queryFn: async () => {
       const { data, error } = await supabase
         .from("equipamento_atividades" as any)
-        .select("id, nome, descricao, tipo, ordem, tempo_estimado_min, unidade, tag_nome, gatilhos, ativo")
+        .select("id, nome, descricao, tipo, ordem, tempo_estimado_min, unidade, tag_nome, gatilhos, ativo, cor")
         .eq("equipamento_id", equipamentoId as string)
         .eq("ativo", true)
         .order("ordem", { ascending: true });
@@ -1260,9 +1261,16 @@ function ProcessosSection({ ordemId, equipamentoId }: { ordemId: string; equipam
             const tipoInfo = TIPO_BADGE[a.tipo] ?? { label: a.tipo, cls: "" };
             const gatilhos: Array<{ tipo: string; tag_nome: string; operador: string; valor: unknown }> = Array.isArray(a.gatilhos) ? a.gatilhos : [];
             return (
-              <Card key={a.id}>
+              <Card key={a.id} style={a.cor ? { borderLeft: `4px solid ${a.cor}` } : undefined}>
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
                   <CardTitle className="text-base">
+                    {a.cor ? (
+                      <span
+                        className="mr-2 inline-block h-3 w-3 rounded-full align-middle"
+                        style={{ background: a.cor }}
+                        aria-hidden
+                      />
+                    ) : null}
                     <span className="mr-2 font-mono text-xs text-muted-foreground">{idx + 1}.</span>
                     {a.nome}
                     {a.tempo_estimado_min != null ? (

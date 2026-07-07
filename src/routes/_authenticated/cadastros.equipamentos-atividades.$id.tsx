@@ -25,8 +25,8 @@ export const Route = createFileRoute("/_authenticated/cadastros/equipamentos-ati
   component: EquipAtividadesPage,
 });
 
-type Tipo = "materia_prima" | "acao" | "tag_captura" | "medicao";
-type Op = "gt" | "lt" | "gte" | "lte" | "eq" | "neq" | "change";
+type Tipo = "materia_prima" | "processo" | "acao" | "tag_captura" | "medicao";
+type Op = "gt" | "lt" | "gte" | "lte" | "eq" | "neq" | "change" | "cross_up" | "cross_down";
 type Gatilho = { tipo: "inicio" | "fim"; tag_nome: string; operador: Op; valor: string };
 type QtdModo = "fixa" | "tag_valor" | "tag_diferenca";
 type CapturaModo = "na_execucao" | "gatilho_valor";
@@ -53,6 +53,7 @@ type AtividadeRow = {
   estab_janela_seg: number;
   estab_min_estavel_seg: number;
   ordem: number;
+  cor: string | null;
 };
 
 type Form = {
@@ -75,10 +76,12 @@ type Form = {
   estab_pct: string;
   estab_janela_seg: string;
   estab_min_estavel_seg: string;
+  cor: string;
 };
 
 const TIPO_LABEL: Record<Tipo, string> = {
   materia_prima: "Matéria-prima / dosagem",
+  processo: "Processo (variação de tag)",
   acao: "Ação / tarefa",
   tag_captura: "Captação de tag",
   medicao: "Medição",
@@ -86,8 +89,22 @@ const TIPO_LABEL: Record<Tipo, string> = {
 
 const OP_LABEL: Record<Op, string> = {
   gt: "maior que (>)", lt: "menor que (<)",
-  gte: "≥", lte: "≤", eq: "=", neq: "≠", change: "qualquer mudança",
+  gte: "≥", lte: "≤", eq: "=", neq: "≠",
+  cross_up: "cruzou para cima (subida atingiu)",
+  cross_down: "cruzou para baixo (descida atingiu)",
+  change: "qualquer mudança",
 };
+
+const COR_PRESETS: Array<{ value: string; label: string }> = [
+  { value: "#22c55e", label: "Verde" },
+  { value: "#eab308", label: "Amarelo" },
+  { value: "#ef4444", label: "Vermelho" },
+  { value: "#3b82f6", label: "Azul" },
+  { value: "#a855f7", label: "Roxo" },
+  { value: "#f97316", label: "Laranja" },
+  { value: "#06b6d4", label: "Ciano" },
+  { value: "#64748b", label: "Cinza" },
+];
 
 function emptyForm(): Form {
   return {
@@ -96,6 +113,7 @@ function emptyForm(): Form {
     qtd_modo: "fixa", qtd_tag_nome: "",
     captura_modo: "na_execucao", captura_operador: "gt", captura_valor: "",
     estab_enabled: false, estab_pct: "2", estab_janela_seg: "30", estab_min_estavel_seg: "30",
+    cor: "",
   };
 }
 
@@ -158,6 +176,7 @@ function EquipAtividadesPage() {
       estab_pct: r.estab_pct?.toString() ?? "2",
       estab_janela_seg: r.estab_janela_seg?.toString() ?? "30",
       estab_min_estavel_seg: r.estab_min_estavel_seg?.toString() ?? "30",
+      cor: r.cor ?? "",
     });
     setOpen(true);
   }
@@ -185,6 +204,7 @@ function EquipAtividadesPage() {
         estab_pct: Number(form.estab_pct) || 2,
         estab_janela_seg: Number(form.estab_janela_seg) || 30,
         estab_min_estavel_seg: Number(form.estab_min_estavel_seg) || 30,
+        cor: form.cor.trim() || null,
       };
       const client = supabase as unknown as { from: (t: string) => { update: (p: unknown) => { eq: (c: string, v: string) => Promise<{ error: unknown }> }; insert: (p: unknown) => Promise<{ error: unknown }> } };
       if (form.id) {
@@ -253,7 +273,16 @@ function EquipAtividadesPage() {
               <TableBody>
                 {list.data!.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.nome}</TableCell>
+                    <TableCell className="font-medium">
+                      <span className="inline-flex items-center gap-2">
+                        <span
+                          className="inline-block h-3 w-3 rounded-full border"
+                          style={{ background: r.cor || "transparent", borderColor: r.cor ? r.cor : "hsl(var(--border))" }}
+                          aria-hidden
+                        />
+                        {r.nome}
+                      </span>
+                    </TableCell>
                     <TableCell>{TIPO_LABEL[r.tipo]}</TableCell>
                     <TableCell>
                       <Badge variant="outline">{r.modo_execucao === "continuo" ? "Contínuo" : "Durante ordem"}</Badge>
@@ -379,14 +408,14 @@ function EquipAtividadesPage() {
               </div>
             )}
 
-            {form.tipo === "materia_prima" && (
+            {(form.tipo === "materia_prima" || form.tipo === "processo") && (
               <div className="grid gap-3 rounded-md border p-3 bg-muted/30">
                 <div className="grid gap-2">
                   <Label>Como obter a quantidade</Label>
                   <Select value={form.qtd_modo} onValueChange={(v) => setForm({ ...form, qtd_modo: v as QtdModo })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="fixa">Valor fixo (informado manualmente)</SelectItem>
+                      <SelectItem value="fixa">{form.tipo === "processo" ? "Sem quantidade (só duração)" : "Valor fixo (informado manualmente)"}</SelectItem>
                       <SelectItem value="tag_valor">Valor da tag no encerramento</SelectItem>
                       <SelectItem value="tag_diferenca">Diferença da tag (fim − início)</SelectItem>
                     </SelectContent>
@@ -394,7 +423,7 @@ function EquipAtividadesPage() {
                 </div>
                 {form.qtd_modo !== "fixa" && (
                   <div className="grid gap-2">
-                    <Label>Tag da dosagem</Label>
+                    <Label>{form.tipo === "processo" ? "Tag do processo" : "Tag da dosagem"}</Label>
                     <Select value={form.qtd_tag_nome} onValueChange={(v) => setForm({ ...form, qtd_tag_nome: v })}>
                       <SelectTrigger><SelectValue placeholder="Selecione a tag" /></SelectTrigger>
                       <SelectContent>
@@ -403,7 +432,7 @@ function EquipAtividadesPage() {
                     </Select>
                   </div>
                 )}
-                {form.qtd_modo === "tag_diferenca" && (
+                {(form.qtd_modo === "tag_diferenca" || (form.tipo === "processo" && form.qtd_modo !== "fixa")) && (
                   <div className="grid gap-2 border-t pt-3">
                     <div className="flex items-center gap-2">
                       <Checkbox checked={form.estab_enabled}
@@ -481,6 +510,38 @@ function EquipAtividadesPage() {
                   </Button>
                 </div>
               ))}
+            </div>
+
+            <div className="rounded-md border p-3 bg-muted/30 grid gap-2">
+              <Label className="text-sm">Cor no acompanhamento</Label>
+              <p className="text-[11px] text-muted-foreground">
+                Usada para identificar visualmente este processo no acompanhamento da produção.
+              </p>
+              <div className="flex flex-wrap items-center gap-2">
+                {COR_PRESETS.map((c) => (
+                  <button
+                    key={c.value}
+                    type="button"
+                    title={c.label}
+                    onClick={() => setForm({ ...form, cor: c.value })}
+                    className={`h-7 w-7 rounded-full border-2 ${form.cor.toLowerCase() === c.value.toLowerCase() ? "border-foreground" : "border-transparent"}`}
+                    style={{ background: c.value }}
+                  />
+                ))}
+                <button
+                  type="button"
+                  onClick={() => setForm({ ...form, cor: "" })}
+                  className={`h-7 rounded-full border px-2 text-[11px] ${!form.cor ? "border-foreground" : "border-border"}`}
+                >
+                  sem cor
+                </button>
+                <Input
+                  value={form.cor}
+                  onChange={(e) => setForm({ ...form, cor: e.target.value })}
+                  placeholder="#hex"
+                  className="h-7 w-28 text-xs"
+                />
+              </div>
             </div>
 
             <div className="flex items-center gap-2">
