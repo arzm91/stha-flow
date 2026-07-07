@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { LogOut } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { UserManagementCard } from "@/components/configuracoes/UserManagementCard";
+import { EmailTemplatesCard } from "@/components/configuracoes/EmailTemplatesCard";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
@@ -75,6 +76,9 @@ function ConfiguracoesPage() {
             <Button variant="destructive" onClick={signOut}><LogOut className="mr-2 h-4 w-4" />Sair da conta</Button>
           </CardContent>
         </Card>
+      </div>
+      <div className="mt-4">
+        <EmailTemplatesCard />
       </div>
       {isAdmin && (
         <div className="mt-4">

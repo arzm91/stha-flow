@@ -620,6 +620,42 @@ export type Database = {
         }
         Relationships: []
       }
+      email_templates_config: {
+        Row: {
+          assunto: string
+          ativo: boolean
+          corpo: string | null
+          created_at: string
+          id: string
+          nome: string
+          owner_id: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          assunto: string
+          ativo?: boolean
+          corpo?: string | null
+          created_at?: string
+          id?: string
+          nome: string
+          owner_id: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          assunto?: string
+          ativo?: boolean
+          corpo?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          owner_id?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_unsubscribe_tokens: {
         Row: {
           created_at: string
