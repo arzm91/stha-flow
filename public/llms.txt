@@ -1,0 +1,9 @@
+# STHApc
+
+> STHApc é um sistema de gestão industrial para controle de produção, estoque, qualidade, indicadores e rastreabilidade em operações industriais modernas.
+
+## Pages
+
+- [/](/): Página inicial do STHApc. Redireciona para o dashboard quando o usuário está autenticado.
+- [/auth](/auth): Acesso ao sistema — login, cadastro de novos usuários e recuperação de senha.
+- [/reset-password](/reset-password): Definição de nova senha a partir do link enviado por e-mail.
