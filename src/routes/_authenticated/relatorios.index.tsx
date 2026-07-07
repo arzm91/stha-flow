@@ -69,6 +69,20 @@ function ReportsListPage() {
           <Button variant="outline" onClick={() => setModelOpen(true)}>
             <Wand2 className="w-4 h-4 mr-1" />A partir de modelo
           </Button>
+          <Button variant="outline" disabled={importing} onClick={() => fileRef.current?.click()}>
+            <Upload className="w-4 h-4 mr-1" />
+            {importing ? 'Importando…' : 'Importar PDF / Excel'}
+          </Button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".pdf,.xlsx,.xls,.csv"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0]
+              if (f) handleImportFile(f)
+            }}
+          />
         </div>
 
         {isLoading ? (
