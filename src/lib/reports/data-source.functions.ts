@@ -8,6 +8,7 @@ interface Input {
   period?: '24h' | '7d' | '30d' | 'month' | 'all'
   limit?: number
   useScope?: boolean
+  filters?: Record<string, string | number | null>
   scope?: {
     equipamentoIds?: string[]
     produtoIds?: string[]
