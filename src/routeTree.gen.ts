@@ -66,6 +66,7 @@ import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/em
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicTagsPushRouteImport } from './routes/api/public/tags.push'
 import { Route as ApiPublicTagsPollRouteImport } from './routes/api/public/tags.poll'
+import { Route as ApiPublicRelatoriosDispatchRouteImport } from './routes/api/public/relatorios.dispatch'
 import { Route as ApiPublicAlertasDispatchEmailRouteImport } from './routes/api/public/alertas.dispatch-email'
 import { Route as AuthenticatedProducaoHistoricoEquipIdRouteImport } from './routes/_authenticated/producao.historico.$equipId'
 import { Route as AuthenticatedEstoqueTanquesIdRouteImport } from './routes/_authenticated/estoque.tanques.$id'
@@ -387,6 +388,12 @@ const ApiPublicTagsPollRoute = ApiPublicTagsPollRouteImport.update({
   path: '/api/public/tags/poll',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicRelatoriosDispatchRoute =
+  ApiPublicRelatoriosDispatchRouteImport.update({
+    id: '/api/public/relatorios/dispatch',
+    path: '/api/public/relatorios/dispatch',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicAlertasDispatchEmailRoute =
   ApiPublicAlertasDispatchEmailRouteImport.update({
     id: '/api/public/alertas/dispatch-email',
@@ -480,6 +487,7 @@ export interface FileRoutesByFullPath {
   '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
   '/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/alertas/dispatch-email': typeof ApiPublicAlertasDispatchEmailRoute
+  '/api/public/relatorios/dispatch': typeof ApiPublicRelatoriosDispatchRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -537,6 +545,7 @@ export interface FileRoutesByTo {
   '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
   '/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/alertas/dispatch-email': typeof ApiPublicAlertasDispatchEmailRoute
+  '/api/public/relatorios/dispatch': typeof ApiPublicRelatoriosDispatchRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -603,6 +612,7 @@ export interface FileRoutesById {
   '/_authenticated/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
   '/_authenticated/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/alertas/dispatch-email': typeof ApiPublicAlertasDispatchEmailRoute
+  '/api/public/relatorios/dispatch': typeof ApiPublicRelatoriosDispatchRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
@@ -669,6 +679,7 @@ export interface FileRouteTypes {
     | '/estoque/tanques/$id'
     | '/producao/historico/$equipId'
     | '/api/public/alertas/dispatch-email'
+    | '/api/public/relatorios/dispatch'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
     | '/lovable/email/auth/preview'
@@ -726,6 +737,7 @@ export interface FileRouteTypes {
     | '/estoque/tanques/$id'
     | '/producao/historico/$equipId'
     | '/api/public/alertas/dispatch-email'
+    | '/api/public/relatorios/dispatch'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
     | '/lovable/email/auth/preview'
@@ -791,6 +803,7 @@ export interface FileRouteTypes {
     | '/_authenticated/estoque/tanques/$id'
     | '/_authenticated/producao/historico/$equipId'
     | '/api/public/alertas/dispatch-email'
+    | '/api/public/relatorios/dispatch'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
     | '/lovable/email/auth/preview'
@@ -815,6 +828,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicAlertasDispatchEmailRoute: typeof ApiPublicAlertasDispatchEmailRoute
+  ApiPublicRelatoriosDispatchRoute: typeof ApiPublicRelatoriosDispatchRoute
   ApiPublicTagsPollRoute: typeof ApiPublicTagsPollRoute
   ApiPublicTagsPushRoute: typeof ApiPublicTagsPushRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
@@ -1225,6 +1239,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTagsPollRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/relatorios/dispatch': {
+      id: '/api/public/relatorios/dispatch'
+      path: '/api/public/relatorios/dispatch'
+      fullPath: '/api/public/relatorios/dispatch'
+      preLoaderRoute: typeof ApiPublicRelatoriosDispatchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/alertas/dispatch-email': {
       id: '/api/public/alertas/dispatch-email'
       path: '/api/public/alertas/dispatch-email'
@@ -1482,6 +1503,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicAlertasDispatchEmailRoute: ApiPublicAlertasDispatchEmailRoute,
+  ApiPublicRelatoriosDispatchRoute: ApiPublicRelatoriosDispatchRoute,
   ApiPublicTagsPollRoute: ApiPublicTagsPollRoute,
   ApiPublicTagsPushRoute: ApiPublicTagsPushRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
