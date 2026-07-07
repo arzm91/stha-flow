@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { LogOut } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { UserManagementCard } from "@/components/configuracoes/UserManagementCard";
+import { EmailTemplatesCard } from "@/components/configuracoes/EmailTemplatesCard";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
