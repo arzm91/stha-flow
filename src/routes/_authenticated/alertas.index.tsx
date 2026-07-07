@@ -153,6 +153,9 @@ function AlertasPage() {
     loadDisparos();
     loadTags();
     loadCadastros();
+    import("@/lib/permissions/list-users.functions").then(({ listAccountUsers }) =>
+      listAccountUsers().then(setUsers).catch(() => setUsers([])),
+    );
     const ch = supabase
       .channel("alertas_page")
       .on("postgres_changes", { event: "*", schema: "public", table: "alertas" }, () => loadAlertas())
