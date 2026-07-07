@@ -345,7 +345,8 @@ export function ChatPopup() {
               </form>
             </>
           )}
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );
