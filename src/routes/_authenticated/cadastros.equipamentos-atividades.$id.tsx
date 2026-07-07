@@ -113,6 +113,7 @@ function emptyForm(): Form {
     qtd_modo: "fixa", qtd_tag_nome: "",
     captura_modo: "na_execucao", captura_operador: "gt", captura_valor: "",
     estab_enabled: false, estab_pct: "2", estab_janela_seg: "30", estab_min_estavel_seg: "30",
+    cor: "",
   };
 }
 
