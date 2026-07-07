@@ -10,6 +10,7 @@ export type ActionType =
   | "criar_tarefa"
   | "enviar_alerta"
   | "gerar_relatorio"
+  | "enviar_email"
   | "webhook_http"
   | "aguardar";
 
