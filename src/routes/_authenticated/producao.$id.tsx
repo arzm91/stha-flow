@@ -1201,7 +1201,7 @@ function ProcessosSection({ ordemId, equipamentoId }: { ordemId: string; equipam
     queryFn: async () => {
       const { data, error } = await supabase
         .from("equipamento_atividades" as any)
-        .select("id, nome, descricao, tipo, ordem, tempo_estimado_min, unidade, tag_nome, gatilhos, ativo")
+        .select("id, nome, descricao, tipo, ordem, tempo_estimado_min, unidade, tag_nome, gatilhos, ativo, cor")
         .eq("equipamento_id", equipamentoId as string)
         .eq("ativo", true)
         .order("ordem", { ascending: true });
