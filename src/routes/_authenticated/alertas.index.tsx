@@ -48,6 +48,8 @@ type Alerta = {
   severidade: Severidade;
   ativo: boolean;
   notificar_email: boolean;
+  email_recipients: string[] | null;
+  email_template_key: string | null;
   cooldown_minutes: number;
   last_fired_at: string | null;
 };
@@ -100,9 +102,12 @@ function AlertasPage() {
     severidade: "warn",
     ativo: true,
     notificar_email: false,
+    email_recipients: [],
+    email_template_key: "alert",
     cooldown_minutes: 5,
   };
   const [form, setForm] = useState<Partial<Alerta>>(blank);
+  const [users, setUsers] = useState<{ id: string; nome: string; email: string }[]>([]);
 
   async function loadAlertas() {
     const { data, error } = await supabase
@@ -148,6 +153,9 @@ function AlertasPage() {
     loadDisparos();
     loadTags();
     loadCadastros();
+    import("@/lib/permissions/list-users.functions").then(({ listAccountUsers }) =>
+      listAccountUsers().then(setUsers).catch(() => setUsers([])),
+    );
     const ch = supabase
       .channel("alertas_page")
       .on("postgres_changes", { event: "*", schema: "public", table: "alertas" }, () => loadAlertas())
@@ -226,6 +234,8 @@ function AlertasPage() {
       severidade: (form.severidade ?? "warn") as Severidade,
       ativo: form.ativo ?? true,
       notificar_email: form.notificar_email ?? false,
+      email_recipients: form.notificar_email ? (form.email_recipients ?? []) : [],
+      email_template_key: form.email_template_key || "alert",
       cooldown_minutes: form.cooldown_minutes ?? 5,
     };
 
@@ -713,6 +723,57 @@ function AlertasPage() {
                 </div>
               </div>
             </div>
+
+            {form.notificar_email && (
+              <div className="grid gap-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+                <div className="grid gap-2">
+                  <Label>Modelo de e-mail</Label>
+                  <Select
+                    value={form.email_template_key ?? "alert"}
+                    onValueChange={(v) => setForm({ ...form, email_template_key: v })}
+                  >
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="alert">Alerta do sistema</SelectItem>
+                      <SelectItem value="message">Mensagem interna</SelectItem>
+                      <SelectItem value="order-confirmation">Confirmação de ordem</SelectItem>
+                      <SelectItem value="report-ready">Relatório disponível</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Destinatários ({(form.email_recipients ?? []).length} selecionado{(form.email_recipients ?? []).length === 1 ? "" : "s"})</Label>
+                  {users.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">Nenhum usuário disponível.</p>
+                  ) : (
+                    <div className="max-h-40 space-y-1 overflow-auto rounded border border-border bg-background p-2">
+                      {users.map((u) => {
+                        const selected = (form.email_recipients ?? []).includes(u.id);
+                        return (
+                          <label key={u.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-muted/50">
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 accent-primary"
+                              checked={selected}
+                              onChange={() => {
+                                const cur = form.email_recipients ?? [];
+                                setForm({
+                                  ...form,
+                                  email_recipients: selected ? cur.filter((x) => x !== u.id) : [...cur, u.id],
+                                });
+                              }}
+                            />
+                            <span className="flex-1 truncate">{u.nome || u.email}</span>
+                            <span className="truncate text-xs text-muted-foreground">{u.email}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <p className="text-xs text-muted-foreground">Selecione um ou mais usuários. Cada um recebe o e-mail quando este alerta disparar.</p>
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>

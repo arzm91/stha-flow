@@ -21,6 +21,8 @@ export type Database = {
           cooldown_minutes: number
           created_at: string
           descricao: string | null
+          email_recipients: string[]
+          email_template_key: string
           evento_processo: string | null
           id: string
           last_fired_at: string | null
@@ -44,6 +46,8 @@ export type Database = {
           cooldown_minutes?: number
           created_at?: string
           descricao?: string | null
+          email_recipients?: string[]
+          email_template_key?: string
           evento_processo?: string | null
           id?: string
           last_fired_at?: string | null
@@ -67,6 +71,8 @@ export type Database = {
           cooldown_minutes?: number
           created_at?: string
           descricao?: string | null
+          email_recipients?: string[]
+          email_template_key?: string
           evento_processo?: string | null
           id?: string
           last_fired_at?: string | null
