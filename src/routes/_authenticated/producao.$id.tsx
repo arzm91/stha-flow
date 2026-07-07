@@ -1377,7 +1377,8 @@ function ProcessosSection({ ordemId, equipamentoId }: { ordemId: string; equipam
                 ) : null}
               </div>
             );
-          })}
+          });
+          })()}
         </CardContent>
       </Card>
     </div>
