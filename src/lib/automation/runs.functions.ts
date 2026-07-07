@@ -342,6 +342,36 @@ async function runActionNode(
     return { info: titulo };
   }
 
+  if (actionType === "enviar_email") {
+    const template = String(cfg.template ?? "alert");
+    const recipient = String(cfg.recipient ?? "").trim();
+    if (!recipient) throw new Error("destinatário obrigatório");
+
+    // Base template data from cfg fields — passed straight into React Email
+    // component props. Falsy values are dropped so template defaults apply.
+    const base: Record<string, unknown> = {};
+    for (const k of [
+      "name", "severity", "alertTitle", "source", "detectedAt", "description", "actionUrl",
+      "reportName", "reportUrl", "generatedAt", "period",
+      "orderNumber", "productName", "quantity", "scheduledFor",
+      "subject", "body", "senderName",
+    ]) {
+      const v = (cfg as Record<string, unknown>)[k];
+      if (v !== undefined && v !== null && v !== "") base[k] = v;
+    }
+    // Merge with trigger context under a namespaced key for advanced templates.
+    const templateData = { ...base, trigger: ctx };
+
+    const { enqueueTransactionalEmail } = await import("@/lib/email/enqueue.server");
+    const res = await enqueueTransactionalEmail({
+      templateName: template,
+      recipientEmail: recipient,
+      templateData,
+    });
+    if (!res.ok) throw new Error(`e-mail não enfileirado: ${res.reason}${res.error ? ` (${res.error})` : ""}`);
+    return { info: `e-mail (${template}) → ${recipient}` };
+  }
+
   if (actionType === "aguardar") {
     const segundos = Math.min(Math.max(Number(cfg.segundos ?? 0), 0), 60);
     await new Promise((r) => setTimeout(r, segundos * 1000));
