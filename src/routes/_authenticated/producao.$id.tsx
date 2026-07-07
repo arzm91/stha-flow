@@ -363,6 +363,7 @@ function TimelineUnificada({ ordemId }: { ordemId: string }) {
   }
   for (const e of etapas.data ?? []) {
     const ev: any = e;
+    if (ev.estab_fase === "aguardando_atividade" && !ev.finalizado_em) continue;
     const nome = ev.atividade_descricao ? `${ev.processo_nome} · ${ev.atividade_descricao}` : ev.processo_nome;
     eventos.push({
       key: `etp-ini-${ev.id}`,
@@ -1250,9 +1251,12 @@ function ProcessosSection({ ordemId, equipamentoId }: { ordemId: string; equipam
           <Card><CardContent className="p-4 text-sm text-muted-foreground">Nenhuma atividade cadastrada para este equipamento.</CardContent></Card>
         ) : (
           (atividades.data ?? []).map((a: any, idx: number) => {
-            const arr = etapasPorAtividade.get(a.id) ?? [];
+            const arrTodas = etapasPorAtividade.get(a.id) ?? [];
+            // Ignora linhas "sombra" de estabilização (fase amostrando, ainda sem variação detectada).
+            const arr = arrTodas.filter((e) => !(e.estab_fase === "aguardando_atividade" && !e.finalizado_em));
             const aberta = arr.find((e) => !e.finalizado_em);
             const ultimaFechada = arr.find((e) => !!e.finalizado_em);
+            const execucoesConcluidas = arr.filter((e) => !!e.finalizado_em).length;
             const tipoInfo = TIPO_BADGE[a.tipo] ?? { label: a.tipo, cls: "" };
             const gatilhos: Array<{ tipo: string; tag_nome: string; operador: string; valor: unknown }> = Array.isArray(a.gatilhos) ? a.gatilhos : [];
             return (
@@ -1309,9 +1313,9 @@ function ProcessosSection({ ordemId, equipamentoId }: { ordemId: string; equipam
                       Sem gatilho cadastrado — atividade dormente até que um gatilho seja definido.
                     </p>
                   )}
-                  {arr.length > 1 ? (
+                  {execucoesConcluidas > 0 || arr.length > 1 ? (
                     <p className="text-[11px] text-muted-foreground">
-                      Execuções nesta ordem: {arr.length}
+                      Execuções nesta ordem: {arr.length} · concluídas: {execucoesConcluidas}
                     </p>
                   ) : null}
                 </CardContent>
@@ -1326,9 +1330,12 @@ function ProcessosSection({ ordemId, equipamentoId }: { ordemId: string; equipam
           <CardTitle className="flex items-center gap-2 text-base"><Clock className="h-4 w-4" />Histórico de etapas</CardTitle>
         </CardHeader>
         <CardContent className="space-y-2">
-          {(etapas.data ?? []).length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhuma etapa registrada.</p>
-          ) : (etapas.data ?? []).map((e: any) => {
+          {(() => {
+            const lista = (etapas.data ?? []).filter((e: any) => !(e.estab_fase === "aguardando_atividade" && !e.finalizado_em));
+            if (lista.length === 0) {
+              return <p className="text-sm text-muted-foreground">Nenhuma etapa registrada.</p>;
+            }
+            return lista.map((e: any) => {
             const dur = e.duracao_seg != null
               ? formatDuracao(e.duracao_seg)
               : formatDuracao(Math.floor((now - new Date(e.iniciado_em).getTime()) / 1000));
@@ -1371,7 +1378,8 @@ function ProcessosSection({ ordemId, equipamentoId }: { ordemId: string; equipam
                 ) : null}
               </div>
             );
-          })}
+          });
+          })()}
         </CardContent>
       </Card>
     </div>
