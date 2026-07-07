@@ -31,7 +31,7 @@ export const SEED_TEMPLATES: SeedTemplate[] = [
             { id: uid(), type: 'heading', x: 40, y: 140, w: 400, h: 30,
               props: { text: 'Ordens em aberto', fontSize: 16, color: '#0f172a', bold: true, align: 'left' } },
             { id: uid(), type: 'table', x: 40, y: 180, w: 710, h: 300,
-              props: { title: '', dataSource: { source: 'ordens_manutencao', columns: ['numero','equipamento_nome','tipo','status','prioridade','iniciado_em'], period: '30d', limit: 20 },
+              props: { title: '', dataSource: { source: 'ordens_manutencao', columns: ['numero','tipo','status','prioridade','responsavel','data_abertura'], period: '30d', limit: 20 },
                 headerColor: '#0f766e', stripe: true } },
             { id: uid(), type: 'heading', x: 40, y: 500, w: 400, h: 30,
               props: { text: 'Observações', fontSize: 14, color: '#0f172a', bold: true, align: 'left' } },
