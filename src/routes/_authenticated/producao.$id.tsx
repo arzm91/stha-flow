@@ -1312,9 +1312,9 @@ function ProcessosSection({ ordemId, equipamentoId }: { ordemId: string; equipam
                       Sem gatilho cadastrado — atividade dormente até que um gatilho seja definido.
                     </p>
                   )}
-                  {arr.length > 1 ? (
+                  {execucoesConcluidas > 0 || arr.length > 1 ? (
                     <p className="text-[11px] text-muted-foreground">
-                      Execuções nesta ordem: {arr.length}
+                      Execuções nesta ordem: {arr.length} · concluídas: {execucoesConcluidas}
                     </p>
                   ) : null}
                 </CardContent>
