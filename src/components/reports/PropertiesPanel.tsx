@@ -226,6 +226,7 @@ function DataSourcePicker({ block }: { block: Block }) {
           <Select value={ds.period ?? 'all'} onValueChange={(v) => updateBlockProps(block.id, { dataSource: { ...ds, period: v } })}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
+              <SelectItem value="24h">Últimas 24h</SelectItem>
               <SelectItem value="7d">Últimos 7 dias</SelectItem>
               <SelectItem value="30d">Últimos 30 dias</SelectItem>
               <SelectItem value="month">Mês atual</SelectItem>
@@ -234,6 +235,10 @@ function DataSourcePicker({ block }: { block: Block }) {
           </Select>
         </Field>
         <NumField label="Limite" value={ds.limit ?? 100} onChange={(v) => updateBlockProps(block.id, { dataSource: { ...ds, limit: v } })} />
+      </div>
+      <div className="flex items-center justify-between">
+        <Label className="text-xs">Aplicar escopo do relatório</Label>
+        <Switch checked={ds.useScope !== false} onCheckedChange={(v) => updateBlockProps(block.id, { dataSource: { ...ds, useScope: v } })} />
       </div>
     </div>
   )

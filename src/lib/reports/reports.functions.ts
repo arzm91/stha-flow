@@ -6,7 +6,7 @@ export const listReports = createServerFn({ method: 'GET' })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from('report_templates')
-      .select('id, nome, descricao, tipo, updated_at, is_system_template, equipamento_ids, produto_ids, manutencao_ids')
+      .select('id, nome, descricao, tipo, updated_at, is_system_template, equipamento_ids, produto_ids, manutencao_ids, tanque_ids, analise_ids')
       .order('updated_at', { ascending: false })
     if (error) throw new Error(error.message)
     return (data ?? []) as Array<Record<string, any>>
@@ -39,6 +39,8 @@ export const createReport = createServerFn({ method: 'POST' })
     equipamento_ids?: string[]
     produto_ids?: string[]
     manutencao_ids?: string[]
+    tanque_ids?: string[]
+    analise_ids?: string[]
   }) => input)
   .handler(async ({ data, context }) => {
     const { data: row, error } = await (context.supabase as any)
@@ -56,6 +58,8 @@ export const createReport = createServerFn({ method: 'POST' })
         equipamento_ids: data.equipamento_ids ?? [],
         produto_ids: data.produto_ids ?? [],
         manutencao_ids: data.manutencao_ids ?? [],
+        tanque_ids: data.tanque_ids ?? [],
+        analise_ids: data.analise_ids ?? [],
       })
       .select('id')
       .single()
@@ -77,6 +81,8 @@ export const updateReport = createServerFn({ method: 'POST' })
     equipamento_ids?: string[]
     produto_ids?: string[]
     manutencao_ids?: string[]
+    tanque_ids?: string[]
+    analise_ids?: string[]
   }) => input)
   .handler(async ({ data, context }) => {
     const { id, ...patch } = data
@@ -87,6 +93,7 @@ export const updateReport = createServerFn({ method: 'POST' })
     if (error) throw new Error(error.message)
     return { ok: true }
   })
+
 
 export const deleteReport = createServerFn({ method: 'POST' })
   .middleware([requireSupabaseAuth])

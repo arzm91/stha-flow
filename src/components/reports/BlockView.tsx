@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
 import { fetchReportData } from '@/lib/reports/data-source.functions'
 import type { Block, DYNAMIC_FIELDS } from '@/lib/reports/types'
+import { useReportScope } from '@/lib/reports/scope-context'
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts'
 
 interface Props {
@@ -18,14 +19,19 @@ function interpolate(text: string, values: Record<string, string>): string {
 function useSourceRows(block: Block) {
   const anyBlock = block as any
   const cfg = anyBlock.props?.dataSource
+  const scope = useReportScope()
   const call = useServerFn(fetchReportData)
+  const effectiveCfg = cfg
+    ? { ...cfg, scope: cfg.useScope === false ? undefined : { equipamentoIds: scope.equipamentoIds, produtoIds: scope.produtoIds, tanqueIds: scope.tanqueIds, analiseIds: scope.analiseIds } }
+    : cfg
   return useQuery({
-    queryKey: ['report-data', cfg],
-    queryFn: () => call({ data: cfg }),
+    queryKey: ['report-data', effectiveCfg],
+    queryFn: () => call({ data: effectiveCfg }),
     enabled: !!cfg?.source,
     staleTime: 60_000,
   })
 }
+
 
 export function BlockView({ block, dynamicValues }: Props) {
   if (block.type === 'text' || block.type === 'heading') {
