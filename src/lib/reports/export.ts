@@ -8,7 +8,7 @@ export async function exportCanvasToPdf(element: HTMLElement, fileName: string) 
     filename: `${fileName}.pdf`,
     image: { type: 'jpeg', quality: 0.95 },
     html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-    jsPDF: { unit: 'px', format: [element.offsetWidth, element.offsetHeight], orientation: 'portrait', hotfixes: ['px_scaling'] },
+    jsPDF: { unit: 'px', format: [element.offsetWidth, element.offsetHeight], orientation: 'portrait' },
   }).from(element).save()
 }
 
