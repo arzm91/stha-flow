@@ -493,6 +493,7 @@ export type Database = {
           columns: Json
           created_at: string
           descricao: string | null
+          equipamento_ids: string[]
           id: string
           nome: string
           owner_id: string
@@ -502,6 +503,7 @@ export type Database = {
           columns?: Json
           created_at?: string
           descricao?: string | null
+          equipamento_ids?: string[]
           id?: string
           nome: string
           owner_id: string
@@ -511,6 +513,7 @@ export type Database = {
           columns?: Json
           created_at?: string
           descricao?: string | null
+          equipamento_ids?: string[]
           id?: string
           nome?: string
           owner_id?: string

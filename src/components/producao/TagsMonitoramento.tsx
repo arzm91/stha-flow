@@ -5,13 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Brush, ReferenceLine, ReferenceArea } from "recharts";
-import { LineChart as LineChartIcon, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon, Search, X } from "lucide-react";
+import { LineChart as LineChartIcon, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon, Search, X, Table as TableIcon } from "lucide-react";
 import { formatNumber, formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type EventoPonto = {
   key: string;
-  tipo: "parametro" | "analise" | "observacao" | "tag_captura";
+  tipo: "parametro" | "analise" | "observacao" | "tag_captura" | "tabela";
   when: number; // epoch ms
   titulo: string;
   detalhe?: string;
@@ -34,6 +34,7 @@ const EVT_CORES = {
   observacao: "#64748b",
   tag_captura: "#14b8a6",
   processo: "#f59e0b",
+  tabela: "#06b6d4",
 } as const;
 
 type Row = {
@@ -60,10 +61,16 @@ export function TagsMonitoramento({
   ordemId,
   tagNomes,
   ativa,
+  equipamentoId,
+  inicioEm,
+  fimEm,
 }: {
   ordemId: string;
   tagNomes: string[];
   ativa: boolean;
+  equipamentoId?: string | null;
+  inicioEm?: string | null;
+  fimEm?: string | null;
 }) {
   const [horas, setHoras] = useState<number>(1);
   const [agora, setAgora] = useState<number>(() => Date.now());
@@ -130,8 +137,39 @@ export function TagsMonitoramento({
     refetchInterval: ativa ? 10_000 : false,
   });
 
+  // Registros de tabelas personalizadas associadas ao equipamento no intervalo da OP.
+  const tabelasQuery = useQuery({
+    queryKey: ["producao-tabelas-eventos", ordemId, equipamentoId, inicioEm, fimEm],
+    enabled: !!equipamentoId && !!inicioEm,
+    queryFn: async () => {
+      const sheets = await supabase
+        .from("custom_sheets")
+        .select("id,nome,columns")
+        .contains("equipamento_ids", [equipamentoId!] as never);
+      if (sheets.error) throw sheets.error;
+      const list = sheets.data ?? [];
+      if (list.length === 0) return [] as Array<{ id: string; sheet_nome: string; created_at: string }>;
+      const ids = list.map((s) => s.id);
+      let q = supabase
+        .from("custom_sheet_rows")
+        .select("id,sheet_id,created_at")
+        .in("sheet_id", ids)
+        .gte("created_at", inicioEm!);
+      if (fimEm) q = q.lte("created_at", fimEm);
+      const rows = await q;
+      if (rows.error) throw rows.error;
+      const byId = new Map(list.map((s) => [s.id, s.nome]));
+      return (rows.data ?? []).map((r) => ({
+        id: r.id,
+        sheet_nome: byId.get(r.sheet_id) ?? "Tabela",
+        created_at: r.created_at,
+      }));
+    },
+    refetchInterval: ativa ? 15_000 : false,
+  });
+
   const [evtAtivos, setEvtAtivos] = useState<Record<string, boolean>>({
-    parametro: true, analise: true, observacao: true, tag_captura: true, processo: true,
+    parametro: true, analise: true, observacao: true, tag_captura: true, processo: true, tabela: true,
   });
 
   // Dados em ordem cronológica (do mais antigo para o mais recente) para o gráfico.
@@ -293,8 +331,15 @@ export function TagsMonitoramento({
         });
       }
     }
+    for (const t of tabelasQuery.data ?? []) {
+      pontos.push({
+        key: `tab-${t.id}`, tipo: "tabela", when: new Date(t.created_at).getTime(),
+        titulo: t.sheet_nome, detalhe: "registro em tabela",
+        cor: EVT_CORES.tabela,
+      });
+    }
     return { eventosPontos: pontos, eventosFaixas: faixas };
-  }, [eventosQuery.data]);
+  }, [eventosQuery.data, tabelasQuery.data]);
 
   // Janela visível = período exato selecionado (mesmo sem dados)
   const janela = useMemo(
@@ -461,6 +506,7 @@ export function TagsMonitoramento({
             { k: "analise", label: "Análises", icon: FlaskConical },
             { k: "tag_captura", label: "Capturas", icon: TagIcon },
             { k: "observacao", label: "Observações", icon: MessageSquare },
+            { k: "tabela", label: "Tabelas", icon: TableIcon },
           ] as const).map(({ k, label, icon: Icon }) => {
             const on = evtAtivos[k];
             const cor = EVT_CORES[k];
