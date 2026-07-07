@@ -5,6 +5,7 @@ import { AppSidebar } from "./AppSidebar";
 import { Button } from "@/components/ui/button";
 import { LogOut, User, Sun, Moon } from "lucide-react";
 import { useTheme } from "@/lib/theme";
+import { ChatPopup } from "@/components/chat/ChatPopup";
 
 import { supabase } from "@/integrations/supabase/client";
 import {
