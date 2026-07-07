@@ -187,7 +187,14 @@ function OPPage() {
 
       {op.data.equipamento_id ? <UtilidadesLive equipamentoId={op.data.equipamento_id as string} /> : null}
 
-      <TagsMonitoramento ordemId={id} tagNomes={tagNomes} ativa={!isFinal} />
+      <TagsMonitoramento
+        ordemId={id}
+        tagNomes={tagNomes}
+        ativa={!isFinal}
+        equipamentoId={(op.data as any).equipamento_id ?? null}
+        inicioEm={(op.data as any).inicio_em ?? null}
+        fimEm={(op.data as any).fim_em ?? null}
+      />
 
       {(op.data.obs_iniciais || op.data.obs_finais) ? (
         <Card className="mb-4">
