@@ -2024,6 +2024,7 @@ export type Database = {
       }
       report_templates: {
         Row: {
+          analise_ids: string[]
           canvas: Json
           created_at: string
           created_by: string | null
@@ -2037,11 +2038,13 @@ export type Database = {
           owner_id: string
           page_size: string
           produto_ids: string[]
+          tanque_ids: string[]
           theme: Json
           tipo: string
           updated_at: string
         }
         Insert: {
+          analise_ids?: string[]
           canvas?: Json
           created_at?: string
           created_by?: string | null
@@ -2055,11 +2058,13 @@ export type Database = {
           owner_id: string
           page_size?: string
           produto_ids?: string[]
+          tanque_ids?: string[]
           theme?: Json
           tipo?: string
           updated_at?: string
         }
         Update: {
+          analise_ids?: string[]
           canvas?: Json
           created_at?: string
           created_by?: string | null
@@ -2073,6 +2078,7 @@ export type Database = {
           owner_id?: string
           page_size?: string
           produto_ids?: string[]
+          tanque_ids?: string[]
           theme?: Json
           tipo?: string
           updated_at?: string
