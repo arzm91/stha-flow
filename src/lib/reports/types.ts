@@ -160,8 +160,11 @@ export const DATA_SOURCE_LABELS: Record<DataSourceKey, string> = {
   ordens_manutencao: 'Ordens de Manutenção',
   manutencao_preventivas: 'Manutenções Preventivas',
   produtos: 'Produtos',
-  analises_registradas: 'Análises Registradas',
+  analises_registradas: 'Análises (produção)',
   tags_live: 'Tags ao Vivo',
+  movimentacoes_estoque: 'Movimentações de Estoque',
+  tanque_analises: 'Análises de Tanque',
+  tanques: 'Tanques (saldo)',
 }
 
 export const DATA_SOURCE_COLUMNS: Record<DataSourceKey, string[]> = {
@@ -172,6 +175,9 @@ export const DATA_SOURCE_COLUMNS: Record<DataSourceKey, string[]> = {
   produtos: ['codigo', 'nome', 'unidade', 'categoria', 'ativo'],
   analises_registradas: ['resultado', 'registrado_em', 'created_at'],
   tags_live: ['nome', 'nome_amigavel', 'valor', 'valor_num', 'unidade', 'grupo', 'qualidade', 'atualizado_em'],
+  movimentacoes_estoque: ['tipo', 'quantidade', 'origem', 'destino', 'ocorrido_em'],
+  tanque_analises: ['resultado', 'observacao', 'registrado_em'],
+  tanques: ['codigo', 'nome', 'capacidade', 'unidade', 'tipo'],
 }
 
 export const DYNAMIC_FIELDS = [
@@ -181,3 +187,4 @@ export const DYNAMIC_FIELDS = [
   { key: 'empresa_nome', label: 'Nome da empresa' },
   { key: 'relatorio_nome', label: 'Nome do relatório' },
 ] as const
+
