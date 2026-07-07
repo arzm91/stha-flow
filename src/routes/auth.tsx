@@ -121,7 +121,7 @@ function AuthPage() {
               <div className="mb-4 flex justify-center lg:hidden">
                 <img src={sthaLogo.url} alt="STHA" className="h-12 w-auto object-contain" />
               </div>
-              <CardTitle>Acessar STHA</CardTitle>
+              <CardTitle><h1 className="text-xl font-semibold leading-none tracking-tight">Acessar STHApc</h1></CardTitle>
               <CardDescription>Entre na sua conta ou crie um novo cadastro.</CardDescription>
             </CardHeader>
             <CardContent>
