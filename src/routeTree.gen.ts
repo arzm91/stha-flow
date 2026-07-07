@@ -59,6 +59,8 @@ import { Route as AuthenticatedAutomacoesIdRouteImport } from './routes/_authent
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
+import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
+import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicTagsPushRouteImport } from './routes/api/public/tags.push'
 import { Route as ApiPublicTagsPollRouteImport } from './routes/api/public/tags.poll'
 import { Route as AuthenticatedProducaoHistoricoEquipIdRouteImport } from './routes/_authenticated/producao.historico.$equipId'
@@ -345,6 +347,16 @@ const LovableEmailQueueProcessRoute =
     path: '/lovable/email/queue/process',
     getParentRoute: () => rootRouteImport,
   } as any)
+const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
+  id: '/lovable/email/auth/webhook',
+  path: '/lovable/email/auth/webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
+  id: '/lovable/email/auth/preview',
+  path: '/lovable/email/auth/preview',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTagsPushRoute = ApiPublicTagsPushRouteImport.update({
   id: '/api/public/tags/push',
   path: '/api/public/tags/push',
@@ -442,6 +454,8 @@ export interface FileRoutesByFullPath {
   '/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesByTo {
@@ -492,6 +506,8 @@ export interface FileRoutesByTo {
   '/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRoutesById {
@@ -552,6 +568,8 @@ export interface FileRoutesById {
   '/_authenticated/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
+  '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
+  '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
 }
 export interface FileRouteTypes {
@@ -612,6 +630,8 @@ export interface FileRouteTypes {
     | '/producao/historico/$equipId'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -662,6 +682,8 @@ export interface FileRouteTypes {
     | '/producao/historico/$equipId'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
   id:
     | '__root__'
@@ -721,6 +743,8 @@ export interface FileRouteTypes {
     | '/_authenticated/producao/historico/$equipId'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
+    | '/lovable/email/auth/preview'
+    | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
   fileRoutesById: FileRoutesById
 }
@@ -737,6 +761,8 @@ export interface RootRouteChildren {
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicTagsPollRoute: typeof ApiPublicTagsPollRoute
   ApiPublicTagsPushRoute: typeof ApiPublicTagsPushRoute
+  LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
+  LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
 }
 
@@ -1092,6 +1118,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailQueueProcessRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lovable/email/auth/webhook': {
+      id: '/lovable/email/auth/webhook'
+      path: '/lovable/email/auth/webhook'
+      fullPath: '/lovable/email/auth/webhook'
+      preLoaderRoute: typeof LovableEmailAuthWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/lovable/email/auth/preview': {
+      id: '/lovable/email/auth/preview'
+      path: '/lovable/email/auth/preview'
+      fullPath: '/lovable/email/auth/preview'
+      preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/tags/push': {
       id: '/api/public/tags/push'
       path: '/api/public/tags/push'
@@ -1370,6 +1410,8 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicTagsPollRoute: ApiPublicTagsPollRoute,
   ApiPublicTagsPushRoute: ApiPublicTagsPushRoute,
+  LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
+  LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
 }
 export const routeTree = rootRouteImport
