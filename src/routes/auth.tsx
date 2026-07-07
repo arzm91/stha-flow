@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +14,7 @@ import sthaLogo from "@/assets/stha_logo.png.asset.json";
 const SIGNUP_ACCESS_CODE = "bra@131";
 
 export const Route = createFileRoute("/auth")({
+  head: pageHead({ title: "Acessar STHApc", description: "Entre na sua conta ou cadastre-se no STHApc — sistema de gestão industrial.", path: "/auth" }),
   ssr: false,
   validateSearch: (s: Record<string, unknown>) => ({
     next: typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//") ? s.next : undefined,

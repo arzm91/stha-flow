@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useRef, useState } from "react";
 import * as XLSX from "xlsx";
@@ -40,6 +41,7 @@ import type { SheetColumn } from "@/lib/tabelas/types";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 export const Route = createFileRoute("/_authenticated/tabelas/$id")({
+  head: pageHead({ title: "Tabelas · Detalhes — STHApc", description: "Visualize detalhes no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: (params) => `/tabelas/${params.id}` }),
   component: TabelaDetail,
 });
 

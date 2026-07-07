@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -19,6 +20,7 @@ import {
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 export const Route = createFileRoute("/_authenticated/turnos")({
+  head: pageHead({ title: "Turnos — STHApc", description: "Acesse e gerencie Turnos no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/turnos" }),
   component: TurnosPage,
 });
 

@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +11,7 @@ import {
 import { formatDuration, formatNumber } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/indicadores")({
+  head: pageHead({ title: "Indicadores — STHApc", description: "Acesse e gerencie Indicadores no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/indicadores" }),
   component: IndicadoresPage,
 });
 

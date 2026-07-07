@@ -1,7 +1,9 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute } from "@tanstack/react-router";
 import { CrudTable } from "@/components/CrudTable";
 
 export const Route = createFileRoute("/_authenticated/cadastros/analises")({
+  head: pageHead({ title: "Cadastros · Análises — STHApc", description: "Acesse e gerencie Cadastros · Análises no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/cadastros/analises" }),
   component: () => (
     <CrudTable
       table="analises_cadastro"

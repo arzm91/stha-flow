@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -11,6 +12,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { formatDate, formatNumber, durationBetween, durationFromNow } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/producao/historico/$equipId")({
+  head: pageHead({ title: "Produção · Histórico · Detalhes — STHApc", description: "Visualize detalhes no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: (params) => `/producao/historico/${params.equipId}` }),
   component: HistoricoEquip,
 });
 

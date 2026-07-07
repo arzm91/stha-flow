@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +11,7 @@ import { formatDate, formatNumber, durationBetween, durationFromNow } from "@/li
 import { EmptyState } from "@/components/EmptyState";
 
 export const Route = createFileRoute("/_authenticated/cadastros/equipamentos/$id")({
+  head: pageHead({ title: "Cadastros · Equipamentos · Detalhes — STHApc", description: "Visualize detalhes no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: (params) => `/cadastros/equipamentos/${params.id}` }),
   component: EquipDetail,
 });
 

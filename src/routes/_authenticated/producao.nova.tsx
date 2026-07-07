@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -14,6 +15,7 @@ import { z } from "zod";
 const search = z.object({ equipamento: z.string().optional() });
 
 export const Route = createFileRoute("/_authenticated/producao/nova")({
+  head: pageHead({ title: "Produção · Nova OP — STHApc", description: "Acesse e gerencie Produção · Nova OP no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/producao/nova" }),
   validateSearch: search,
   component: NovaOPPage,
 });

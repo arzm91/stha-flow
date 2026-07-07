@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,6 +16,7 @@ import type { Fonte, SourceKey } from "@/lib/relatorios/types";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/relatorios/")({
+  head: pageHead({ title: "Relatórios — STHApc", description: "Acesse e gerencie Relatórios no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/relatorios" }),
   component: RelatoriosIndex,
 });
 

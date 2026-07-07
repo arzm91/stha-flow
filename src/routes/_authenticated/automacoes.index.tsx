@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +20,7 @@ type Flow = {
 };
 
 export const Route = createFileRoute("/_authenticated/automacoes/")({
+  head: pageHead({ title: "Automações — STHApc", description: "Acesse e gerencie Automações no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/automacoes" }),
   component: AutomacoesIndex,
 });
 

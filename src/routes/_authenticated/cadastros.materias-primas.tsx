@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/_authenticated/cadastros/materias-primas")({
+  head: pageHead({ title: "Cadastros · Matérias-primas — STHApc", description: "Acesse e gerencie Cadastros · Matérias-primas no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/cadastros/materias-primas" }),
   component: MateriasPrimasPage,
 });
 

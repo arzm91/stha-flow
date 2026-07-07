@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -41,6 +42,7 @@ import {
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/producao/pcp")({
+  head: pageHead({ title: "Produção · PCP / Ordens — STHApc", description: "Acesse e gerencie Produção · PCP / Ordens no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/producao/pcp" }),
   component: PcpPage,
 });
 

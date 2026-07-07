@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -18,6 +19,7 @@ import { useResourcePermissions } from "@/hooks/useResourcePermissions";
 
 
 export const Route = createFileRoute("/_authenticated/cadastros/produtos")({
+  head: pageHead({ title: "Cadastros · Produtos — STHApc", description: "Acesse e gerencie Cadastros · Produtos no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/cadastros/produtos" }),
   component: ProdutosPage,
 });
 

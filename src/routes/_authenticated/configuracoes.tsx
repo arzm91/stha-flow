@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +14,7 @@ import { UserManagementCard } from "@/components/configuracoes/UserManagementCar
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 export const Route = createFileRoute("/_authenticated/configuracoes")({
+  head: pageHead({ title: "Configurações — STHApc", description: "Acesse e gerencie Configurações no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/configuracoes" }),
   component: ConfiguracoesPage,
 });
 

@@ -1,3 +1,4 @@
+import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -12,6 +13,7 @@ import { useResourcePermissions } from "@/hooks/useResourcePermissions";
 
 
 export const Route = createFileRoute("/_authenticated/estoque/")({
+  head: pageHead({ title: "Estoque — STHApc", description: "Acesse e gerencie Estoque no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/estoque" }),
   component: EstoquePage,
 });
 
