@@ -709,7 +709,7 @@ export function TagsMonitoramento({
                 ...pontosVisiveis.map((p) => ({
                   when: p.when,
                   cor: p.cor,
-                  label: `${p.tipo === "parametro" ? "Parâmetro" : p.tipo === "analise" ? "Análise" : p.tipo === "tag_captura" ? "Captura" : "Observação"}: ${p.titulo}`,
+                  label: `${p.tipo === "parametro" ? "Parâmetro" : p.tipo === "analise" ? "Análise" : p.tipo === "tag_captura" ? "Captura" : p.tipo === "tabela" ? "Tabela" : "Observação"}: ${p.titulo}`,
                   extra: p.detalhe ?? "",
                 })),
               ]
