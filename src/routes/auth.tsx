@@ -94,7 +94,7 @@ function AuthPage() {
   };
 
   return (
-    <div className="dark min-h-screen bg-background">
+    <main className="dark min-h-screen bg-background">
       <div className="grid min-h-screen lg:grid-cols-2">
         <div className="hidden flex-col justify-between bg-gradient-to-br from-card via-background to-card p-12 lg:flex">
           <div className="flex items-center gap-3">
@@ -201,6 +201,7 @@ function AuthPage() {
           </Card>
         </div>
       </div>
+    </main>
 
       <Dialog open={showAccessDeniedDialog} onOpenChange={setShowAccessDeniedDialog}>
         <DialogContent>
