@@ -1,0 +1,1 @@
+CREATE POLICY "profiles_select_same_tenant" ON public.profiles FOR SELECT TO authenticated USING (effective_owner(auth.uid()) = effective_owner(id));
