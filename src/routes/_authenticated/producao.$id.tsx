@@ -19,6 +19,7 @@ import { TagsMonitoramento } from "@/components/producao/TagsMonitoramento";
 import { UtilidadesLive, UtilidadesStrip } from "@/components/producao/UtilidadesLive";
 import { gerarRelatorioProducaoPdf } from "@/lib/producao-pdf";
 import { gerarRelatorioProducaoXlsx } from "@/lib/producao-xlsx";
+import type { SheetColumn as SheetCol } from "@/lib/tabelas/types";
 
 export const Route = createFileRoute("/_authenticated/producao/$id")({
   component: OPPage,
@@ -186,7 +187,14 @@ function OPPage() {
 
       {op.data.equipamento_id ? <UtilidadesLive equipamentoId={op.data.equipamento_id as string} /> : null}
 
-      <TagsMonitoramento ordemId={id} tagNomes={tagNomes} ativa={!isFinal} />
+      <TagsMonitoramento
+        ordemId={id}
+        tagNomes={tagNomes}
+        ativa={!isFinal}
+        equipamentoId={(op.data as any).equipamento_id ?? null}
+        inicioEm={(op.data as any).inicio_em ?? null}
+        fimEm={(op.data as any).fim_em ?? null}
+      />
 
       {(op.data.obs_iniciais || op.data.obs_finais) ? (
         <Card className="mb-4">
@@ -290,6 +298,14 @@ function OPPage() {
 }
 
 function TimelineUnificada({ ordemId }: { ordemId: string }) {
+  const opQ = useQuery({
+    queryKey: ["op-times-equip", ordemId],
+    queryFn: async () => {
+      const { data } = await supabase.from("ordens_producao")
+        .select("equipamento_id,inicio_em,fim_em").eq("id", ordemId).maybeSingle();
+      return data;
+    },
+  });
   const parametros = useQuery({
     queryKey: ["params", ordemId],
     queryFn: async () => {
@@ -325,9 +341,48 @@ function TimelineUnificada({ ordemId }: { ordemId: string }) {
     },
   });
 
+  const equipId = opQ.data?.equipamento_id ?? null;
+  const inicioEm = opQ.data?.inicio_em ?? null;
+  const fimEm = opQ.data?.fim_em ?? null;
+  const tabelasRows = useQuery({
+    queryKey: ["timeline-custom-sheet-rows", ordemId, equipId, inicioEm, fimEm],
+    enabled: !!equipId && !!inicioEm,
+    queryFn: async () => {
+      const sheets = await supabase
+        .from("custom_sheets")
+        .select("id,nome,columns")
+        .contains("equipamento_ids", [equipId!] as never);
+      if (sheets.error) throw sheets.error;
+      const list = sheets.data ?? [];
+      if (list.length === 0) return [] as Array<{ id: string; sheet_id: string; sheet_nome: string; columns: SheetCol[]; data: Record<string, unknown>; created_at: string }>;
+      const ids = list.map((s) => s.id);
+      let q = supabase
+        .from("custom_sheet_rows")
+        .select("id,sheet_id,data,created_at")
+        .in("sheet_id", ids)
+        .gte("created_at", inicioEm!)
+        .order("created_at", { ascending: false });
+      if (fimEm) q = q.lte("created_at", fimEm);
+      const rows = await q;
+      if (rows.error) throw rows.error;
+      const byId = new Map(list.map((s) => [s.id, s]));
+      return (rows.data ?? []).map((r) => {
+        const s = byId.get(r.sheet_id)!;
+        return {
+          id: r.id,
+          sheet_id: r.sheet_id,
+          sheet_nome: s.nome,
+          columns: (s.columns as unknown as SheetCol[]) ?? [],
+          data: (r.data ?? {}) as Record<string, unknown>,
+          created_at: r.created_at,
+        };
+      });
+    },
+  });
+
   type Evt = {
     when: string;
-    tipo: "parametro" | "analise" | "observacao" | "processo_inicio" | "processo_fim";
+    tipo: "parametro" | "analise" | "observacao" | "processo_inicio" | "processo_fim" | "tabela";
     titulo: string;
     detalhe?: string;
     key: string;
@@ -391,6 +446,25 @@ function TimelineUnificada({ ordemId }: { ordemId: string }) {
       });
     }
   }
+  for (const r of tabelasRows.data ?? []) {
+    const partes: string[] = [];
+    for (const c of r.columns) {
+      const v = r.data[c.key];
+      if (v === null || v === undefined || v === "") continue;
+      let display: string;
+      if (c.type === "boolean") display = v ? "Sim" : "Não";
+      else if (c.type === "number") display = formatNumber(Number(v));
+      else display = String(v);
+      partes.push(`${c.label}: ${display}`);
+    }
+    eventos.push({
+      key: `tab-${r.id}`,
+      when: r.created_at,
+      tipo: "tabela",
+      titulo: `Registro em "${r.sheet_nome}"`,
+      detalhe: partes.length ? partes.join(" · ") : undefined,
+    });
+  }
 
   eventos.sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime());
 
@@ -400,9 +474,10 @@ function TimelineUnificada({ ordemId }: { ordemId: string }) {
     observacao: { label: "Observação", icon: MessageSquare, cls: "bg-amber-500/10 text-amber-700 border-amber-500/30", dot: "bg-amber-500" },
     processo_inicio: { label: "Processo iniciado", icon: Play, cls: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30", dot: "bg-emerald-500" },
     processo_fim: { label: "Processo finalizado", icon: Square, cls: "bg-slate-500/10 text-slate-700 border-slate-500/30", dot: "bg-slate-500" },
+    tabela: { label: "Tabela", icon: FileSpreadsheet, cls: "bg-cyan-500/10 text-cyan-700 border-cyan-500/30", dot: "bg-cyan-500" },
   };
 
-  const loading = parametros.isLoading || analises.isLoading || observacoes.isLoading || etapas.isLoading;
+  const loading = parametros.isLoading || analises.isLoading || observacoes.isLoading || etapas.isLoading || tabelasRows.isLoading;
 
   return (
     <Card className="mt-4">

@@ -38,6 +38,7 @@ type SheetRow = {
   nome: string;
   descricao: string | null;
   columns: SheetColumn[];
+  equipamento_ids: string[] | null;
   updated_at: string;
 };
 
@@ -55,7 +56,7 @@ function TabelasIndex() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("custom_sheets")
-        .select("id, nome, descricao, columns, updated_at")
+        .select("id, nome, descricao, columns, equipamento_ids, updated_at")
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return data as unknown as SheetRow[];
@@ -197,6 +198,22 @@ function SheetFormDialog({
   const [columns, setColumns] = useState<SheetColumn[]>(
     initial?.columns ?? [{ key: "col1", label: "Coluna 1", type: "text" }],
   );
+  const [equipIds, setEquipIds] = useState<string[]>(initial?.equipamento_ids ?? []);
+
+  const equipamentosQ = useQuery({
+    queryKey: ["equipamentos-min"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("equipamentos")
+        .select("id, codigo, nome")
+        .order("codigo");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const toggleEquip = (id: string) =>
+    setEquipIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
 
   const addCol = () =>
     setColumns((c) => [
@@ -229,6 +246,7 @@ function SheetFormDialog({
           nome: nome.trim(),
           descricao: descricao.trim() || null,
           columns: cleaned as never,
+          equipamento_ids: equipIds as never,
           owner_id: u.user.id,
         });
         if (error) throw error;
@@ -239,6 +257,7 @@ function SheetFormDialog({
             nome: nome.trim(),
             descricao: descricao.trim() || null,
             columns: cleaned as never,
+            equipamento_ids: equipIds as never,
           })
           .eq("id", initial.id);
         if (error) throw error;
@@ -279,6 +298,39 @@ function SheetFormDialog({
             <Label>Descrição (opcional)</Label>
             <Input value={descricao} onChange={(e) => setDescricao(e.target.value)} />
           </div>
+          <div className="space-y-1.5">
+            <Label>Equipamentos associados (opcional)</Label>
+            <p className="text-xs text-muted-foreground">
+              Cada novo registro nesta tabela aparecerá no acompanhamento da produção
+              (gráfico + histórico) quando o equipamento estiver com uma ordem em andamento.
+            </p>
+            <div className="rounded-md border border-border p-2 max-h-40 overflow-y-auto">
+              {equipamentosQ.isLoading ? (
+                <p className="text-xs text-muted-foreground">Carregando...</p>
+              ) : (equipamentosQ.data ?? []).length === 0 ? (
+                <p className="text-xs text-muted-foreground">Nenhum equipamento cadastrado.</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {(equipamentosQ.data ?? []).map((eq) => {
+                    const on = equipIds.includes(eq.id);
+                    return (
+                      <Button
+                        key={eq.id}
+                        type="button"
+                        size="sm"
+                        variant={on ? "default" : "outline"}
+                        className="h-7 text-xs"
+                        onClick={() => toggleEquip(eq.id)}
+                      >
+                        {eq.codigo ? `${eq.codigo} · ` : ""}{eq.nome}
+                      </Button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>Colunas (cabeçalho)</Label>
