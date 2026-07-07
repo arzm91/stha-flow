@@ -432,7 +432,7 @@ function EquipAtividadesPage() {
                     </Select>
                   </div>
                 )}
-                {form.qtd_modo === "tag_diferenca" && (
+                {(form.qtd_modo === "tag_diferenca" || (form.tipo === "processo" && form.qtd_modo !== "fixa")) && (
                   <div className="grid gap-2 border-t pt-3">
                     <div className="flex items-center gap-2">
                       <Checkbox checked={form.estab_enabled}
