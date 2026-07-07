@@ -100,6 +100,11 @@ export const fetchReportData = createServerFn({ method: 'POST' })
     const cols = data.columns.length ? data.columns.join(',') : '*'
     let q = (context.supabase as any).from(table).select(cols).limit(data.limit ?? 100)
     if (data.useScope !== false) q = applyScope(q, data.source, data.scope)
+    if (data.filters) {
+      for (const [k, v] of Object.entries(data.filters)) {
+        if (v !== null && v !== undefined && v !== '') q = q.eq(k, v)
+      }
+    }
     const dateCol = DATE_COL[data.source]
     const start = periodStart(data.period)
     if (dateCol && start) q = q.gte(dateCol, start)
