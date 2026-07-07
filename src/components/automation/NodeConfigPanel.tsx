@@ -460,10 +460,10 @@ export function NodeConfigPanel({
                   <Select value={String(cfg.template ?? "alert")} onValueChange={(v) => set({ template: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="alert">Alerta do sistema</SelectItem>
-                      <SelectItem value="report-ready">Relatório pronto</SelectItem>
-                      <SelectItem value="order-confirmation">Confirmação de ordem</SelectItem>
-                      <SelectItem value="message">Mensagem / notificação</SelectItem>
+                      <SelectItem value="alert">⚠ Alerta do sistema</SelectItem>
+                      <SelectItem value="message">✉ Mensagem interna</SelectItem>
+                      <SelectItem value="order-confirmation">📋 Confirmação de ordem</SelectItem>
+                      <SelectItem value="report-ready">📄 Relatório disponível</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -479,6 +479,13 @@ export function NodeConfigPanel({
                 <div className="space-y-1">
                   <Label>Nome do destinatário (opcional)</Label>
                   <Input value={String(cfg.name ?? "")} onChange={(e) => set({ name: e.target.value })} />
+                </div>
+
+                <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-2 text-[11px] leading-snug text-muted-foreground">
+                  <b>Os dados do gatilho são incluídos automaticamente</b> no
+                  e-mail (tag, ordem, evento, horário, produto, quantidade
+                  etc.). Preencha os campos abaixo apenas para <b>sobrescrever</b>
+                  algum valor específico — deixe em branco para usar o valor do gatilho.
                 </div>
 
                 {cfg.template === "alert" && (
