@@ -363,6 +363,7 @@ function TimelineUnificada({ ordemId }: { ordemId: string }) {
   }
   for (const e of etapas.data ?? []) {
     const ev: any = e;
+    if (ev.estab_fase === "aguardando_atividade" && !ev.finalizado_em) continue;
     const nome = ev.atividade_descricao ? `${ev.processo_nome} · ${ev.atividade_descricao}` : ev.processo_nome;
     eventos.push({
       key: `etp-ini-${ev.id}`,
