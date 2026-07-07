@@ -204,6 +204,7 @@ function EquipAtividadesPage() {
         estab_pct: Number(form.estab_pct) || 2,
         estab_janela_seg: Number(form.estab_janela_seg) || 30,
         estab_min_estavel_seg: Number(form.estab_min_estavel_seg) || 30,
+        cor: form.cor.trim() || null,
       };
       const client = supabase as unknown as { from: (t: string) => { update: (p: unknown) => { eq: (c: string, v: string) => Promise<{ error: unknown }> }; insert: (p: unknown) => Promise<{ error: unknown }> } };
       if (form.id) {
