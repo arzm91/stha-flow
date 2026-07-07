@@ -14,6 +14,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SitemapXmlRouteImport } from './routes/sitemap.xml'
 import { Route as AuthenticatedTurnosRouteImport } from './routes/_authenticated/turnos'
 import { Route as AuthenticatedTagsRouteImport } from './routes/_authenticated/tags'
 import { Route as AuthenticatedTabelasRouteImport } from './routes/_authenticated/tabelas'
@@ -88,6 +89,11 @@ const AuthenticatedRouteRoute = AuthenticatedRouteRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapXmlRoute = SitemapXmlRouteImport.update({
+  id: '/sitemap/xml',
+  path: '/sitemap/xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedTurnosRoute = AuthenticatedTurnosRouteImport.update({
@@ -401,6 +407,7 @@ export interface FileRoutesByFullPath {
   '/tabelas': typeof AuthenticatedTabelasRouteWithChildren
   '/tags': typeof AuthenticatedTagsRouteWithChildren
   '/turnos': typeof AuthenticatedTurnosRoute
+  '/sitemap/xml': typeof SitemapXmlRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/automacoes/$id': typeof AuthenticatedAutomacoesIdRoute
@@ -450,6 +457,7 @@ export interface FileRoutesByTo {
   '/indicadores': typeof AuthenticatedIndicadoresRoute
   '/monitoramento': typeof AuthenticatedMonitoramentoRoute
   '/turnos': typeof AuthenticatedTurnosRoute
+  '/sitemap/xml': typeof SitemapXmlRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/automacoes/$id': typeof AuthenticatedAutomacoesIdRoute
@@ -509,6 +517,7 @@ export interface FileRoutesById {
   '/_authenticated/tabelas': typeof AuthenticatedTabelasRouteWithChildren
   '/_authenticated/tags': typeof AuthenticatedTagsRouteWithChildren
   '/_authenticated/turnos': typeof AuthenticatedTurnosRoute
+  '/sitemap/xml': typeof SitemapXmlRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/automacoes/$id': typeof AuthenticatedAutomacoesIdRoute
@@ -568,6 +577,7 @@ export interface FileRouteTypes {
     | '/tabelas'
     | '/tags'
     | '/turnos'
+    | '/sitemap/xml'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/automacoes/$id'
@@ -617,6 +627,7 @@ export interface FileRouteTypes {
     | '/indicadores'
     | '/monitoramento'
     | '/turnos'
+    | '/sitemap/xml'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/automacoes/$id'
@@ -675,6 +686,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tabelas'
     | '/_authenticated/tags'
     | '/_authenticated/turnos'
+    | '/sitemap/xml'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/automacoes/$id'
@@ -720,6 +732,7 @@ export interface RootRouteChildren {
   ResetPasswordRoute: typeof ResetPasswordRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  SitemapXmlRoute: typeof SitemapXmlRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicTagsPollRoute: typeof ApiPublicTagsPollRoute
@@ -762,6 +775,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap/xml': {
+      id: '/sitemap/xml'
+      path: '/sitemap/xml'
+      fullPath: '/sitemap/xml'
+      preLoaderRoute: typeof SitemapXmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/turnos': {
@@ -1345,6 +1365,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  SitemapXmlRoute: SitemapXmlRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicTagsPollRoute: ApiPublicTagsPollRoute,
