@@ -481,7 +481,13 @@ export function NodeConfigPanel({
                   <Input value={String(cfg.name ?? "")} onChange={(e) => set({ name: e.target.value })} />
                 </div>
 
-                {cfg.template === "alert" && (
+                <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-2 text-[11px] leading-snug text-muted-foreground">
+                  <b>Os dados do gatilho são incluídos automaticamente</b> no
+                  e-mail (tag, ordem, evento, horário, produto, quantidade
+                  etc.). Preencha os campos abaixo apenas para <b>sobrescrever</b>
+                  algum valor específico — deixe em branco para usar o valor do gatilho.
+                </div>
+
                   <>
                     <div className="space-y-1">
                       <Label>Severidade</Label>
