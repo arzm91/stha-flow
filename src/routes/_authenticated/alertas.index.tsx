@@ -84,6 +84,7 @@ function AlertasPage() {
   const [analises, setAnalises] = useState<Analise[]>([]);
   const [processos, setProcessos] = useState<Processo[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
+  const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("todos");
 
   // form state
