@@ -1,8 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 
+// Firebase Web apiKey is a public identifier — safe to expose in client bundles.
+// Real access is gated by Firebase Security Rules + App Check.
 export const getFirebaseWebConfig = createServerFn({ method: "GET" }).handler(async () => {
   return {
-    apiKey: process.env.GOOGLE_API_KEY ?? "",
+    apiKey: "AIzaSyAVG62xS2aZLm8op7fHZT5UYupYtW5qh5I",
     authDomain: "sthapc.firebaseapp.com",
     projectId: "sthapc",
     storageBucket: "sthapc.firebasestorage.app",
