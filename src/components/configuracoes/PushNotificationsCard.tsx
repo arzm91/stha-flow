@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Bell, BellOff, Smartphone, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { enablePushNotifications, isPushSupported } from "@/lib/push/client";
+import { enablePushNotifications, getPushSupportStatus } from "@/lib/push/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 type Device = {
@@ -20,11 +20,15 @@ type Device = {
 export function PushNotificationsCard() {
   const qc = useQueryClient();
   const [supported, setSupported] = useState<boolean | null>(null);
+  const [supportReason, setSupportReason] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermission | "unknown">("unknown");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    isPushSupported().then((ok) => setSupported(ok));
+    getPushSupportStatus().then((status) => {
+      setSupported(status.ok);
+      setSupportReason(status.reason ?? null);
+    });
     if (typeof Notification !== "undefined") setPermission(Notification.permission);
   }, []);
 
@@ -50,6 +54,7 @@ export function PushNotificationsCard() {
     if (!res.ok) {
       if (res.reason === "unsupported") toast.error("Este navegador não suporta notificações push");
       else if (res.reason === "ios_requires_home_screen") toast.error("No iPhone, abra o STHApc pelo ícone salvo na Tela de Início para ativar o push.");
+      else if (res.reason === "preview_unavailable") toast.error("Ative pelo domínio publicado do STHApc; o preview não permite registrar o service worker de push.");
       else if (res.reason === "permission_denied") toast.error("Permissão negada. Habilite nas configurações do navegador.");
       else toast.error(`Falha ao ativar: ${res.reason ?? "erro desconhecido"}`);
       return;
@@ -82,7 +87,11 @@ export function PushNotificationsCard() {
       <CardContent className="space-y-4">
         {supported === false && (
           <p className="text-sm text-muted-foreground">
-            Seu navegador não suporta notificações push nesta tela. Em iPhone, abra o STHApc pelo ícone salvo na Tela de Início; o Safari normal não libera push.
+            {supportReason === "preview_unavailable"
+              ? "Notificações push devem ser ativadas pelo domínio publicado do STHApc; o preview não permite registrar o service worker de push."
+              : supportReason === "ios_requires_home_screen"
+                ? "No iPhone, abra o STHApc pelo ícone salvo na Tela de Início; o Safari normal não libera push."
+                : "Seu navegador não suporta notificações push nesta tela."}
           </p>
         )}
         {supported !== false && (
