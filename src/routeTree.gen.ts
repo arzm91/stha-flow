@@ -13,7 +13,6 @@ import { Route as UnsubscribeRouteImport } from './routes/unsubscribe'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as McpRouteImport } from './routes/mcp'
-import { Route as FirebaseMessagingSwDotjsRouteImport } from './routes/firebase-messaging-sw[.]js'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -95,12 +94,6 @@ const McpRoute = McpRouteImport.update({
   path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FirebaseMessagingSwDotjsRoute =
-  FirebaseMessagingSwDotjsRouteImport.update({
-    id: '/firebase-messaging-sw.js',
-    path: '/firebase-messaging-sw.js',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -441,7 +434,6 @@ const AuthenticatedCadastrosEquipamentosAtividadesIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/firebase-messaging-sw.js': typeof FirebaseMessagingSwDotjsRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -507,7 +499,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/firebase-messaging-sw.js': typeof FirebaseMessagingSwDotjsRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -568,7 +559,6 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/firebase-messaging-sw.js': typeof FirebaseMessagingSwDotjsRoute
   '/mcp': typeof McpRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -636,7 +626,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
-    | '/firebase-messaging-sw.js'
     | '/mcp'
     | '/reset-password'
     | '/sitemap.xml'
@@ -702,7 +691,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
-    | '/firebase-messaging-sw.js'
     | '/mcp'
     | '/reset-password'
     | '/sitemap.xml'
@@ -762,7 +750,6 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
-    | '/firebase-messaging-sw.js'
     | '/mcp'
     | '/reset-password'
     | '/sitemap.xml'
@@ -830,7 +817,6 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  FirebaseMessagingSwDotjsRoute: typeof FirebaseMessagingSwDotjsRoute
   McpRoute: typeof McpRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
@@ -880,13 +866,6 @@ declare module '@tanstack/react-router' {
       path: '/mcp'
       fullPath: '/mcp'
       preLoaderRoute: typeof McpRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/firebase-messaging-sw.js': {
-      id: '/firebase-messaging-sw.js'
-      path: '/firebase-messaging-sw.js'
-      fullPath: '/firebase-messaging-sw.js'
-      preLoaderRoute: typeof FirebaseMessagingSwDotjsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -1512,7 +1491,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  FirebaseMessagingSwDotjsRoute: FirebaseMessagingSwDotjsRoute,
   McpRoute: McpRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
