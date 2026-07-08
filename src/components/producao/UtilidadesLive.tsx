@@ -36,6 +36,8 @@ const statusMap: Record<string, { label: string; cls: string; alert?: boolean }>
 };
 
 export function UtilidadesLive({ equipamentoId }: { equipamentoId: string }) {
+  const [openScada, setOpenScada] = useState<Record<string, boolean>>({});
+
   const equip = useQuery({
     queryKey: ["equip-utilidades-ids", equipamentoId],
     queryFn: async () => {
