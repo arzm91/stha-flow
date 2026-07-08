@@ -145,6 +145,20 @@ export function ScadaCanvas({
           </pattern>
         </defs>
         <rect x={0} y={0} width={doc.canvas.width} height={doc.canvas.height} fill="url(#scada-grid)" />
+        {doc.canvas.background?.dataUrl && (
+          <image
+            href={doc.canvas.background.dataUrl}
+            x={0} y={0}
+            width={doc.canvas.width} height={doc.canvas.height}
+            opacity={doc.canvas.background.opacity ?? 1}
+            preserveAspectRatio={
+              doc.canvas.background.fit === "stretch" ? "none"
+              : doc.canvas.background.fit === "cover" ? "xMidYMid slice"
+              : "xMidYMid meet"
+            }
+          />
+        )}
+
         {/* pipes */}
         {orderedPipes.map((pipe) => {
           const from = doc.elements.find((e) => e.id === pipe.fromEl);
