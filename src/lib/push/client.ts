@@ -75,6 +75,7 @@ export async function enablePushNotifications(rotulo?: string): Promise<{ ok: bo
   const { error } = await supabase.from("push_devices").upsert(
     {
       user_id: u.user.id,
+      owner_id: u.user.id,
       fcm_token: token,
       plataforma: detectPlatform(),
       rotulo: rotulo || `${detectPlatform()} • ${new Date().toLocaleDateString("pt-BR")}`,
