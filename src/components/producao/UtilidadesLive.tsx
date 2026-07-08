@@ -146,9 +146,27 @@ export function UtilidadesLive({ equipamentoId }: { equipamentoId: string }) {
                 ) : (
                   <div className="mt-2 text-xs text-muted-foreground">Sem tags monitoradas.</div>
                 )}
+                <div className="mt-2 border-t pt-2">
+                  <Button
+                    type="button" variant="ghost" size="sm"
+                    className="h-7 w-full justify-between px-2 text-xs"
+                    onClick={() => setOpenScada((s) => ({ ...s, [u.id]: !s[u.id] }))}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <Workflow className="h-3.5 w-3.5" /> Supervisório
+                    </span>
+                    {openScada[u.id] ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  </Button>
+                  {openScada[u.id] && (
+                    <div className="mt-2">
+                      <ScadaViewer equipamentoId={u.id} />
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
+
         </div>
       </CardContent>
     </Card>
