@@ -17,6 +17,12 @@ function isStandaloneApp(): boolean {
   return window.matchMedia?.("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
 }
 
+function isLovablePreviewHost(): boolean {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname;
+  return host.startsWith("id-preview--") || host.startsWith("preview--") || host.endsWith(".lovableproject.com") || host.endsWith(".lovableproject-dev.com") || host.endsWith(".beta.lovable.dev");
+}
+
 async function getApp(): Promise<{ app: FirebaseApp; vapidKey: string }> {
   if (!appPromise) {
     appPromise = (async () => {
@@ -33,6 +39,7 @@ async function getApp(): Promise<{ app: FirebaseApp; vapidKey: string }> {
 export async function isPushSupported(): Promise<boolean> {
   if (typeof window === "undefined") return false;
   if (!("serviceWorker" in navigator) || !("Notification" in window)) return false;
+  if (isLovablePreviewHost()) return false;
   if (isIosDevice() && !isStandaloneApp()) return false;
   try {
     return await isSupported();
@@ -48,7 +55,8 @@ export async function getMessagingInstance(): Promise<Messaging> {
 
 async function registerServiceWorker(): Promise<ServiceWorkerRegistration> {
   const existing = await navigator.serviceWorker.getRegistration("/");
-  if (existing) return existing;
+  const scriptUrl = existing?.active?.scriptURL ?? existing?.waiting?.scriptURL ?? existing?.installing?.scriptURL ?? "";
+  if (existing && scriptUrl.endsWith("/firebase-messaging-sw.js")) return existing;
   const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
   await navigator.serviceWorker.ready;
   return registration;
@@ -67,6 +75,7 @@ function detectPlatform(): string {
 export async function enablePushNotifications(rotulo?: string): Promise<{ ok: boolean; token?: string; reason?: string }> {
   try {
     if (typeof window === "undefined") return { ok: false, reason: "unsupported" };
+    if (isLovablePreviewHost()) return { ok: false, reason: "preview_unavailable" };
     if (!("serviceWorker" in navigator) || !("Notification" in window) || !("PushManager" in window)) {
       return { ok: false, reason: "unsupported" };
     }
@@ -86,7 +95,7 @@ export async function enablePushNotifications(rotulo?: string): Promise<{ ok: bo
     const messaging = await getMessagingInstance();
 
     const token = await getToken(messaging, {
-      vapidKey,
+      ...(vapidKey.length >= 80 ? { vapidKey } : {}),
       serviceWorkerRegistration: registration,
     });
     if (!token) return { ok: false, reason: "no_token" };
