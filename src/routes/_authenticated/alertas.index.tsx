@@ -787,7 +787,42 @@ function AlertasPage() {
                 </div>
               </div>
             )}
+
+            {form.notificar_push && (
+              <div className="grid gap-3 rounded-md border border-primary/30 bg-primary/5 p-3">
+                <Label>Destinatários de push ({(form.push_recipients ?? []).length} selecionado{(form.push_recipients ?? []).length === 1 ? "" : "s"})</Label>
+                {users.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Nenhum usuário disponível.</p>
+                ) : (
+                  <div className="max-h-40 space-y-1 overflow-auto rounded border border-border bg-background p-2">
+                    {users.map((u) => {
+                      const selected = (form.push_recipients ?? []).includes(u.id);
+                      return (
+                        <label key={u.id} className="flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-sm hover:bg-muted/50">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 accent-primary"
+                            checked={selected}
+                            onChange={() => {
+                              const cur = form.push_recipients ?? [];
+                              setForm({
+                                ...form,
+                                push_recipients: selected ? cur.filter((x) => x !== u.id) : [...cur, u.id],
+                              });
+                            }}
+                          />
+                          <span className="flex-1 truncate">{u.nome || u.email}</span>
+                          <span className="truncate text-xs text-muted-foreground">{u.email}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">O push chega em todos os dispositivos que o usuário ativou nas Configurações.</p>
+              </div>
+            )}
           </div>
+
 
           <DialogFooter className="px-6 py-4 border-t shrink-0">
             <Button variant="ghost" onClick={() => setOpen(false)}>Cancelar</Button>
