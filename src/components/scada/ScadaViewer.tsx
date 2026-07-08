@@ -17,7 +17,8 @@ export function ScadaViewer({ equipamentoId }: { equipamentoId: string }) {
   });
   if (q.isLoading || !q.data?.pfd_graph) return null;
   const doc = migrateLegacy(q.data.pfd_graph);
-  if (doc.elements.length === 0) return null;
+  if (doc.elements.length === 0 && !doc.canvas.background?.dataUrl) return null;
+
   return (
     <Card className="mb-4">
       <CardHeader className="pb-2">
