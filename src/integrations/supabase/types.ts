@@ -30,12 +30,12 @@ export type Database = {
           min_val: number | null
           nome: string
           notificar_email: boolean
-          notificar_sms: boolean
+          notificar_push: boolean
           owner_id: string
           parametro_id: string | null
           processo_id: string | null
+          push_recipients: string[]
           severidade: string
-          sms_recipients: string[]
           stale_minutes: number | null
           tag_nome: string | null
           tempo_limite_minutos: number | null
@@ -57,12 +57,12 @@ export type Database = {
           min_val?: number | null
           nome: string
           notificar_email?: boolean
-          notificar_sms?: boolean
+          notificar_push?: boolean
           owner_id: string
           parametro_id?: string | null
           processo_id?: string | null
+          push_recipients?: string[]
           severidade?: string
-          sms_recipients?: string[]
           stale_minutes?: number | null
           tag_nome?: string | null
           tempo_limite_minutos?: number | null
@@ -84,12 +84,12 @@ export type Database = {
           min_val?: number | null
           nome?: string
           notificar_email?: boolean
-          notificar_sms?: boolean
+          notificar_push?: boolean
           owner_id?: string
           parametro_id?: string | null
           processo_id?: string | null
+          push_recipients?: string[]
           severidade?: string
-          sms_recipients?: string[]
           stale_minutes?: number | null
           tag_nome?: string | null
           tempo_limite_minutos?: number | null
@@ -1864,6 +1864,90 @@ export type Database = {
         }
         Relationships: []
       }
+      push_devices: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          fcm_token: string
+          id: string
+          owner_id: string
+          plataforma: string
+          rotulo: string
+          ultima_notificacao_em: string | null
+          updated_at: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          fcm_token: string
+          id?: string
+          owner_id: string
+          plataforma?: string
+          rotulo: string
+          ultima_notificacao_em?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          fcm_token?: string
+          id?: string
+          owner_id?: string
+          plataforma?: string
+          rotulo?: string
+          ultima_notificacao_em?: string | null
+          updated_at?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      push_send_log: {
+        Row: {
+          alerta_id: string | null
+          corpo: string
+          created_at: string
+          device_id: string | null
+          disparo_id: string | null
+          erro: string | null
+          id: string
+          owner_id: string
+          provider_message_id: string | null
+          status: string
+          titulo: string
+        }
+        Insert: {
+          alerta_id?: string | null
+          corpo: string
+          created_at?: string
+          device_id?: string | null
+          disparo_id?: string | null
+          erro?: string | null
+          id?: string
+          owner_id: string
+          provider_message_id?: string | null
+          status?: string
+          titulo: string
+        }
+        Update: {
+          alerta_id?: string | null
+          corpo?: string
+          created_at?: string
+          device_id?: string | null
+          disparo_id?: string | null
+          erro?: string | null
+          id?: string
+          owner_id?: string
+          provider_message_id?: string | null
+          status?: string
+          titulo?: string
+        }
+        Relationships: []
+      }
       relatorio_turno_eventos: {
         Row: {
           categoria: string
@@ -2142,81 +2226,6 @@ export type Database = {
           severidade?: string
           timezone?: string
           updated_at?: string
-        }
-        Relationships: []
-      }
-      sms_recipients: {
-        Row: {
-          ativo: boolean
-          created_at: string
-          created_by: string | null
-          id: string
-          nome: string
-          observacao: string | null
-          owner_id: string
-          telefone: string
-          updated_at: string
-        }
-        Insert: {
-          ativo?: boolean
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          nome: string
-          observacao?: string | null
-          owner_id: string
-          telefone: string
-          updated_at?: string
-        }
-        Update: {
-          ativo?: boolean
-          created_at?: string
-          created_by?: string | null
-          id?: string
-          nome?: string
-          observacao?: string | null
-          owner_id?: string
-          telefone?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      sms_send_log: {
-        Row: {
-          alerta_id: string | null
-          created_at: string
-          disparo_id: string | null
-          erro: string | null
-          id: string
-          mensagem: string
-          owner_id: string
-          provider_message_id: string | null
-          status: string
-          telefone: string
-        }
-        Insert: {
-          alerta_id?: string | null
-          created_at?: string
-          disparo_id?: string | null
-          erro?: string | null
-          id?: string
-          mensagem: string
-          owner_id: string
-          provider_message_id?: string | null
-          status?: string
-          telefone: string
-        }
-        Update: {
-          alerta_id?: string | null
-          created_at?: string
-          disparo_id?: string | null
-          erro?: string | null
-          id?: string
-          mensagem?: string
-          owner_id?: string
-          provider_message_id?: string | null
-          status?: string
-          telefone?: string
         }
         Relationships: []
       }
