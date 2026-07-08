@@ -1,9 +1,13 @@
 // Exibe as utilidades vinculadas ao equipamento de produção, com status e tags ao vivo.
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Wrench, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Wrench, AlertTriangle, Workflow, ChevronDown, ChevronUp } from "lucide-react";
+import { ScadaViewer } from "@/components/scada/ScadaViewer";
+
 
 type Utilidade = {
   id: string;
