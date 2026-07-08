@@ -37,14 +37,18 @@ async function getApp(): Promise<{ app: FirebaseApp; vapidKey: string }> {
 }
 
 export async function isPushSupported(): Promise<boolean> {
+  return (await getPushSupportStatus()).ok;
+}
+
+export async function getPushSupportStatus(): Promise<{ ok: boolean; reason?: string }> {
   if (typeof window === "undefined") return false;
-  if (!("serviceWorker" in navigator) || !("Notification" in window)) return false;
-  if (isLovablePreviewHost()) return false;
-  if (isIosDevice() && !isStandaloneApp()) return false;
+  if (!("serviceWorker" in navigator) || !("Notification" in window) || !("PushManager" in window)) return { ok: false, reason: "unsupported" };
+  if (isLovablePreviewHost()) return { ok: false, reason: "preview_unavailable" };
+  if (isIosDevice() && !isStandaloneApp()) return { ok: false, reason: "ios_requires_home_screen" };
   try {
-    return await isSupported();
+    return (await isSupported()) ? { ok: true } : { ok: false, reason: "unsupported" };
   } catch {
-    return false;
+    return { ok: false, reason: "unsupported" };
   }
 }
 
