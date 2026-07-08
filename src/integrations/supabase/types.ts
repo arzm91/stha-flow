@@ -30,10 +30,12 @@ export type Database = {
           min_val: number | null
           nome: string
           notificar_email: boolean
+          notificar_sms: boolean
           owner_id: string
           parametro_id: string | null
           processo_id: string | null
           severidade: string
+          sms_recipients: string[]
           stale_minutes: number | null
           tag_nome: string | null
           tempo_limite_minutos: number | null
@@ -55,10 +57,12 @@ export type Database = {
           min_val?: number | null
           nome: string
           notificar_email?: boolean
+          notificar_sms?: boolean
           owner_id: string
           parametro_id?: string | null
           processo_id?: string | null
           severidade?: string
+          sms_recipients?: string[]
           stale_minutes?: number | null
           tag_nome?: string | null
           tempo_limite_minutos?: number | null
@@ -80,10 +84,12 @@ export type Database = {
           min_val?: number | null
           nome?: string
           notificar_email?: boolean
+          notificar_sms?: boolean
           owner_id?: string
           parametro_id?: string | null
           processo_id?: string | null
           severidade?: string
+          sms_recipients?: string[]
           stale_minutes?: number | null
           tag_nome?: string | null
           tempo_limite_minutos?: number | null
@@ -2136,6 +2142,81 @@ export type Database = {
           severidade?: string
           timezone?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      sms_recipients: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          nome: string
+          observacao: string | null
+          owner_id: string
+          telefone: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nome: string
+          observacao?: string | null
+          owner_id: string
+          telefone: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nome?: string
+          observacao?: string | null
+          owner_id?: string
+          telefone?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sms_send_log: {
+        Row: {
+          alerta_id: string | null
+          created_at: string
+          disparo_id: string | null
+          erro: string | null
+          id: string
+          mensagem: string
+          owner_id: string
+          provider_message_id: string | null
+          status: string
+          telefone: string
+        }
+        Insert: {
+          alerta_id?: string | null
+          created_at?: string
+          disparo_id?: string | null
+          erro?: string | null
+          id?: string
+          mensagem: string
+          owner_id: string
+          provider_message_id?: string | null
+          status?: string
+          telefone: string
+        }
+        Update: {
+          alerta_id?: string | null
+          created_at?: string
+          disparo_id?: string | null
+          erro?: string | null
+          id?: string
+          mensagem?: string
+          owner_id?: string
+          provider_message_id?: string | null
+          status?: string
+          telefone?: string
         }
         Relationships: []
       }
