@@ -50,6 +50,8 @@ type Alerta = {
   notificar_email: boolean;
   email_recipients: string[] | null;
   email_template_key: string | null;
+  notificar_push: boolean;
+  push_recipients: string[] | null;
   cooldown_minutes: number;
   last_fired_at: string | null;
 };
@@ -104,6 +106,8 @@ function AlertasPage() {
     notificar_email: false,
     email_recipients: [],
     email_template_key: "alert",
+    notificar_push: false,
+    push_recipients: [],
     cooldown_minutes: 5,
   };
   const [form, setForm] = useState<Partial<Alerta>>(blank);
@@ -236,6 +240,8 @@ function AlertasPage() {
       notificar_email: form.notificar_email ?? false,
       email_recipients: form.notificar_email ? (form.email_recipients ?? []) : [],
       email_template_key: form.email_template_key || "alert",
+      notificar_push: form.notificar_push ?? false,
+      push_recipients: form.notificar_push ? (form.push_recipients ?? []) : [],
       cooldown_minutes: form.cooldown_minutes ?? 5,
     };
 
@@ -719,6 +725,13 @@ function AlertasPage() {
                   <Switch
                     checked={form.notificar_email ?? false}
                     onCheckedChange={(v) => setForm({ ...form, notificar_email: v })}
+                  />
+                </div>
+                <div className="flex items-center justify-between rounded-md border p-2">
+                  <span className="text-sm">Notificar por push (celular)</span>
+                  <Switch
+                    checked={form.notificar_push ?? false}
+                    onCheckedChange={(v) => setForm({ ...form, notificar_push: v })}
                   />
                 </div>
               </div>
