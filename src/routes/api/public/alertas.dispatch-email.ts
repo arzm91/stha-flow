@@ -1,6 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { createClient } from '@supabase/supabase-js'
 import { enqueueTransactionalEmail } from '@/lib/email/enqueue.server'
+import { sendFcmMessage } from '@/lib/push/fcm.server'
 
 type Body = {
   disparo_id?: string
@@ -98,7 +99,7 @@ export const Route = createFileRoute('/api/public/alertas/dispatch-email')({
         }
 
         const ids = Array.isArray(body.recipient_user_ids) ? body.recipient_user_ids : []
-        if (ids.length === 0) return Response.json({ ok: true, sent: 0 })
+        if (ids.length === 0) return Response.json({ ok: true, sent: 0, push_sent: 0 })
 
         const admin = createClient(supabaseUrl, serviceKey, {
           auth: { persistSession: false, autoRefreshToken: false },
@@ -132,7 +133,68 @@ export const Route = createFileRoute('/api/public/alertas/dispatch-email')({
           else console.warn('dispatch-email enqueue failed', { email, reason: result.reason })
         }
 
-        return Response.json({ ok: true, sent, total: emails.length })
+        // Push notifications — only if alert has notificar_push=true and push_recipients set
+        let pushSent = 0
+        try {
+          if (body.alerta_id && process.env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+            const { data: alerta } = await admin
+              .from('alertas')
+              .select('notificar_push, push_recipients, nome, severidade, owner_id')
+              .eq('id', body.alerta_id)
+              .maybeSingle()
+
+            const pushIds = (alerta?.push_recipients ?? []) as string[]
+            if (alerta?.notificar_push && pushIds.length > 0) {
+              const { data: devices } = await admin
+                .from('push_devices')
+                .select('id, fcm_token, user_id')
+                .in('user_id', pushIds)
+                .eq('ativo', true)
+
+              const title = `[${(alerta.severidade ?? 'info').toUpperCase()}] ${body.alerta_nome ?? alerta.nome ?? 'Alerta STHApc'}`
+              const msgBody = body.mensagem ?? ''
+              const url = 'https://sthapc.cloud/alertas'
+
+              for (const dev of devices ?? []) {
+                const res = await sendFcmMessage({
+                  token: dev.fcm_token,
+                  title,
+                  body: msgBody,
+                  url,
+                  data: {
+                    alerta_id: String(body.alerta_id),
+                    disparo_id: String(body.disparo_id ?? ''),
+                  },
+                })
+                await admin.from('push_send_log').insert({
+                  owner_id: alerta.owner_id,
+                  device_id: dev.id,
+                  alerta_id: body.alerta_id,
+                  disparo_id: body.disparo_id ?? null,
+                  titulo: title,
+                  corpo: msgBody,
+                  status: res.ok ? 'sent' : 'error',
+                  provider_message_id: res.ok ? res.messageId : null,
+                  erro: res.ok ? null : res.error.slice(0, 500),
+                })
+                if (res.ok) {
+                  pushSent += 1
+                  await admin
+                    .from('push_devices')
+                    .update({ ultima_notificacao_em: new Date().toISOString() })
+                    .eq('id', dev.id)
+                } else if (res.status === 404 || res.status === 400) {
+                  // Token invalid/unregistered → deactivate
+                  await admin.from('push_devices').update({ ativo: false }).eq('id', dev.id)
+                }
+              }
+            }
+          }
+        } catch (err) {
+          console.error('dispatch-email: push send failed', err)
+        }
+
+        return Response.json({ ok: true, sent, total: emails.length, push_sent: pushSent })
       },
     },
   },
