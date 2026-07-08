@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CrudTable, type FieldDef } from "@/components/CrudTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { History } from "lucide-react";
+import { History, Workflow } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/cadastros/utilidades")({
   head: pageHead({ title: "Cadastros · Utilidades — STHApc", description: "Acesse e gerencie Cadastros · Utilidades no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/cadastros/utilidades" }),
@@ -89,10 +89,16 @@ function UtilidadesPage() {
         { key: "ativo", label: "Ativo", render: (r) => (r.ativo ? "Sim" : "Não") },
       ]}
       extraActions={(r) => (
-        <Button asChild variant="ghost" size="icon" title="Histórico">
-          <Link to="/cadastros/equipamentos/$id" params={{ id: r.id }}><History className="h-4 w-4" /></Link>
-        </Button>
+        <>
+          <Button asChild variant="ghost" size="icon" title="Diagrama PFD / Supervisório">
+            <Link to="/cadastros/equipamentos-pfd/$id" params={{ id: r.id }}><Workflow className="h-4 w-4" /></Link>
+          </Button>
+          <Button asChild variant="ghost" size="icon" title="Histórico">
+            <Link to="/cadastros/equipamentos/$id" params={{ id: r.id }}><History className="h-4 w-4" /></Link>
+          </Button>
+        </>
       )}
+
     />
   );
 }

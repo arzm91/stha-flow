@@ -115,9 +115,18 @@ export type ScadaLayer = {
   z: number;
 };
 
+export type ScadaBackground = {
+  // data URL (image/png;base64,... ou image/svg+xml;base64,...) — embutido no doc pra
+  // funcionar sem depender de storage. Nome original é só pra exibir na UI.
+  dataUrl: string;
+  filename?: string;
+  opacity: number;   // 0..1
+  fit: "contain" | "cover" | "stretch";
+};
+
 export type ScadaDoc = {
   version: 2;
-  canvas: { width: number; height: number; grid: number; bg: string };
+  canvas: { width: number; height: number; grid: number; bg: string; background?: ScadaBackground };
   layers: ScadaLayer[];
   elements: ScadaElement[];
   pipes: ScadaPipe[];
@@ -127,6 +136,7 @@ export function emptyDoc(): ScadaDoc {
   return {
     version: 2,
     canvas: { width: 2000, height: 1400, grid: 10, bg: "#0b1220" },
+
     layers: [
       { id: "l-processo", name: "Processo", visible: true, z: 1 },
       { id: "l-instrumentos", name: "Instrumentação", visible: true, z: 2 },

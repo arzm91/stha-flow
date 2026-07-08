@@ -1,9 +1,13 @@
 // Exibe as utilidades vinculadas ao equipamento de produção, com status e tags ao vivo.
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Wrench, AlertTriangle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Wrench, AlertTriangle, Workflow, ChevronDown, ChevronUp } from "lucide-react";
+import { ScadaViewer } from "@/components/scada/ScadaViewer";
+
 
 type Utilidade = {
   id: string;
@@ -32,6 +36,8 @@ const statusMap: Record<string, { label: string; cls: string; alert?: boolean }>
 };
 
 export function UtilidadesLive({ equipamentoId }: { equipamentoId: string }) {
+  const [openScada, setOpenScada] = useState<Record<string, boolean>>({});
+
   const equip = useQuery({
     queryKey: ["equip-utilidades-ids", equipamentoId],
     queryFn: async () => {
@@ -140,9 +146,27 @@ export function UtilidadesLive({ equipamentoId }: { equipamentoId: string }) {
                 ) : (
                   <div className="mt-2 text-xs text-muted-foreground">Sem tags monitoradas.</div>
                 )}
+                <div className="mt-2 border-t pt-2">
+                  <Button
+                    type="button" variant="ghost" size="sm"
+                    className="h-7 w-full justify-between px-2 text-xs"
+                    onClick={() => setOpenScada((s) => ({ ...s, [u.id]: !s[u.id] }))}
+                  >
+                    <span className="inline-flex items-center gap-1">
+                      <Workflow className="h-3.5 w-3.5" /> Supervisório
+                    </span>
+                    {openScada[u.id] ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                  </Button>
+                  {openScada[u.id] && (
+                    <div className="mt-2">
+                      <ScadaViewer equipamentoId={u.id} />
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })}
+
         </div>
       </CardContent>
     </Card>

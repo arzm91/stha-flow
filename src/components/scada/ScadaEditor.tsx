@@ -208,10 +208,98 @@ export function ScadaEditor({ doc, onChange, onSave, saving, headerRight }: Scad
 }
 
 function DocPanel({ doc, onChange }: { doc: ScadaDoc; onChange: (d: ScadaDoc) => void }) {
+  const [uploadErr, setUploadErr] = useState<string | null>(null);
+
+  const onUpload = async (file: File) => {
+    setUploadErr(null);
+    const isPdl = /\.pdl$/i.test(file.name);
+    if (isPdl) {
+      setUploadErr("Arquivos .PDL (WinCC) são binários proprietários da Siemens e não podem ser renderizados diretamente. Exporte a tela no WinCC como PNG, JPG ou SVG e faça upload aqui.");
+      return;
+    }
+    const okTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/svg+xml"];
+    if (!okTypes.includes(file.type) && !/\.(png|jpg|jpeg|webp|svg)$/i.test(file.name)) {
+      setUploadErr("Formato não suportado. Use PNG, JPG, WebP ou SVG.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadErr("Arquivo grande demais (máx. 5 MB). Otimize a imagem antes de subir.");
+      return;
+    }
+    const dataUrl = await new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(file);
+    });
+    onChange({
+      ...doc,
+      canvas: {
+        ...doc.canvas,
+        background: {
+          dataUrl,
+          filename: file.name,
+          opacity: doc.canvas.background?.opacity ?? 1,
+          fit: doc.canvas.background?.fit ?? "contain",
+        },
+      },
+    });
+  };
+
+  const bg = doc.canvas.background;
+
   return (
     <div className="space-y-3">
+      <div className="rounded-md border border-dashed p-3">
+        <Label className="text-xs font-medium">Imagem de fundo (WinCC / PFD)</Label>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Exporte a tela do WinCC como PNG/JPG/SVG e suba aqui. Depois posicione instrumentos ISA por cima e vincule às tags ao vivo.
+        </p>
+        <input
+          type="file"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml,.png,.jpg,.jpeg,.webp,.svg,.pdl"
+          className="mt-2 block w-full text-xs file:mr-2 file:rounded file:border-0 file:bg-primary file:px-2 file:py-1 file:text-xs file:text-primary-foreground"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f); e.currentTarget.value = ""; }}
+        />
+        {uploadErr && <p className="mt-2 text-[11px] text-destructive">{uploadErr}</p>}
+        {bg?.dataUrl && (
+          <div className="mt-2 space-y-2">
+            <div className="flex items-center gap-2">
+              <img src={bg.dataUrl} alt="prévia" className="h-12 w-16 rounded border object-contain bg-muted" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[11px]">{bg.filename ?? "fundo.img"}</div>
+                <button
+                  type="button"
+                  className="text-[11px] text-destructive underline"
+                  onClick={() => onChange({ ...doc, canvas: { ...doc.canvas, background: undefined } })}
+                >remover</button>
+              </div>
+            </div>
+            <div>
+              <Label className="text-[11px]">Encaixe</Label>
+              <Select value={bg.fit} onValueChange={(v) => onChange({ ...doc, canvas: { ...doc.canvas, background: { ...bg, fit: v as "contain" | "cover" | "stretch" } } })}>
+                <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="contain">Ajustar (contain)</SelectItem>
+                  <SelectItem value="cover">Cobrir (cover)</SelectItem>
+                  <SelectItem value="stretch">Esticar</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="text-[11px]">Opacidade: {Math.round((bg.opacity ?? 1) * 100)}%</Label>
+              <input
+                type="range" min={0.1} max={1} step={0.05}
+                value={bg.opacity ?? 1}
+                onChange={(e) => onChange({ ...doc, canvas: { ...doc.canvas, background: { ...bg, opacity: Number(e.target.value) } } })}
+                className="w-full"
+              />
+            </div>
+          </div>
+        )}
+      </div>
       <div>
-        <Label className="text-xs">Fundo</Label>
+        <Label className="text-xs">Cor de fundo</Label>
         <Input type="color" value={doc.canvas.bg} onChange={(e) => onChange({ ...doc, canvas: { ...doc.canvas, bg: e.target.value } })} />
       </div>
       <div className="grid grid-cols-2 gap-2">
@@ -243,6 +331,7 @@ function DocPanel({ doc, onChange }: { doc: ScadaDoc; onChange: (d: ScadaDoc) =>
     </div>
   );
 }
+
 
 type ElementPanelProps = {
   el: ScadaElement;
