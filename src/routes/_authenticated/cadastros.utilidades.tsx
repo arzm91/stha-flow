@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CrudTable, type FieldDef } from "@/components/CrudTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { History } from "lucide-react";
+import { History, Workflow } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/cadastros/utilidades")({
   head: pageHead({ title: "Cadastros · Utilidades — STHApc", description: "Acesse e gerencie Cadastros · Utilidades no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/cadastros/utilidades" }),
