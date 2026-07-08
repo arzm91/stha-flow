@@ -41,7 +41,7 @@ export async function isPushSupported(): Promise<boolean> {
 }
 
 export async function getPushSupportStatus(): Promise<{ ok: boolean; reason?: string }> {
-  if (typeof window === "undefined") return false;
+  if (typeof window === "undefined") return { ok: false, reason: "unsupported" };
   if (!("serviceWorker" in navigator) || !("Notification" in window) || !("PushManager" in window)) return { ok: false, reason: "unsupported" };
   if (isLovablePreviewHost()) return { ok: false, reason: "preview_unavailable" };
   if (isIosDevice() && !isStandaloneApp()) return { ok: false, reason: "ios_requires_home_screen" };
