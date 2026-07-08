@@ -7,6 +7,16 @@ import { toast } from "sonner";
 let appPromise: Promise<FirebaseApp> | null = null;
 let cachedVapid: string | null = null;
 
+function isIosDevice(): boolean {
+  if (typeof navigator === "undefined") return false;
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
+function isStandaloneApp(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia?.("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
+}
+
 async function getApp(): Promise<{ app: FirebaseApp; vapidKey: string }> {
   if (!appPromise) {
     appPromise = (async () => {
@@ -23,6 +33,7 @@ async function getApp(): Promise<{ app: FirebaseApp; vapidKey: string }> {
 export async function isPushSupported(): Promise<boolean> {
   if (typeof window === "undefined") return false;
   if (!("serviceWorker" in navigator) || !("Notification" in window)) return false;
+  if (isIosDevice() && !isStandaloneApp()) return false;
   try {
     return await isSupported();
   } catch {
@@ -36,9 +47,11 @@ export async function getMessagingInstance(): Promise<Messaging> {
 }
 
 async function registerServiceWorker(): Promise<ServiceWorkerRegistration> {
-  const existing = await navigator.serviceWorker.getRegistration("/firebase-messaging-sw.js");
+  const existing = await navigator.serviceWorker.getRegistration("/");
   if (existing) return existing;
-  return navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
+  const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js", { scope: "/" });
+  await navigator.serviceWorker.ready;
+  return registration;
 }
 
 function detectPlatform(): string {
@@ -52,48 +65,60 @@ function detectPlatform(): string {
 }
 
 export async function enablePushNotifications(rotulo?: string): Promise<{ ok: boolean; token?: string; reason?: string }> {
-  if (!(await isPushSupported())) return { ok: false, reason: "unsupported" };
+  try {
+    if (typeof window === "undefined") return { ok: false, reason: "unsupported" };
+    if (!("serviceWorker" in navigator) || !("Notification" in window) || !("PushManager" in window)) {
+      return { ok: false, reason: "unsupported" };
+    }
+    if (isIosDevice() && !isStandaloneApp()) return { ok: false, reason: "ios_requires_home_screen" };
 
-  const perm = Notification.permission === "granted"
-    ? "granted"
-    : await Notification.requestPermission();
-  if (perm !== "granted") return { ok: false, reason: "permission_denied" };
+    // On iOS this must happen immediately from the button tap. Do not await
+    // Firebase support checks before asking, or Safari can drop the user gesture.
+    const perm = Notification.permission === "granted"
+      ? "granted"
+      : await Notification.requestPermission();
+    if (perm !== "granted") return { ok: false, reason: "permission_denied" };
 
-  const registration = await registerServiceWorker();
-  const { vapidKey } = await getApp();
-  const messaging = await getMessagingInstance();
+    if (!(await isPushSupported())) return { ok: false, reason: "unsupported" };
 
-  const token = await getToken(messaging, {
-    vapidKey,
-    serviceWorkerRegistration: registration,
-  });
-  if (!token) return { ok: false, reason: "no_token" };
+    const registration = await registerServiceWorker();
+    const { vapidKey } = await getApp();
+    const messaging = await getMessagingInstance();
 
-  const { data: u } = await supabase.auth.getUser();
-  if (!u.user) return { ok: false, reason: "not_authenticated" };
+    const token = await getToken(messaging, {
+      vapidKey,
+      serviceWorkerRegistration: registration,
+    });
+    if (!token) return { ok: false, reason: "no_token" };
 
-  const { error } = await supabase.from("push_devices").upsert(
-    {
-      user_id: u.user.id,
-      owner_id: u.user.id,
-      fcm_token: token,
-      plataforma: detectPlatform(),
-      rotulo: rotulo || `${detectPlatform()} • ${new Date().toLocaleDateString("pt-BR")}`,
-      ativo: true,
-      user_agent: navigator.userAgent.slice(0, 300),
-    },
-    { onConflict: "fcm_token" },
-  );
-  if (error) return { ok: false, reason: error.message };
+    const { data: u } = await supabase.auth.getUser();
+    if (!u.user) return { ok: false, reason: "not_authenticated" };
 
-  // Foreground messages: show toast (SW handles background)
-  onMessage(messaging, (payload) => {
-    const title = payload.notification?.title || payload.data?.title || "STHApc";
-    const body = payload.notification?.body || payload.data?.body || "";
-    toast(title, { description: body });
-  });
+    const { error } = await supabase.from("push_devices").upsert(
+      {
+        user_id: u.user.id,
+        owner_id: u.user.id,
+        fcm_token: token,
+        plataforma: detectPlatform(),
+        rotulo: rotulo || `${detectPlatform()} • ${new Date().toLocaleDateString("pt-BR")}`,
+        ativo: true,
+        user_agent: navigator.userAgent.slice(0, 300),
+      },
+      { onConflict: "fcm_token" },
+    );
+    if (error) return { ok: false, reason: error.message };
 
-  return { ok: true, token };
+    // Foreground messages: show toast (SW handles background)
+    onMessage(messaging, (payload) => {
+      const title = payload.notification?.title || payload.data?.title || "STHApc";
+      const body = payload.notification?.body || payload.data?.body || "";
+      toast(title, { description: body });
+    });
+
+    return { ok: true, token };
+  } catch (error) {
+    return { ok: false, reason: error instanceof Error ? error.message : String(error) };
+  }
 }
 
 export async function disablePushDevice(deviceId: string): Promise<{ ok: boolean; reason?: string }> {

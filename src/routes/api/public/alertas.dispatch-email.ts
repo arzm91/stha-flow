@@ -99,23 +99,25 @@ export const Route = createFileRoute('/api/public/alertas/dispatch-email')({
         }
 
         const ids = Array.isArray(body.recipient_user_ids) ? body.recipient_user_ids : []
-        if (ids.length === 0) return Response.json({ ok: true, sent: 0, push_sent: 0 })
 
         const admin = createClient(supabaseUrl, serviceKey, {
           auth: { persistSession: false, autoRefreshToken: false },
         })
-        const { data: profiles, error: profErr } = await admin
-          .from('profiles')
-          .select('id,email')
-          .in('id', ids)
-        if (profErr) {
-          console.error('dispatch-email: profiles lookup failed', profErr)
-          return Response.json({ error: 'profiles_lookup_failed' }, { status: 500 })
-        }
+        let emails: string[] = []
+        if (ids.length > 0) {
+          const { data: profiles, error: profErr } = await admin
+            .from('profiles')
+            .select('id,email')
+            .in('id', ids)
+          if (profErr) {
+            console.error('dispatch-email: profiles lookup failed', profErr)
+            return Response.json({ error: 'profiles_lookup_failed' }, { status: 500 })
+          }
 
-        const emails = (profiles ?? [])
-          .map((p) => (p as { email: string | null }).email)
-          .filter((e): e is string => Boolean(e && e.includes('@')))
+          emails = (profiles ?? [])
+            .map((p) => (p as { email: string | null }).email)
+            .filter((e): e is string => Boolean(e && e.includes('@')))
+        }
 
         const key = body.template_key || 'alert'
         const templateData = buildTemplateData(key, body)

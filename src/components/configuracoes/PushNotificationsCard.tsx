@@ -49,6 +49,7 @@ export function PushNotificationsCard() {
     setBusy(false);
     if (!res.ok) {
       if (res.reason === "unsupported") toast.error("Este navegador não suporta notificações push");
+      else if (res.reason === "ios_requires_home_screen") toast.error("No iPhone, abra o STHApc pelo ícone salvo na Tela de Início para ativar o push.");
       else if (res.reason === "permission_denied") toast.error("Permissão negada. Habilite nas configurações do navegador.");
       else toast.error(`Falha ao ativar: ${res.reason ?? "erro desconhecido"}`);
       return;
@@ -81,7 +82,7 @@ export function PushNotificationsCard() {
       <CardContent className="space-y-4">
         {supported === false && (
           <p className="text-sm text-muted-foreground">
-            Seu navegador não suporta notificações push. Em iPhone, adicione o site à tela de início para ativar.
+            Seu navegador não suporta notificações push nesta tela. Em iPhone, abra o STHApc pelo ícone salvo na Tela de Início; o Safari normal não libera push.
           </p>
         )}
         {supported !== false && (
