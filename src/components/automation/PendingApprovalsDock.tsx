@@ -44,7 +44,21 @@ export function PendingApprovalsDock() {
       .eq("status", "pending_approval")
       .order("created_at", { ascending: false })
       .limit(20);
-    setRuns(((data as unknown) as Run[]) ?? []);
+    const rows = ((data as unknown) as Run[]) ?? [];
+    setRuns(rows);
+    // Auto-aprova as pendentes marcadas como "finalizar sem aprovação".
+    for (const r of rows) {
+      if (autoRunning.current.has(r.id)) continue;
+      if (!runIsFullyAutomatic(r)) continue;
+      autoRunning.current.add(r.id);
+      approve({ data: { runId: r.id } })
+        .then((res) => {
+          if (res.ok) toast.success(`Automação "${r.flow?.nome ?? "Fluxo"}" finalizada`);
+          else toast.error(`Automação "${r.flow?.nome ?? "Fluxo"}" falhou em parte`);
+        })
+        .catch((e) => toast.error(e instanceof Error ? e.message : "Falha ao finalizar automação"))
+        .finally(() => autoRunning.current.delete(r.id));
+    }
   }
 
   async function autoRunApproved() {
@@ -96,12 +110,21 @@ export function PendingApprovalsDock() {
   const [dialogNumero, setDialogNumero] = useState("");
   const [dialogProdutoId, setDialogProdutoId] = useState<string | null>(null);
 
-  function runNeedsApprovalDialog(r: Run): boolean {
+  function finalizarNodes(r: Run): ActionNode[] {
     const pa = r.planned_actions;
     const nodesArr = Array.isArray(pa) ? pa : (pa?.nodes ?? []);
-    return nodesArr.some(
-      (n) => n.type === "action" && (n.data?.config?.type === "finalizar_op"),
+    return nodesArr.filter(
+      (n) => n.type === "action" && n.data?.config?.type === "finalizar_op",
     );
+  }
+  function runNeedsApprovalDialog(r: Run): boolean {
+    const fins = finalizarNodes(r);
+    // Se todos finalizar_op forem "sem_aprovacao", não abre diálogo.
+    return fins.length > 0 && fins.some((n) => n.data?.config?.sem_aprovacao !== true);
+  }
+  function runIsFullyAutomatic(r: Run): boolean {
+    const fins = finalizarNodes(r);
+    return fins.length > 0 && fins.every((n) => n.data?.config?.sem_aprovacao === true);
   }
 
   async function openApprovalFor(r: Run) {
@@ -111,13 +134,14 @@ export function PendingApprovalsDock() {
       (n) => n.type === "action" && n.data?.config?.type === "finalizar_op",
     );
     const equipId = (finalAction?.data?.config?.equipamento_id as string) ?? null;
+    const qtdTag = (finalAction?.data?.config?.qtd_produzida_tag as string) ?? "";
     let qtd = 0;
     let numero = "";
     let produtoId: string | null = null;
     if (equipId) {
       const { data: op } = await supabase
         .from("ordens_producao")
-        .select("qtd_planejada, numero, produto_id")
+        .select("qtd_planejada, numero, produto_id, owner_id")
         .eq("equipamento_id", equipId)
         .eq("status", "em_andamento")
         .order("inicio_em", { ascending: false })
@@ -126,6 +150,14 @@ export function PendingApprovalsDock() {
       qtd = Number(op?.qtd_planejada ?? 0);
       numero = op?.numero ?? "";
       produtoId = op?.produto_id ?? null;
+
+      // Se há tag configurada como quantidade produzida, usa esse valor como sugestão.
+      if (qtdTag && op?.owner_id) {
+        const { data: tag } = await supabase
+          .from("tags_live").select("valor_num")
+          .eq("owner_id", op.owner_id).eq("nome", qtdTag).maybeSingle();
+        if (tag?.valor_num != null) qtd = Number(tag.valor_num);
+      }
     }
     setDialogQtd(qtd);
     setDialogNumero(numero);

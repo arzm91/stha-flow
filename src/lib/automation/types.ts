@@ -51,4 +51,6 @@ export const COMPARADORES = [
   { value: "eq", label: "igual (=)" },
   { value: "neq", label: "diferente (≠)" },
   { value: "between", label: "está entre (mín ≤ x ≤ máx)" },
+  { value: "cross_up", label: "cruzou para cima (subida atingiu)" },
+  { value: "cross_down", label: "cruzou para baixo (descida atingiu)" },
 ];
