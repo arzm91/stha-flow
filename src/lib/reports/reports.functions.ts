@@ -79,6 +79,7 @@ export const updateReport = createServerFn({ method: 'POST' })
     tipo?: string
     theme?: Record<string, any>
     canvas?: Record<string, any>
+    workbook?: Record<string, any>
     page_size?: string
     orientation?: string
     equipamento_ids?: string[]
