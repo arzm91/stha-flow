@@ -232,6 +232,11 @@ function ReportEditorPage() {
           setTimeout(() => editorRef.current?.recalcSthaAll(), 0)
         }}
       />
+      <InsertChartDialog
+        open={chartOpen}
+        onOpenChange={setChartOpen}
+        onInsert={(chart) => { addObject(chart); setTimeout(() => editorRef.current?.recalcSthaAll(), 0) }}
+      />
     </div>
   )
 }
