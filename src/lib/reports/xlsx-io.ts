@@ -1,4 +1,5 @@
 import ExcelJS from 'exceljs'
+import * as XLSX from 'xlsx'
 import type { Workbook, Sheet, CellStyle } from './spreadsheet-types'
 import { emptySheet, DEFAULT_ROWS, DEFAULT_COLS } from './spreadsheet-types'
 
@@ -17,22 +18,99 @@ function hexFromArgb(argb?: string): string | undefined {
 
 const MAX_ROWS = 2000
 const MAX_COLS = 100
+const MAX_SHEETS = 8
+
+function safeSheetName(rawName: string | undefined, idx: number, usedNames: Set<string>): string {
+  const baseName = rawName || `Planilha${idx}`
+  const safeName = baseName.replace(/[\\/?*[\]:'!]/g, ' ').trim().slice(0, 31) || `Planilha${idx}`
+  let dedup = safeName
+  let n = 2
+  while (usedNames.has(dedup)) dedup = `${safeName} (${n++})`.slice(0, 31)
+  usedNames.add(dedup)
+  return dedup
+}
+
+function cellValueFromXlsx(cell: XLSX.CellObject | undefined): string | number | null {
+  if (!cell) return null
+  if (cell.f) return `=${cell.f}`
+  const v = cell.v as unknown
+  if (v == null) return null
+  if (v instanceof Date) return v.toISOString()
+  if (typeof v === 'number' || typeof v === 'string') return v
+  if (typeof v === 'boolean') return v ? 'TRUE' : 'FALSE'
+  return String(v)
+}
+
+function importWithSheetJs(buf: ArrayBuffer): Workbook {
+  const parsed = XLSX.read(buf, {
+    type: 'array',
+    sheetRows: MAX_ROWS,
+    cellDates: true,
+    cellFormula: true,
+    cellNF: true,
+    cellStyles: false,
+  })
+  const sheets: Sheet[] = []
+  const usedNames = new Set<string>()
+  parsed.SheetNames.slice(0, MAX_SHEETS).forEach((sheetName, index) => {
+    const ws = parsed.Sheets[sheetName]
+    const safeName = safeSheetName(sheetName, index + 1, usedNames)
+    const sheet = emptySheet(`s${index + 1}`, safeName)
+    const range = ws?.['!ref'] ? XLSX.utils.decode_range(ws['!ref']) : { s: { r: 0, c: 0 }, e: { r: 0, c: 0 } }
+    const maxRow = Math.max(DEFAULT_ROWS, Math.min(MAX_ROWS, range.e.r + 1))
+    const maxCol = Math.max(DEFAULT_COLS, Math.min(MAX_COLS, range.e.c + 1))
+
+    while (sheet.data.length < maxRow) sheet.data.push(Array.from({ length: maxCol }, () => null))
+    for (const row of sheet.data) while (row.length < maxCol) row.push(null)
+
+    for (let r = 0; r < maxRow; r++) {
+      for (let c = 0; c < maxCol; c++) {
+        const cell = ws?.[XLSX.utils.encode_cell({ r, c })]
+        const value = cellValueFromXlsx(cell)
+        if (value != null) sheet.data[r][c] = value
+        if (cell?.z) sheet.styles[`${r},${c}`] = { numberFormat: cell.z } as CellStyle
+      }
+    }
+
+    const cols = ws?.['!cols'] ?? []
+    cols.slice(0, maxCol).forEach((col, i) => {
+      const width = col?.wpx ?? (col?.wch ? Math.round(col.wch * 7) : undefined)
+      if (width) sheet.colWidths[i] = width
+    })
+    const rows = ws?.['!rows'] ?? []
+    rows.slice(0, maxRow).forEach((row, i) => {
+      const height = row?.hpx ?? row?.hpt
+      if (height) sheet.rowHeights[i] = height
+    })
+    for (const merge of ws?.['!merges'] ?? []) {
+      if (merge.s.r < 0 || merge.s.c < 0 || merge.e.r >= maxRow || merge.e.c >= maxCol) continue
+      sheet.mergeCells.push({
+        row: merge.s.r,
+        col: merge.s.c,
+        rowspan: merge.e.r - merge.s.r + 1,
+        colspan: merge.e.c - merge.s.c + 1,
+      })
+    }
+
+    sheets.push(sheet)
+  })
+  if (!sheets.length) sheets.push(emptySheet())
+  return { sheets, activeSheetId: sheets[0].id }
+}
 
 /** Read .xlsx into internal Workbook, preserving values, formulas and basic styles. */
 export async function importXlsx(file: File): Promise<Workbook> {
-  const wb = new ExcelJS.Workbook()
   const buf = await file.arrayBuffer()
+  const ext = file.name.split('.').pop()?.toLowerCase()
+  if (ext === 'xls' || ext === 'xlsx') return importWithSheetJs(buf)
+
+  const wb = new ExcelJS.Workbook()
   await wb.xlsx.load(buf)
   const sheets: Sheet[] = []
   const usedNames = new Set<string>()
   wb.eachSheet((ws, idx) => {
-    const rawName = ws.name || `Planilha${idx}`
-    let safeName = rawName.replace(/[\\/?*[\]:'!]/g, ' ').trim().slice(0, 31) || `Planilha${idx}`
-    let dedup = safeName
-    let n = 2
-    while (usedNames.has(dedup)) dedup = `${safeName} (${n++})`.slice(0, 31)
-    usedNames.add(dedup)
-    const sheet = emptySheet(`s${idx}`, dedup)
+    if (idx > MAX_SHEETS) return
+    const sheet = emptySheet(`s${idx}`, safeSheetName(ws.name, idx, usedNames))
     const rc = Math.max(1, Math.min(Number(ws.rowCount) || 0, MAX_ROWS))
     const cc0 = Math.max(1, Math.min(Number(ws.columnCount) || 0, MAX_COLS))
     const maxRow = Math.max(rc, DEFAULT_ROWS)
