@@ -43,10 +43,10 @@ export async function importXlsx(file: File): Promise<Workbook> {
           if (v.richText) value = v.richText.map((t: any) => t.text).join('')
           else if (v.text) value = v.text
           else if (v.result != null) value = v.result
-          else if (v && typeof (v as any).getTime === 'function') value = (v as Date).toISOString()
+          else if (v && typeof (v as any).getTime === 'function') value = (v as unknown as Date).toISOString()
           else value = String(cell.value)
-        } else if ((cell.value as any) instanceof Date) {
-          value = (cell.value as Date).toISOString()
+        } else if ((cell.value as unknown) instanceof Date) {
+          value = (cell.value as unknown as Date).toISOString()
         } else {
           value = cell.value as any
         }
