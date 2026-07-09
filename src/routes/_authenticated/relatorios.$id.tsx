@@ -1,29 +1,28 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router'
 import { pageHead } from '@/lib/seo'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, lazy, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
 import { getReport, updateReport } from '@/lib/reports/reports.functions'
-import { supabase } from '@/integrations/supabase/client'
-import { useEditorStore } from '@/lib/reports/store'
-import { PAGE_SIZES } from '@/lib/reports/types'
-import type { PageSizeKey } from '@/lib/reports/types'
-import { ReportScopeProvider, type ReportScope } from '@/lib/reports/scope-context'
-import { ScopePickerDialog } from '@/components/reports/ScopePickerDialog'
-import { BlockPalette } from '@/components/reports/BlockPalette'
-import { PropertiesPanel } from '@/components/reports/PropertiesPanel'
-import { CanvasBlock } from '@/components/reports/CanvasBlock'
+import { normalizeWorkbook, type Workbook, type CellStyle } from '@/lib/reports/spreadsheet-types'
+import { importXlsx, exportXlsx, exportCsv } from '@/lib/reports/xlsx-io'
+import { exportSpreadsheetToPdf } from '@/lib/reports/pdf-export-sheet'
+import { InsertSystemDataDialog } from '@/components/reports/InsertSystemDataDialog'
 import { SchedulesDialog } from '@/components/reports/SchedulesDialog'
-import { exportCanvasToPdf, exportTablesToCsv } from '@/lib/reports/export'
+import type { SpreadsheetEditorHandle } from '@/components/reports/SpreadsheetEditor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Badge } from '@/components/ui/badge'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { ArrowLeft, Save, FileDown, CalendarClock, Undo2, Redo2, FileSpreadsheet, Target } from 'lucide-react'
+import {
+  ArrowLeft, Save, FileDown, CalendarClock, FileSpreadsheet,
+  Upload, RefreshCw, Bold, Italic, Underline as UnderlineIcon,
+  AlignLeft, AlignCenter, AlignRight, Plus, Database,
+} from 'lucide-react'
 import { toast } from 'sonner'
 
+const SpreadsheetEditor = lazy(() => import('@/components/reports/SpreadsheetEditor').then((m) => ({ default: m.SpreadsheetEditor })))
+
 export const Route = createFileRoute('/_authenticated/relatorios/$id')({
-  head: pageHead({ title: 'Editor de Relatório — STHApc', description: 'Editor visual de relatórios', path: '/relatorios' }),
+  head: pageHead({ title: 'Editor de Relatório — STHApc', description: 'Editor em planilha de relatórios', path: '/relatorios' }),
   component: ReportEditorPage,
 })
 
@@ -35,152 +34,136 @@ function ReportEditorPage() {
   const updateFn = useServerFn(updateReport)
 
   const { data: report, isLoading } = useQuery({
-    queryKey: ['report', id],
-    queryFn: () => getFn({ data: { id } }),
+    queryKey: ['report', id], queryFn: () => getFn({ data: { id } }),
   })
 
-  const setCanvas = useEditorStore((s) => s.setCanvas)
-  const setTheme = useEditorStore((s) => s.setTheme)
-  const canvas = useEditorStore((s) => s.canvas)
-  const theme = useEditorStore((s) => s.theme)
-  const undo = useEditorStore((s) => s.undo)
-  const redo = useEditorStore((s) => s.redo)
-  const select = useEditorStore((s) => s.select)
-
   const [nome, setNome] = useState('')
-  const [pageSize, setPageSize] = useState<PageSizeKey>('A4')
-  const [orientation, setOrientation] = useState<'portrait' | 'landscape'>('portrait')
+  const [workbook, setWorkbook] = useState<Workbook | null>(null)
   const [schedulesOpen, setSchedulesOpen] = useState(false)
-  const [scopeOpen, setScopeOpen] = useState(false)
-  const [scope, setScope] = useState<ReportScope>({ equipamentoIds: [], produtoIds: [], tanqueIds: [], analiseIds: [] })
-  const [ownerId, setOwnerId] = useState<string>('')
-  const [userName, setUserName] = useState<string>('')
-  const canvasRef = useRef<HTMLDivElement>(null)
+  const [insertOpen, setInsertOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const editorRef = useRef<SpreadsheetEditorHandle>(null)
+  const gridWrapperRef = useRef<HTMLDivElement>(null)
+  const importRef = useRef<HTMLInputElement>(null)
 
+  useEffect(() => { setMounted(true) }, [])
   useEffect(() => {
     if (!report) return
     setNome(report.nome)
-    setPageSize(report.page_size as PageSizeKey)
-    setOrientation(report.orientation)
-    setCanvas(report.canvas, false)
-    setTheme(report.theme)
-    setScope({
-      equipamentoIds: report.equipamento_ids ?? [],
-      produtoIds: report.produto_ids ?? [],
-      tanqueIds: report.tanque_ids ?? [],
-      analiseIds: report.analise_ids ?? [],
-    })
-  }, [report, setCanvas, setTheme])
-
-  useEffect(() => {
-    supabase.auth.getUser().then(async ({ data }) => {
-      if (!data.user) return
-      setUserName(data.user.email ?? '')
-      const { data: prof } = await supabase.from('profiles').select('nome, created_by').eq('id', data.user.id).maybeSingle()
-      setUserName((prof?.nome as string) || data.user.email || '')
-      setOwnerId((prof?.created_by as string) || data.user.id)
-    })
-  }, [])
+    setWorkbook(normalizeWorkbook(report.workbook))
+  }, [report])
 
   const save = useMutation({
-    mutationFn: () => updateFn({ data: {
-      id, nome, canvas, theme, page_size: pageSize, orientation,
-      equipamento_ids: scope.equipamentoIds,
-      produto_ids: scope.produtoIds,
-      tanque_ids: scope.tanqueIds,
-      analise_ids: scope.analiseIds,
-    } }),
+    mutationFn: async () => {
+      const wb = editorRef.current?.getWorkbook() ?? workbook
+      return updateFn({ data: { id, nome, workbook: wb as any } })
+    },
     onSuccess: () => { toast.success('Salvo'); qc.invalidateQueries({ queryKey: ['report', id] }); qc.invalidateQueries({ queryKey: ['reports'] }) },
     onError: (e: any) => toast.error(e.message),
   })
 
-  const dynamicValues: Record<string, string> = {
-    data_hoje: new Date().toLocaleDateString('pt-BR'),
-    hora_agora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-    usuario_nome: userName,
-    empresa_nome: '',
-    relatorio_nome: nome,
+  const doExportXlsx = async () => {
+    const wb = editorRef.current?.getWorkbook() ?? workbook
+    if (!wb) return
+    try { await exportXlsx(wb, nome || 'relatorio'); toast.success('Excel gerado') }
+    catch (e: any) { toast.error(e?.message ?? 'Falha ao exportar') }
+  }
+  const doExportCsv = () => {
+    const wb = editorRef.current?.getWorkbook() ?? workbook
+    if (!wb) return
+    const active = wb.sheets.find((s) => s.id === wb.activeSheetId) ?? wb.sheets[0]
+    exportCsv(active, nome || 'relatorio')
+    toast.success('CSV gerado')
+  }
+  const doExportPdf = async () => {
+    if (!gridWrapperRef.current) return
+    try { await exportSpreadsheetToPdf(gridWrapperRef.current, nome || 'relatorio'); toast.success('PDF gerado') }
+    catch (e: any) { toast.error(e?.message ?? 'Falha ao gerar PDF') }
+  }
+  const doImportXlsx = async (file: File) => {
+    try {
+      const wb = await importXlsx(file)
+      setWorkbook(wb)
+      toast.success('Importado. Salve para persistir.')
+    } catch (e: any) { toast.error(e?.message ?? 'Falha ao importar') }
+    finally { if (importRef.current) importRef.current.value = '' }
   }
 
-  const totalScope = scope.equipamentoIds.length + scope.produtoIds.length + scope.tanqueIds.length + scope.analiseIds.length
-  const size = PAGE_SIZES[pageSize][orientation]
+  const applyStyle = (patch: Partial<CellStyle>) => editorRef.current?.applyStyleToSelection(patch)
 
-  if (isLoading || !report) return <div className="p-6 text-sm text-muted-foreground">Carregando…</div>
+  if (isLoading || !report || !workbook) return <div className="p-6 text-sm text-muted-foreground">Carregando…</div>
 
   return (
-    <ReportScopeProvider scope={scope}>
-      <div className="flex flex-col h-full min-h-0">
-        {/* Toolbar */}
-        <div className="border-b bg-card px-3 py-2 flex items-center gap-2 flex-wrap">
-          <Button variant="ghost" size="sm" onClick={() => navigate({ to: '/relatorios' })}><ArrowLeft className="w-4 h-4" /></Button>
-          <Input value={nome} onChange={(e) => setNome(e.target.value)} className="max-w-xs h-8" placeholder="Nome do relatório" />
-          <Select value={pageSize} onValueChange={(v) => setPageSize(v as PageSizeKey)}>
-            <SelectTrigger className="w-24 h-8"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="A4">A4</SelectItem><SelectItem value="Letter">Letter</SelectItem></SelectContent>
-          </Select>
-          <Select value={orientation} onValueChange={(v) => setOrientation(v as any)}>
-            <SelectTrigger className="w-32 h-8"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="portrait">Retrato</SelectItem><SelectItem value="landscape">Paisagem</SelectItem></SelectContent>
-          </Select>
-          <div className="flex items-center gap-1 ml-2">
-            <input type="color" value={theme.primary} onChange={(e) => setTheme({ ...theme, primary: e.target.value })} className="w-8 h-8 rounded border" title="Cor primária" />
-          </div>
-          <Button variant="outline" size="sm" onClick={() => setScopeOpen(true)}>
-            <Target className="w-4 h-4 mr-1" />Escopo {totalScope > 0 && <Badge variant="secondary" className="ml-1">{totalScope}</Badge>}
-          </Button>
-          <div className="flex-1" />
-          <Button variant="ghost" size="sm" onClick={undo}><Undo2 className="w-4 h-4" /></Button>
-          <Button variant="ghost" size="sm" onClick={redo}><Redo2 className="w-4 h-4" /></Button>
-          <Button variant="outline" size="sm" onClick={() => setSchedulesOpen(true)}><CalendarClock className="w-4 h-4 mr-1" />Agendas</Button>
-          <Button variant="outline" size="sm" onClick={async () => {
-            try {
-              await exportTablesToCsv(canvas, nome || 'relatorio', scope)
-              toast.success('CSV exportado')
-            } catch (e: any) {
-              toast.error(e?.message || 'Falha ao exportar CSV')
-            }
-          }}><FileSpreadsheet className="w-4 h-4 mr-1" />CSV</Button>
-          <Button variant="outline" size="sm" onClick={async () => {
-            if (!canvasRef.current) return
-            try {
-              await exportCanvasToPdf(canvasRef.current, nome || 'relatorio')
-            } catch (e: any) {
-              toast.error(e?.message || 'Falha ao gerar PDF')
-            }
-          }}><FileDown className="w-4 h-4 mr-1" />PDF</Button>
-          <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}><Save className="w-4 h-4 mr-1" />Salvar</Button>
-        </div>
-
-        <div className="flex flex-1 min-h-0">
-          <div className="w-56 border-r overflow-y-auto bg-card"><BlockPalette /></div>
-
-          <div className="flex-1 overflow-auto bg-slate-100 p-8" onClick={() => select(null)}>
-            <div
-              ref={canvasRef}
-              className="mx-auto bg-white shadow-lg relative"
-              style={{ width: size.w, height: size.h, fontFamily: theme.font }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              {canvas.pages[0]?.blocks.map((b) => (
-                <CanvasBlock key={b.id} block={b} dynamicValues={dynamicValues} />
-              ))}
-            </div>
-          </div>
-
-          <div className="w-72 border-l overflow-y-auto bg-card">
-            <PropertiesPanel effectiveOwnerId={ownerId} />
-          </div>
-        </div>
-
-        <SchedulesDialog open={schedulesOpen} onOpenChange={setSchedulesOpen} reportId={id} />
-        <ScopePickerDialog
-          open={scopeOpen}
-          onOpenChange={setScopeOpen}
-          initial={scope}
-          onConfirm={(s) => { setScope(s); toast.success('Escopo atualizado. Salve para persistir.') }}
-          confirmLabel="Aplicar"
-        />
+    <div className="flex flex-col h-full min-h-0">
+      {/* Toolbar principal */}
+      <div className="border-b bg-card px-3 py-2 flex items-center gap-2 flex-wrap">
+        <Button variant="ghost" size="sm" onClick={() => navigate({ to: '/relatorios' })}><ArrowLeft className="w-4 h-4" /></Button>
+        <Input value={nome} onChange={(e) => setNome(e.target.value)} className="max-w-xs h-8" placeholder="Nome do relatório" />
+        <Button variant="outline" size="sm" onClick={() => setInsertOpen(true)}>
+          <Database className="w-4 h-4 mr-1" />Inserir dado do sistema
+        </Button>
+        <Button variant="ghost" size="sm" onClick={() => editorRef.current?.recalcSthaAll()}>
+          <RefreshCw className="w-4 h-4 mr-1" />Recalcular
+        </Button>
+        <div className="flex-1" />
+        <Button variant="outline" size="sm" onClick={() => importRef.current?.click()}><Upload className="w-4 h-4 mr-1" />Importar</Button>
+        <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) doImportXlsx(f) }} />
+        <Button variant="outline" size="sm" onClick={() => setSchedulesOpen(true)}><CalendarClock className="w-4 h-4 mr-1" />Agendas</Button>
+        <Button variant="outline" size="sm" onClick={doExportCsv}><FileSpreadsheet className="w-4 h-4 mr-1" />CSV</Button>
+        <Button variant="outline" size="sm" onClick={doExportXlsx}><FileSpreadsheet className="w-4 h-4 mr-1" />Excel</Button>
+        <Button variant="outline" size="sm" onClick={doExportPdf}><FileDown className="w-4 h-4 mr-1" />PDF</Button>
+        <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}><Save className="w-4 h-4 mr-1" />Salvar</Button>
       </div>
-    </ReportScopeProvider>
+
+      {/* Toolbar de formatação */}
+      <div className="border-b bg-card px-3 py-1 flex items-center gap-1 flex-wrap">
+        <Button variant="ghost" size="sm" title="Negrito" onClick={() => applyStyle({ bold: true })}><Bold className="w-4 h-4" /></Button>
+        <Button variant="ghost" size="sm" title="Itálico" onClick={() => applyStyle({ italic: true })}><Italic className="w-4 h-4" /></Button>
+        <Button variant="ghost" size="sm" title="Sublinhado" onClick={() => applyStyle({ underline: true })}><UnderlineIcon className="w-4 h-4" /></Button>
+        <div className="w-px h-6 bg-border mx-1" />
+        <Button variant="ghost" size="sm" title="Alinhar à esquerda" onClick={() => applyStyle({ align: 'left' })}><AlignLeft className="w-4 h-4" /></Button>
+        <Button variant="ghost" size="sm" title="Centralizar" onClick={() => applyStyle({ align: 'center' })}><AlignCenter className="w-4 h-4" /></Button>
+        <Button variant="ghost" size="sm" title="Alinhar à direita" onClick={() => applyStyle({ align: 'right' })}><AlignRight className="w-4 h-4" /></Button>
+        <div className="w-px h-6 bg-border mx-1" />
+        <label className="flex items-center gap-1 text-xs">
+          <span className="text-muted-foreground">Texto:</span>
+          <input type="color" onChange={(e) => applyStyle({ color: e.target.value })} className="w-6 h-6 rounded border cursor-pointer" defaultValue="#000000" />
+        </label>
+        <label className="flex items-center gap-1 text-xs">
+          <span className="text-muted-foreground">Fundo:</span>
+          <input type="color" onChange={(e) => applyStyle({ bg: e.target.value })} className="w-6 h-6 rounded border cursor-pointer" defaultValue="#ffffff" />
+        </label>
+        <div className="w-px h-6 bg-border mx-1" />
+        <Button variant="ghost" size="sm" onClick={() => applyStyle({ bold: false, italic: false, underline: false, color: undefined, bg: undefined, align: undefined })}>
+          Limpar
+        </Button>
+      </div>
+
+      {/* Editor */}
+      <div className="flex-1 min-h-0 bg-white" ref={gridWrapperRef}>
+        {mounted && (
+          <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Carregando planilha…</div>}>
+            <SpreadsheetEditor
+              ref={editorRef}
+              workbook={workbook}
+              onChange={setWorkbook}
+            />
+          </Suspense>
+        )}
+      </div>
+
+      <SchedulesDialog open={schedulesOpen} onOpenChange={setSchedulesOpen} reportId={id} />
+      <InsertSystemDataDialog
+        open={insertOpen}
+        onOpenChange={setInsertOpen}
+        onInsertFormula={(f) => editorRef.current?.insertAtActive(f)}
+        onInsertValue={async (f) => {
+          // insert formula then resolve — cached value will show
+          editorRef.current?.insertAtActive(f)
+          setTimeout(() => editorRef.current?.recalcSthaAll(), 0)
+        }}
+      />
+    </div>
   )
 }
