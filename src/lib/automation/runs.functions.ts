@@ -335,18 +335,34 @@ async function runActionNode(
   }
 
   if (actionType === "gerar_relatorio") {
-    // Cria registro de aviso com link/contexto para o relatório.
-    // Geração de PDF real fica no front; aqui registramos a solicitação.
-    const titulo = String(cfg.titulo ?? "Relatório gerado");
-    await supabase.from("alertas_disparos").insert({
-      owner_id: ownerId,
-      alerta_nome: titulo,
-      severidade: "info",
-      mensagem: `Relatório "${cfg.tipo ?? "produção"}" solicitado pela automação`,
-      categoria: "aviso",
-      contexto: { tipo: cfg.tipo, escopo: cfg.escopo, ...ctx },
+    const reportId = String(cfg.report_id ?? "").trim();
+    if (!reportId) throw new Error("Selecione um relatório no nó da automação");
+    const formats = Array.isArray(cfg.formats) && cfg.formats.length
+      ? (cfg.formats as string[])
+      : ["xlsx"];
+    const recipient = String(cfg.recipient ?? "").trim();
+    const sendEmail = cfg.send_email === true && recipient.length > 0;
+
+    // Build resolve context from override or from trigger context
+    const equipOverride = String(cfg.equipamento_id_override ?? "").trim();
+    let equipamentoId = equipOverride || (ctx.equipamento_id as string | undefined) || "";
+    const ordemId = (ctx.ordem_id as string | undefined) || "";
+    if (!equipamentoId && ordemId) {
+      const { data: op } = await supabase
+        .from("ordens_producao").select("equipamento_id").eq("id", ordemId).maybeSingle();
+      if (op?.equipamento_id) equipamentoId = op.equipamento_id as string;
+    }
+
+    const { generateReportRunInternal } = await import("@/lib/reports/generate.functions");
+    const res = await generateReportRunInternal(supabase, ownerId, {
+      report_id: reportId,
+      ctx: { equipamento: equipamentoId || undefined, ordem_id: ordemId || undefined },
+      formats,
+      automation_run_id: (ctx.__run_id as string | undefined) ?? null,
+      triggered_by: "automation",
+      recipient_email: sendEmail ? recipient : undefined,
     });
-    return { info: titulo };
+    return { info: `relatório gerado (run ${res.runId.slice(0, 8)})${sendEmail ? ` · e-mail → ${recipient}` : ""}` };
   }
 
   if (actionType === "enviar_email") {
