@@ -2328,7 +2328,7 @@ export type Database = {
           intervalo_segundos?: number
           metodo?: string
           nome: string
-          owner_id?: string
+          owner_id: string
           push_token?: string
           tags_recebidas?: number
           ultima_execucao?: string | null
@@ -2384,7 +2384,7 @@ export type Database = {
           nome: string
           nome_amigavel?: string | null
           origem?: string
-          owner_id?: string
+          owner_id: string
           qualidade?: string | null
           unidade?: string | null
           valor?: string | null
