@@ -322,6 +322,8 @@ async function runActionNode(
         .eq("id", prox.id);
       await supabase.from("equipamentos").update({ status: "ocupado" }).eq("id", equipId);
     }
+    ctx.equipamento_id = equipId;
+    ctx.ordem_id = op.id;
     return { info: `OP ${op.numero} finalizada (${qtdProduzida} ${qtdOrigem}) · ${destinos.length} destino(s) · ${analises.length} análise(s)` };
   }
 
