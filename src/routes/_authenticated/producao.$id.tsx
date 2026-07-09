@@ -1144,6 +1144,7 @@ function FinalizarDialog({
   const [obs, setObs] = useState("");
   const [tanqueId, setTanqueId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [askReport, setAskReport] = useState(false);
   type MatRow = {
     id: string;
     materia_prima_id: string;
@@ -1291,7 +1292,7 @@ function FinalizarDialog({
         toast.error("Falha ao gerar PDF: " + (pdfErr as Error).message);
       }
       setOpen(false);
-      onDone();
+      setAskReport(true);
     } catch (err) {
       toast.error((err as Error).message);
     } finally { setLoading(false); }
