@@ -6,7 +6,7 @@ export const listReports = createServerFn({ method: 'GET' })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from('report_templates')
-      .select('id, nome, descricao, tipo, updated_at, is_system_template, equipamento_ids, produto_ids, manutencao_ids, tanque_ids, analise_ids')
+      .select('id, nome, descricao, tipo, updated_at, is_system_template, equipamento_ids, produto_ids, manutencao_ids, tanque_ids, analise_ids, workbook')
       .order('updated_at', { ascending: false })
     if (error) throw new Error(error.message)
     return (data ?? []) as Array<Record<string, any>>
