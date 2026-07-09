@@ -6,7 +6,7 @@ export const listReports = createServerFn({ method: 'GET' })
   .handler(async ({ context }) => {
     const { data, error } = await context.supabase
       .from('report_templates')
-      .select('id, nome, descricao, tipo, updated_at, is_system_template, equipamento_ids, produto_ids, manutencao_ids, tanque_ids, analise_ids')
+      .select('id, nome, descricao, tipo, updated_at, is_system_template, equipamento_ids, produto_ids, manutencao_ids, tanque_ids, analise_ids, workbook')
       .order('updated_at', { ascending: false })
     if (error) throw new Error(error.message)
     return (data ?? []) as Array<Record<string, any>>
@@ -34,6 +34,7 @@ export const createReport = createServerFn({ method: 'POST' })
     tipo?: string
     theme?: Record<string, any>
     canvas?: Record<string, any>
+    workbook?: Record<string, any>
     page_size?: string
     orientation?: string
     equipamento_ids?: string[]
@@ -43,24 +44,26 @@ export const createReport = createServerFn({ method: 'POST' })
     analise_ids?: string[]
   }) => input)
   .handler(async ({ data, context }) => {
+    const insertRow: any = {
+      owner_id: context.userId,
+      created_by: context.userId,
+      nome: data.nome,
+      descricao: data.descricao ?? null,
+      tipo: data.tipo ?? 'personalizado',
+      theme: data.theme ?? { primary: '#2563eb', font: 'Inter' },
+      canvas: data.canvas ?? { pages: [{ id: 'p1', blocks: [] }] },
+      page_size: data.page_size ?? 'A4',
+      orientation: data.orientation ?? 'portrait',
+      equipamento_ids: data.equipamento_ids ?? [],
+      produto_ids: data.produto_ids ?? [],
+      manutencao_ids: data.manutencao_ids ?? [],
+      tanque_ids: data.tanque_ids ?? [],
+      analise_ids: data.analise_ids ?? [],
+    }
+    if (data.workbook) insertRow.workbook = data.workbook
     const { data: row, error } = await (context.supabase as any)
       .from('report_templates')
-      .insert({
-        owner_id: context.userId,
-        created_by: context.userId,
-        nome: data.nome,
-        descricao: data.descricao ?? null,
-        tipo: data.tipo ?? 'personalizado',
-        theme: data.theme ?? { primary: '#2563eb', font: 'Inter' },
-        canvas: data.canvas ?? { pages: [{ id: 'p1', blocks: [] }] },
-        page_size: data.page_size ?? 'A4',
-        orientation: data.orientation ?? 'portrait',
-        equipamento_ids: data.equipamento_ids ?? [],
-        produto_ids: data.produto_ids ?? [],
-        manutencao_ids: data.manutencao_ids ?? [],
-        tanque_ids: data.tanque_ids ?? [],
-        analise_ids: data.analise_ids ?? [],
-      })
+      .insert(insertRow)
       .select('id')
       .single()
     if (error) throw new Error(error.message)
@@ -76,6 +79,7 @@ export const updateReport = createServerFn({ method: 'POST' })
     tipo?: string
     theme?: Record<string, any>
     canvas?: Record<string, any>
+    workbook?: Record<string, any>
     page_size?: string
     orientation?: string
     equipamento_ids?: string[]

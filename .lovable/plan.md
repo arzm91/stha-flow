@@ -1,108 +1,98 @@
-# Novo módulo de Relatórios
 
-Substituir totalmente a página `/relatorios` por um construtor visual de relatórios com dados reais do sistema, exportação e agendamento.
+# Novo /relatorios — Planilha estilo Excel
 
-## O que muda na experiência
+Substituir totalmente o editor visual (canvas A4) por um editor de planilha, onde cada célula pode conter valor, fórmula nativa do Excel, ou fórmula customizada que puxa dados reais do sistema.
 
-**Lista de relatórios (`/relatorios`)**
-- Grid de cards: nome, descrição, tipo (Manutenção / Produção / Personalizado), última atualização.
-- Botões: **Novo relatório em branco**, **Novo a partir de modelo** (OS Manutenção / Produtividade Diária), Duplicar, Editar, Agendar, Exportar (PDF/CSV), Excluir.
-- Filtro por associação (equipamento, produto, manutenção).
+## Experiência
 
-**Editor (`/relatorios/$id`)**
-- Canvas A4 (retrato/paisagem) com zoom, régua e grid de alinhamento.
-- Barra lateral esquerda com blocos arrastáveis:
-  - **Texto / Título / Parágrafo** (fonte, tamanho, cor, alinhamento)
-  - **Imagem / Logomarca** (upload em storage)
-  - **Linha divisória / Espaçador**
-  - **Campo dinâmico** (`{{data_hoje}}`, `{{nome_equipamento}}`, `{{ordem_numero}}`, etc.)
-  - **Tabela de dados** (escolhe fonte + colunas + filtros)
-  - **Gráfico** (barras, linhas, pizza) sobre uma fonte de dados
-  - **KPI / Indicador** (número grande + label + tendência)
-  - **Assinatura** (campo em branco para assinar)
-- Barra lateral direita: propriedades do bloco selecionado (posição, tamanho, cor, fonte, borda, fonte de dados).
-- Topo: nome do relatório, tema (cor primária + fonte), associações (equipamento/produto/manutenção — múltiplas), salvar, pré-visualizar, exportar.
-- Arrastar, redimensionar, alinhar, duplicar, deletar, camadas (frente/trás), desfazer/refazer.
+**Lista `/relatorios`** — mantém cards, mas todos os relatórios agora são planilhas.
+- Botões: **Novo relatório**, **Importar .xlsx**, Duplicar, Excluir.
+- Remove o fluxo antigo de "modelos visuais" e "escopo/canvas".
 
-**Fontes de dados disponíveis** (blocos de tabela/gráfico/KPI puxam daqui)
-- Ordens de produção (com filtros de período, status, produto, equipamento)
-- Equipamentos e atividades
-- Ordens de manutenção e manutenções preventivas
-- Produtos e receitas
-- Análises registradas
-- Tags ao vivo / histórico de tags
-- Rotinas e disparos de alertas
+**Editor `/relatorios/$id`** — planilha completa:
+- Grid tipo Excel: colunas A–Z... (expansível), linhas numeradas, cabeçalhos fixos, seleção de célula/intervalo, copy/paste, undo/redo, mesclar células, formatação (fonte, tamanho, negrito, itálico, cor texto/fundo, alinhamento, bordas, formato numérico, moeda, %, data).
+- Múltiplas abas (planilhas) por relatório.
+- Barra de fórmulas no topo mostrando/editando a célula ativa.
+- Botão **Recalcular** e recálculo automático quando dependências mudam.
+- Botão **Inserir dado do sistema** → abre um assistente que monta a fórmula para você (fonte, filtros, coluna, agregação) e escreve na célula selecionada (pode inserir como fórmula viva OU como valor snapshot).
+- Menu **Arquivo**: Salvar (auto), Exportar Excel, Exportar PDF, Exportar CSV, Importar .xlsx (substitui a aba atual ou adiciona nova).
 
-Cada fonte tem um seletor de colunas, período (últimos 7/30 dias, mês atual, personalizado) e filtros básicos. Todos os fetches respeitam RLS do tenant.
+## Fórmulas customizadas do sistema
 
-**Modelos prontos (seed)**
-- **OS de Manutenção** — cabeçalho com logo, dados do equipamento, descrição do serviço, materiais, tempo, técnico responsável, assinaturas.
-- **Produtividade Diária** — cabeçalho com data/turno, KPIs de produção, gráfico de barras por equipamento, tabela de ordens concluídas, observações.
+Prefixo `STHA.` para não colidir com nativas. Exemplos:
 
-Ambos ficam disponíveis em "Novo a partir de modelo" e podem ser duplicados livremente.
+- `=STHA.PRODUCAO.ULTIMA("Envase 1";"quantidade")` — último valor produzido no equipamento.
+- `=STHA.PRODUCAO.SOMA("Envase 1";"quantidade";"2026-07-01";"2026-07-31")` — soma no período.
+- `=STHA.TAG.ATUAL("TT-101")` — valor atual da tag ao vivo.
+- `=STHA.TAG.HISTORICO("TT-101";"media";"2026-07-08 00:00";"2026-07-08 23:59")` — média histórica.
+- `=STHA.MANUTENCAO.ABERTAS("Caldeira 1")` — nº de OS abertas.
+- `=STHA.MANUTENCAO.ULTIMA("Caldeira 1";"data_conclusao")`
+- `=STHA.ESTOQUE.SALDO("Produto X")`, `=STHA.TANQUE.NIVEL("TQ-01")`
+- `=STHA.ANALISE.ULTIMA("pH")`, `=STHA.ANALISE.MEDIA("pH";"2026-07-01";"2026-07-31")`
+- `=STHA.ORDEM.CAMPO(123;"quantidade_produzida")`
 
-**Exportação**
-- **PDF** — renderiza o canvas fielmente (mesmo layout, cores, fontes).
-- **Excel/CSV** — exporta as tabelas de dados usadas no relatório (uma aba/arquivo por bloco de tabela).
+Autocomplete na barra de fórmulas com sugestão de argumentos e valores válidos (equipamentos, produtos, tanques, tags do tenant).
 
-**Agendamento e envio por e-mail**
-- Cada relatório pode ter N agendas: frequência (diária/semanal/mensal), horário, dias da semana, destinatários (multi-seleção da lista de usuários), template de e-mail (reutiliza os já cadastrados).
-- No horário marcado, o sistema gera o PDF, faz upload no storage e enfileira e-mail com link + anexo (usa a fila `transactional_emails` já em produção).
+Cada função tem duas variantes:
+- **Fórmula viva** → grava a fórmula na célula; recalcula ao abrir/recarregar.
+- **Snapshot** (via assistente "Inserir dado") → grava o valor calculado no momento.
 
-## Fases de entrega (nesta rodada)
+## Import de .xlsx (preservar tudo)
 
-**Fase 1 — Fundação (esta entrega)**
-1. Migration: apaga `relatorio_templates` + `relatorio_turno_eventos` antigos, cria:
-   - `report_templates` (nome, descrição, tipo, tema JSON, canvas JSON, page_size, associações array)
-   - `report_associations` (relatório ↔ equipamento/produto/manutenção)
-   - `report_schedules` (relatório, cron/frequência, destinatários, template email, ativo)
-   - `report_runs` (histórico de execução: quando rodou, PDF gerado, status, erro)
-   - Bucket de storage `report-assets` (logos, imagens) e `report-exports` (PDFs gerados)
-   - Todas com RLS por `effective_owner(auth.uid())` e GRANTs corretos
-2. Seed dos 2 modelos prontos como registros marcados `is_system_template = true`.
+- Aceita .xlsx e .xls.
+- Preserva: valores, fórmulas nativas do Excel, formatação (fonte, cores, bordas), larguras de coluna, alturas de linha, mesclagens, múltiplas abas.
+- Não preserva: macros VBA, gráficos nativos do Excel (viram imagem estática), pivots.
+- Após importar, você adiciona `=STHA.*` nas células desejadas.
 
-**Fase 2 — Editor visual**
-3. Nova página `/relatorios` (lista) e `/relatorios/$id` (editor) sob `_authenticated`.
-4. Componentes de canvas usando `dnd-kit` + `react-rnd` para arrastar/redimensionar.
-5. Blocos: Texto, Imagem, Divisória, Espaçador, Campo dinâmico, Tabela, Gráfico, KPI, Assinatura.
-6. Painel de propriedades por bloco + tema global (cor primária, fonte).
-7. Undo/redo via `zustand` com histórico.
+## Exportação
 
-**Fase 3 — Dados**
-8. Server functions `report-data.functions.ts` com uma função por fonte (produção, equipamentos, manutenção, produtos, análises, tags). Todas com `requireSupabaseAuth`, filtros e projeção segura.
-9. Blocos de Tabela/Gráfico/KPI consomem essas fontes via TanStack Query.
+- **Excel (.xlsx)** — gera arquivo com valores calculados no momento da exportação; fórmulas `=STHA.*` são exportadas como valores (Excel não conhece essas funções); fórmulas nativas são preservadas.
+- **PDF** — renderiza a planilha (paisagem/retrato, escala automática, quebra por página) via html2canvas + jsPDF.
+- **CSV** — apenas dados da aba ativa, com valores calculados.
 
-**Fase 4 — Exportação**
-10. PDF: `html2pdf.js` no cliente sobre o canvas (respeita CSS e imagens).
-11. CSV: exporta tabelas do relatório com `papaparse`.
+## Arquitetura técnica
 
-**Fase 5 — Agendamento por e-mail**
-12. Server route `/api/public/relatorios/dispatch` (autenticada por apikey no header).
-13. Trigger/pg_cron: varre `report_schedules` a cada 5 min, chama a rota.
-14. A rota gera o PDF via headless render server-side (fallback: envia link para gerar sob demanda), enfileira email com `enqueue_email` e registra em `report_runs`.
-15. UI de agenda: modal no editor + aba "Agendas" no card do relatório.
+**Libs a instalar:**
+- `handsontable` (community/MIT via `@handsontable/react`) — grid completo com formatação, mesclagem, fórmulas Excel via HyperFormula, undo/redo, copy/paste.
+- `hyperformula` — motor de fórmulas compatível com Excel, com API para registrar funções customizadas (`STHA.*`).
+- `exceljs` — leitura/escrita .xlsx preservando estilos e fórmulas nativas.
+- `jspdf` + `html2canvas` — PDF a partir do grid renderizado.
+- `papaparse` — CSV.
 
-## Segurança e limites
+**Modelo de dados (migração):**
+- Tabela `report_templates` já existe. Reaproveitar as colunas gerais (nome, descricao, tipo, updated_at, RLS). Adicionar coluna `workbook JSONB` (aba, células, formatos, mesclagens, larguras) — a coluna antiga `canvas JSONB` fica no banco por compatibilidade, ignorada pelo novo editor. Sem migração destrutiva de dados: relatórios antigos aparecem na lista como "legado" e podem ser excluídos manualmente.
+- Nada muda em `report_schedules`/`report_runs`; a exportação agendada usa o novo pipeline .xlsx/PDF.
 
-- Toda tabela nova terá RLS por tenant (`effective_owner(auth.uid()) = effective_owner(owner_id)`), admin scope para gerenciar, usuários com permissão de relatórios para ver.
-- Storage buckets privados, URLs assinadas de curta duração para download.
-- Sem impacto nas páginas existentes — só a rota `/relatorios` é substituída.
-- Módulo de e-mail e usuários já existentes são reaproveitados (nada novo em `email_*`).
+**Server functions novas (`src/lib/reports/formulas.functions.ts`)** — uma por família (`producao`, `tag`, `manutencao`, `estoque`, `tanque`, `analise`, `ordem`), todas com `requireSupabaseAuth`, RLS aplicado. O cliente envia um lote de chamadas (dedup por assinatura) e recebe os valores para o HyperFormula preencher.
 
-## Detalhes técnicos
+**Fluxo de cálculo:**
+1. Ao abrir, carrega workbook do banco.
+2. Handsontable + HyperFormula renderizam.
+3. HyperFormula chama funções `STHA.*` registradas como async → cliente enfileira e envia lote ao servidor.
+4. Valores retornam, células atualizam.
+5. Recálculo manual pelo botão ou automático quando outra célula referenciada muda.
 
-- Rotas: `src/routes/_authenticated/relatorios.index.tsx` (lista) e `src/routes/_authenticated/relatorios.$id.tsx` (editor). Removo o(s) arquivo(s) atuais.
-- Estado do editor: `zustand` + JSON serializado em `report_templates.canvas` (`{ pages: [{ blocks: [{id, type, x, y, w, h, props}] }] }`).
-- Libs a instalar: `@dnd-kit/core`, `react-rnd`, `html2pdf.js`, `papaparse`, `recharts` (já presente), `zustand` (verificar).
-- Server fns novos em `src/lib/reports/*.functions.ts`.
-- Route pública para agenda: `src/routes/api/public/relatorios.dispatch.ts` com verificação por `apikey` header (Supabase anon key) — mesmo padrão já usado em alertas.
-- Cron via `pg_cron` chamando a rota (5 min).
-- Migração destrutiva das tabelas antigas conforme escolhido ("apagar tudo").
+**Salvar:** debounce 1s após edição, grava `workbook` JSONB inteiro.
 
-## Fora de escopo (fases futuras)
+## Arquivos a criar/alterar
 
-- Import de PDF/imagem como fundo de template
-- Import de planilhas Excel como base
-- Assinatura eletrônica com validação
-- Fluxo de aprovação multi-nível de relatórios
-- Versionamento visual de templates
+- `src/routes/_authenticated/relatorios.$id.tsx` — substituir editor visual pelo novo `SpreadsheetEditor`.
+- `src/routes/_authenticated/relatorios.index.tsx` — simplificar (remover fluxos de canvas/escopo/modelo).
+- `src/components/reports/SpreadsheetEditor.tsx` (novo) — Handsontable + HyperFormula, toolbar.
+- `src/components/reports/InsertSystemDataDialog.tsx` (novo) — assistente para fórmulas STHA.
+- `src/lib/reports/formulas/registry.ts` (novo) — define funções STHA e as registra no HyperFormula.
+- `src/lib/reports/formulas.functions.ts` (novo) — server fns que resolvem dados por lote.
+- `src/lib/reports/xlsx-import.ts` (novo) — ExcelJS → workbook interno.
+- `src/lib/reports/xlsx-export.ts` (novo) — workbook interno → ExcelJS.
+- `src/lib/reports/pdf-export.ts` (novo) — html2canvas + jsPDF.
+- Migration: adicionar coluna `workbook JSONB` em `report_templates`.
+
+## Fora de escopo desta rodada
+
+- Gráficos dentro da planilha (fica para depois; export .xlsx pode reintroduzir).
+- Macros / scripts.
+- Edição colaborativa em tempo real.
+- Versionamento de planilhas.
+- Substituir agendamento — continua funcionando, só passa a exportar .xlsx.
+
+Se aprovar, começo pela migração + libs + editor base, depois fórmulas STHA, depois import/export.
