@@ -96,12 +96,21 @@ export function PendingApprovalsDock() {
   const [dialogNumero, setDialogNumero] = useState("");
   const [dialogProdutoId, setDialogProdutoId] = useState<string | null>(null);
 
-  function runNeedsApprovalDialog(r: Run): boolean {
+  function finalizarNodes(r: Run): ActionNode[] {
     const pa = r.planned_actions;
     const nodesArr = Array.isArray(pa) ? pa : (pa?.nodes ?? []);
-    return nodesArr.some(
-      (n) => n.type === "action" && (n.data?.config?.type === "finalizar_op"),
+    return nodesArr.filter(
+      (n) => n.type === "action" && n.data?.config?.type === "finalizar_op",
     );
+  }
+  function runNeedsApprovalDialog(r: Run): boolean {
+    const fins = finalizarNodes(r);
+    // Se todos finalizar_op forem "sem_aprovacao", não abre diálogo.
+    return fins.length > 0 && fins.some((n) => n.data?.config?.sem_aprovacao !== true);
+  }
+  function runIsFullyAutomatic(r: Run): boolean {
+    const fins = finalizarNodes(r);
+    return fins.length > 0 && fins.every((n) => n.data?.config?.sem_aprovacao === true);
   }
 
   async function openApprovalFor(r: Run) {
