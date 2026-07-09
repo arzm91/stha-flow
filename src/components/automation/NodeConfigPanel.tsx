@@ -10,8 +10,102 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { PRODUCTION_EVENTS, COMPARADORES } from "@/lib/automation/types";
 import { TagPicker, EquipamentoPicker, ProdutoPicker } from "./TagPicker";
+import { listReports } from "@/lib/reports/reports.functions";
+
+function ReportPickerConfig({
+  cfg,
+  set,
+}: {
+  cfg: Record<string, unknown>;
+  set: (patch: Record<string, unknown>) => void;
+}) {
+  const listFn = useServerFn(listReports);
+  const { data: reports = [] } = useQuery({
+    queryKey: ["automation-report-list"],
+    queryFn: () => listFn(),
+    staleTime: 60_000,
+  });
+  const formats = Array.isArray(cfg.formats) ? (cfg.formats as string[]) : ["xlsx"];
+  const toggleFormat = (f: string) => {
+    const has = formats.includes(f);
+    const next = has ? formats.filter((x) => x !== f) : [...formats, f];
+    set({ formats: next.length ? next : ["xlsx"] });
+  };
+  return (
+    <>
+      <div className="space-y-1">
+        <Label>Relatório</Label>
+        <Select value={String(cfg.report_id ?? "")} onValueChange={(v) => set({ report_id: v })}>
+          <SelectTrigger><SelectValue placeholder="Escolha um relatório salvo…" /></SelectTrigger>
+          <SelectContent>
+            {reports.length === 0 ? (
+              <div className="px-2 py-1.5 text-xs text-muted-foreground">
+                Nenhum relatório encontrado. Crie um em /relatórios.
+              </div>
+            ) : (
+              reports.map((r: any) => (
+                <SelectItem key={r.id} value={r.id}>{r.nome}</SelectItem>
+              ))
+            )}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-1">
+        <Label>Equipamento (opcional — substitui contexto)</Label>
+        <EquipamentoPicker
+          value={String(cfg.equipamento_id_override ?? "")}
+          onChange={(v) => set({ equipamento_id_override: v })}
+        />
+        <p className="text-[11px] text-muted-foreground">
+          Deixe em branco para usar o equipamento/ordem do gatilho. As fórmulas STHA_* do
+          relatório que não tiverem equipamento fixo passam a usar este valor.
+        </p>
+      </div>
+      <div className="space-y-1">
+        <Label>Formatos</Label>
+        <div className="flex flex-wrap gap-3 text-xs">
+          {[
+            { v: "xlsx", label: "Excel (.xlsx)" },
+            { v: "pdf", label: "PDF (download na tela do relatório)" },
+          ].map((f) => (
+            <label key={f.v} className="flex items-center gap-1.5">
+              <input type="checkbox" checked={formats.includes(f.v)} onChange={() => toggleFormat(f.v)} />
+              {f.label}
+            </label>
+          ))}
+        </div>
+      </div>
+      <label className="flex items-center gap-2 text-xs">
+        <input
+          type="checkbox"
+          checked={cfg.send_email === true}
+          onChange={(e) => set({ send_email: e.target.checked })}
+        />
+        Enviar por e-mail ao gerar
+      </label>
+      {cfg.send_email === true && (
+        <div className="space-y-1">
+          <Label>Destinatário</Label>
+          <Input
+            type="email"
+            placeholder="pessoa@empresa.com"
+            value={String(cfg.recipient ?? "")}
+            onChange={(e) => set({ recipient: e.target.value })}
+          />
+        </div>
+      )}
+      <p className="text-[11px] text-muted-foreground">
+        A automação resolve as fórmulas do relatório com os dados no momento do disparo,
+        gera o arquivo .xlsx, salva no histórico e (opcionalmente) envia por e-mail com um
+        link de download seguro (válido por 7 dias).
+      </p>
+    </>
+  );
+}
 
 type Node = {
   id: string;
@@ -441,27 +535,7 @@ export function NodeConfigPanel({
             )}
 
             {cfg.type === "gerar_relatorio" && (
-              <>
-                <div className="space-y-1">
-                  <Label>Tipo de relatório</Label>
-                  <Select value={String(cfg.tipo ?? "producao")} onValueChange={(v) => set({ tipo: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="producao">Produção</SelectItem>
-                      <SelectItem value="qualidade">Qualidade</SelectItem>
-                      <SelectItem value="estoque">Estoque</SelectItem>
-                      <SelectItem value="turno">Turno</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label>Título</Label>
-                  <Input value={String(cfg.titulo ?? "Relatório automático")} onChange={(e) => set({ titulo: e.target.value })} />
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Registra uma solicitação na aba Avisos. Envio por e-mail será adicionado quando o conector de e-mail estiver configurado.
-                </p>
-              </>
+              <ReportPickerConfig cfg={cfg} set={set} />
             )}
 
             {cfg.type === "enviar_email" && (

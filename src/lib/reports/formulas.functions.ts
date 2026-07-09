@@ -3,6 +3,37 @@ import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware'
 
 type Call = { name: string; args: string[] }
 type Result = { value: string | number | null; error?: string }
+export type ResolveContext = {
+  /** Equipamento id/código/nome — usado quando o 1º argumento vier vazio em fórmulas de produção/manutenção */
+  equipamento?: string
+  /** Ordem de produção específica — quando presente e o campo pedido for de produção, usa esta OP em vez da última */
+  ordem_id?: string
+}
+
+function applyCtx(name: string, args: string[], ctx?: ResolveContext): string[] {
+  if (!ctx) return args
+  const needsEquip = ['STHA_PROD_ULTIMA','STHA_PROD_SOMA','STHA_PROD_CONTAR','STHA_MANUT_ABERTAS','STHA_MANUT_ULTIMA'].includes(name)
+  if (needsEquip && (!args[0] || !args[0].trim()) && ctx.equipamento) {
+    return [ctx.equipamento, ...args.slice(1)]
+  }
+  return args
+}
+
+export async function resolveOneWithCtx(supabase: any, call: Call, ctx?: ResolveContext): Promise<Result> {
+  const patched = { ...call, args: applyCtx(call.name, call.args, ctx) }
+  // Special: STHA_PROD_ULTIMA with ctx.ordem_id → fetch that specific OP
+  if (patched.name === 'STHA_PROD_ULTIMA' && ctx?.ordem_id) {
+    const [, campo] = patched.args
+    const { data } = await supabase
+      .from('ordens_producao')
+      .select('id, numero, qtd_produzida, qtd_planejada, status, inicio_em, fim_em')
+      .eq('id', ctx.ordem_id)
+      .maybeSingle()
+    if (!data) return { value: null }
+    return { value: (data as any)[campo] ?? null }
+  }
+  return resolveOne(supabase, patched)
+}
 
 async function resolveOne(supabase: any, call: Call): Promise<Result> {
   const { name, args } = call
@@ -167,13 +198,13 @@ function toIso(v: string, endOfDay = false): string {
 
 export const resolveFormulas = createServerFn({ method: 'POST' })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { calls: Call[] }) => input)
+  .inputValidator((input: { calls: Call[]; ctx?: ResolveContext }) => input)
   .handler(async ({ data, context }) => {
     const supabase = context.supabase
     const out: Record<string, Result> = {}
     for (const call of data.calls) {
       const key = `${call.name}|${call.args.join('\u0001')}`
-      out[key] = await resolveOne(supabase, call)
+      out[key] = await resolveOneWithCtx(supabase, call, data.ctx)
     }
     return out
   })

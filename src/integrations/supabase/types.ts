@@ -1992,43 +1992,58 @@ export type Database = {
       }
       report_runs: {
         Row: {
+          automation_run_id: string | null
+          context: Json
           created_at: string
           error_message: string | null
           finished_at: string | null
+          formats: string[]
           id: string
           owner_id: string
           pdf_path: string | null
           recipient_user_ids: string[]
           report_id: string
+          resolved_snapshot: Json | null
           schedule_id: string | null
           status: string
           triggered_by: string
+          xlsx_path: string | null
         }
         Insert: {
+          automation_run_id?: string | null
+          context?: Json
           created_at?: string
           error_message?: string | null
           finished_at?: string | null
+          formats?: string[]
           id?: string
           owner_id: string
           pdf_path?: string | null
           recipient_user_ids?: string[]
           report_id: string
+          resolved_snapshot?: Json | null
           schedule_id?: string | null
           status?: string
           triggered_by?: string
+          xlsx_path?: string | null
         }
         Update: {
+          automation_run_id?: string | null
+          context?: Json
           created_at?: string
           error_message?: string | null
           finished_at?: string | null
+          formats?: string[]
           id?: string
           owner_id?: string
           pdf_path?: string | null
           recipient_user_ids?: string[]
           report_id?: string
+          resolved_snapshot?: Json | null
           schedule_id?: string | null
           status?: string
           triggered_by?: string
+          xlsx_path?: string | null
         }
         Relationships: [
           {
