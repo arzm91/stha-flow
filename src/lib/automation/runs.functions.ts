@@ -86,13 +86,20 @@ async function evaluateCondition(
     const valorMax = cfg.valor_max != null && cfg.valor_max !== "" ? Number(cfg.valor_max) : null;
     if (!tagNome) return { ok: false, reason: "tag não informada" };
     const { data } = await supabase
-      .from("tags_live").select("valor_num")
+      .from("tags_live").select("valor_num, valor_num_prev")
       .eq("owner_id", ownerId).eq("nome", tagNome).maybeSingle();
     const v = data?.valor_num != null ? Number(data.valor_num) : null;
+    const p = data?.valor_num_prev != null ? Number(data.valor_num_prev) : null;
     if (v == null) return { ok: false, reason: "tag sem valor" };
     if (operador === "between") {
       if (valorMin == null || valorMax == null) return { ok: false, reason: "faixa não informada" };
       return { ok: v >= valorMin && v <= valorMax, reason: `tag=${v}` };
+    }
+    if (operador === "cross_up") {
+      return { ok: p != null && p < valor && v >= valor, reason: `tag=${v} (ant=${p ?? "—"})` };
+    }
+    if (operador === "cross_down") {
+      return { ok: p != null && p > valor && v <= valor, reason: `tag=${v} (ant=${p ?? "—"})` };
     }
     return { ok: compare(v, operador, valor), reason: `tag=${v}` };
   }
