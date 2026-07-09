@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_authenticated/relatorios/$slug")({
   head: ({ params }) => {
     const meta = REPORTS[(params as any).slug as ReportSlug];
     const title = meta ? `${meta.titulo} — STHApc` : "Relatório — STHApc";
-    return pageHead({ title, description: meta?.descricao ?? "Relatório", path: "/relatorios" })({ params, loaderData: undefined });
+    return pageHead({ title, description: meta?.descricao ?? "Relatório", path: "/relatorios" })({ params });
   },
   component: ReportViewer,
 });
