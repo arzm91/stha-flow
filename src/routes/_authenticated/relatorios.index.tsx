@@ -36,7 +36,7 @@ function ReportsIndex() {
   }, {});
   return (
     <div className="flex h-full flex-col">
-      <PageHeader title="Relatórios" description="Relatórios prontos do sistema. Clique para gerar, visualizar e imprimir/baixar em PDF." icon={<FileText className="h-5 w-5" />} />
+      <PageHeader title="Relatórios" description="Relatórios prontos do sistema. Clique para gerar, visualizar e imprimir/baixar em PDF." />
       <div className="flex-1 space-y-6 overflow-auto p-4 md:p-6">
         {Object.entries(grupos).map(([cat, items]) => (
           <section key={cat}>
