@@ -1,11 +1,12 @@
-import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas'
-
 export async function exportSpreadsheetToPdf(
   el: HTMLElement,
   filename: string,
   orientation: 'portrait' | 'landscape' = 'landscape',
 ): Promise<void> {
+  const [{ default: jsPDF }, { default: html2canvas }] = await Promise.all([
+    import('jspdf'),
+    import('html2canvas'),
+  ])
   const canvas = await html2canvas(el, { scale: 2, backgroundColor: '#ffffff', useCORS: true })
   const pdf = new jsPDF({ orientation, unit: 'pt', format: 'a4' })
   const pageW = pdf.internal.pageSize.getWidth()
