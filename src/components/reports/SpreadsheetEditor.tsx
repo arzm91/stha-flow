@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle } from 'react'
+import { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle, useLayoutEffect } from 'react'
 import { HotTable } from '@handsontable/react'
 import Handsontable from 'handsontable'
 import { HyperFormula } from 'hyperformula'
@@ -8,8 +8,9 @@ import { registerAllModules } from 'handsontable/registry'
 import { useServerFn } from '@tanstack/react-start'
 import { resolveFormulas } from '@/lib/reports/formulas.functions'
 import { extractSthaCalls } from '@/lib/reports/formulas-catalog'
-import type { Workbook, Sheet, CellStyle } from '@/lib/reports/spreadsheet-types'
+import type { Workbook, Sheet, CellStyle, SheetObject } from '@/lib/reports/spreadsheet-types'
 import { DEFAULT_COLS, DEFAULT_ROWS } from '@/lib/reports/spreadsheet-types'
+import { SpreadsheetObjectsLayer } from './SpreadsheetObjectsLayer'
 
 registerAllModules()
 
@@ -20,6 +21,7 @@ export type SpreadsheetEditorHandle = {
   recalcSthaAll: () => Promise<void>
   applyStyleToSelection: (patch: Partial<CellStyle>) => void
   insertAtActive: (value: string) => void
+  addObject: (obj: SheetObject) => void
 }
 
 type Props = {
@@ -35,19 +37,31 @@ export const SpreadsheetEditor = forwardRef<SpreadsheetEditorHandle, Props>(func
   const [wb, setWb] = useState<Workbook>(workbook)
   const [activeId, setActiveId] = useState(workbook.activeSheetId)
   const hotRef = useRef<any>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [size, setSize] = useState<{ w: number; h: number }>({ w: 800, h: 500 })
   const resolve = useServerFn(resolveFormulas)
 
-  // Sync from parent when workbook prop identity changes
-  useEffect(() => {
-    setWb(workbook)
-    setActiveId(workbook.activeSheetId)
-  }, [workbook])
+  useEffect(() => { setWb(workbook); setActiveId(workbook.activeSheetId) }, [workbook])
 
   const activeSheet = wb.sheets.find((s) => s.id === activeId) ?? wb.sheets[0]
 
   useEffect(() => { onActiveSheetChange?.(activeSheet) }, [activeSheet, onActiveSheetChange])
 
-  // Build display data: replace STHA formulas with cached value (or #CARREGANDO)
+  // Measure container to give Handsontable an explicit numeric height (percentages
+  // don't render reliably inside flex containers here).
+  useLayoutEffect(() => {
+    if (!containerRef.current) return
+    const el = containerRef.current
+    const update = () => {
+      const r = el.getBoundingClientRect()
+      setSize({ w: Math.max(200, Math.floor(r.width)), h: Math.max(200, Math.floor(r.height)) })
+    }
+    update()
+    const ro = new ResizeObserver(update)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
   const displayData = useMemo(() => {
     return activeSheet.data.map((row, r) =>
       row.map((val, c) => {
@@ -60,7 +74,6 @@ export const SpreadsheetEditor = forwardRef<SpreadsheetEditorHandle, Props>(func
     )
   }, [activeSheet])
 
-  // Cell renderer applying styles
   const cellsFn = useMemo(() => {
     return (row: number, col: number) => {
       const st = activeSheet.styles[`${row},${col}`]
@@ -87,37 +100,31 @@ export const SpreadsheetEditor = forwardRef<SpreadsheetEditorHandle, Props>(func
     }
   }, [activeSheet])
 
-  // Update sheet in workbook (immutable)
   const updateSheet = (mut: (s: Sheet) => Sheet) => {
     const next: Workbook = {
       ...wb,
       sheets: wb.sheets.map((s) => (s.id === activeId ? mut(s) : s)),
     }
-    setWb(next)
-    onChange?.(next)
+    setWb(next); onChange?.(next)
   }
 
   const handleAfterChange = (changes: any[] | null, source: string) => {
     if (source === 'loadData' || !changes) return
-    let touched = false
     updateSheet((s) => {
       const data = s.data.map((r) => [...r])
-      let cache = { ...s.sthaCache }
+      const cache = { ...s.sthaCache }
       for (const [r, c, _old, next] of changes) {
         const cc = typeof c === 'number' ? c : Number(c)
         const val: any = next
         data[r as number][cc] = val === '' ? null : val
-        // If cleared STHA formula, drop cache
         const key = `${r},${cc}`
         if (typeof val !== 'string' || !val.startsWith('=') || !/STHA_/.test(val)) {
-          if (cache[key] !== undefined) { delete cache[key]; touched = true }
+          if (cache[key] !== undefined) delete cache[key]
         }
       }
       return { ...s, data, sthaCache: cache }
     })
-    // After state settles, resolve any new STHA formulas
     setTimeout(() => resolveSthaFor(activeId), 0)
-    if (touched) void touched
   }
 
   const resolveSthaFor = async (sheetId: string) => {
@@ -136,6 +143,21 @@ export const SpreadsheetEditor = forwardRef<SpreadsheetEditorHandle, Props>(func
         }
       })
     })
+    // include chart series formulas
+    const chartCalls: { name: string; args: string[] }[] = []
+    for (const obj of sheet.objects ?? []) {
+      if (obj.kind === 'chart') {
+        for (const s of obj.series) {
+          const raw = s.formula.startsWith('=') ? s.formula.slice(1) : s.formula
+          const calls = extractSthaCalls('=' + raw)
+          for (const call of calls) {
+            const key = `${call.name}|${call.args.join('\u0001')}`
+            if (!callsByKey[key]) callsByKey[key] = { ...call, positions: [] }
+            chartCalls.push(call)
+          }
+        }
+      }
+    }
     const distinctCalls = Object.values(callsByKey).map((c) => ({ name: c.name, args: c.args }))
     if (!distinctCalls.length) return
     try {
@@ -149,14 +171,28 @@ export const SpreadsheetEditor = forwardRef<SpreadsheetEditorHandle, Props>(func
             cache[`${r},${c}`] = (res.value ?? (res.error ? `#ERRO` : '')) as any
           }
         }
-        return { ...s, sthaCache: cache }
+        // update chart cached values
+        const objects = (s.objects ?? []).map((obj) => {
+          if (obj.kind !== 'chart') return obj
+          const values = obj.series.map((series) => {
+            const raw = series.formula.startsWith('=') ? series.formula.slice(1) : series.formula
+            const calls = extractSthaCalls('=' + raw)
+            const first = calls[0]
+            if (!first) return null
+            const k = `${first.name}|${first.args.join('\u0001')}`
+            const r = (results as any)[k]
+            const v = r?.value
+            return typeof v === 'number' ? v : v == null ? null : Number(v) || 0
+          })
+          return { ...obj, values }
+        })
+        return { ...s, sthaCache: cache, objects }
       })
-    } catch (e) {
-      // ignore; cells will keep "…"
+    } catch {
+      /* keep cache */
     }
   }
 
-  // On mount & on switching sheet, resolve STHA
   useEffect(() => { void resolveSthaFor(activeId) /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [activeId])
 
   useImperativeHandle(ref, () => ({
@@ -196,7 +232,21 @@ export const SpreadsheetEditor = forwardRef<SpreadsheetEditorHandle, Props>(func
       })
       setTimeout(() => resolveSthaFor(activeId), 0)
     },
+    addObject: (obj: SheetObject) => {
+      updateSheet((s) => ({ ...s, objects: [...(s.objects ?? []), obj] }))
+      if (obj.kind === 'chart') setTimeout(() => resolveSthaFor(activeId), 0)
+    },
   }), [wb, activeId])
+
+  const updateObject = (id: string, patch: Partial<SheetObject>) => {
+    updateSheet((s) => ({
+      ...s,
+      objects: (s.objects ?? []).map((o) => (o.id === id ? ({ ...o, ...patch } as SheetObject) : o)),
+    }))
+  }
+  const removeObject = (id: string) => {
+    updateSheet((s) => ({ ...s, objects: (s.objects ?? []).filter((o) => o.id !== id) }))
+  }
 
   const addSheet = () => {
     const id = `s${wb.sheets.length + 1}_${Date.now()}`
@@ -206,7 +256,7 @@ export const SpreadsheetEditor = forwardRef<SpreadsheetEditorHandle, Props>(func
     )
     const next: Workbook = {
       ...wb,
-      sheets: [...wb.sheets, { id, name, data, mergeCells: [], colWidths: [], rowHeights: [], styles: {}, sthaCache: {} }],
+      sheets: [...wb.sheets, { id, name, data, mergeCells: [], colWidths: [], rowHeights: [], styles: {}, sthaCache: {}, objects: [] }],
       activeSheetId: id,
     }
     setWb(next); setActiveId(id); onChange?.(next)
@@ -231,7 +281,7 @@ export const SpreadsheetEditor = forwardRef<SpreadsheetEditorHandle, Props>(func
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <div className="flex-1 min-h-0 overflow-hidden hot-container">
+      <div ref={containerRef} className="flex-1 min-h-0 overflow-hidden hot-container ht-theme-main relative bg-white">
         <HotTable
           ref={hotRef}
           data={displayData}
@@ -248,11 +298,16 @@ export const SpreadsheetEditor = forwardRef<SpreadsheetEditorHandle, Props>(func
           undo
           copyPaste
           licenseKey={HANDSONTABLE_LICENSE}
-          height="100%"
-          width="100%"
+          height={size.h}
+          width={size.w}
           stretchH="none"
           afterChange={handleAfterChange}
           cells={cellsFn}
+        />
+        <SpreadsheetObjectsLayer
+          objects={activeSheet.objects ?? []}
+          onChange={updateObject}
+          onRemove={removeObject}
         />
       </div>
       <div className="flex items-center gap-1 bg-muted border-t px-2 py-1 overflow-x-auto">

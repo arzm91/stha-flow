@@ -14,18 +14,54 @@ export type CellStyle = {
 
 export type MergeCell = { row: number; col: number; rowspan: number; colspan: number }
 
+/** Overlay object anchored on the sheet by pixel position (relative to the grid). */
+export type SheetObjectBase = {
+  id: string
+  x: number
+  y: number
+  w: number
+  h: number
+  z?: number
+}
+export type ImageObject = SheetObjectBase & {
+  kind: 'image'
+  /** Data URL (base64) so it persists inside the workbook JSON. */
+  src: string
+  alt?: string
+}
+export type ShapeObject = SheetObjectBase & {
+  kind: 'shape'
+  shape: 'rectangle' | 'ellipse' | 'line'
+  fill?: string
+  stroke?: string
+  strokeWidth?: number
+  rounded?: number
+}
+export type ChartSeries = {
+  label: string
+  /** STHA_* formula (without leading '=') to resolve into a number */
+  formula: string
+}
+export type ChartObject = SheetObjectBase & {
+  kind: 'chart'
+  chartType: 'bar' | 'line' | 'pie'
+  title?: string
+  series: ChartSeries[]
+  /** cached resolved values, same order as series */
+  values?: (number | null)[]
+}
+export type SheetObject = ImageObject | ShapeObject | ChartObject
+
 export type Sheet = {
   id: string
   name: string
-  // Raw cell values / formulas typed by user. `null` = empty. Strings starting with `=` are formulas.
   data: (string | number | null)[][]
   mergeCells: MergeCell[]
   colWidths: number[]
   rowHeights: number[]
-  // key = "r,c" -> CellStyle
   styles: Record<string, CellStyle>
-  // key = "r,c" -> resolved STHA value cache (for display when offline / on load)
   sthaCache: Record<string, string | number>
+  objects: SheetObject[]
 }
 
 export type Workbook = {
@@ -41,14 +77,9 @@ export function emptySheet(id = 's1', name = 'Planilha1'): Sheet {
     Array.from({ length: DEFAULT_COLS }, () => null),
   )
   return {
-    id,
-    name,
-    data,
-    mergeCells: [],
-    colWidths: [],
-    rowHeights: [],
-    styles: {},
-    sthaCache: {},
+    id, name, data,
+    mergeCells: [], colWidths: [], rowHeights: [],
+    styles: {}, sthaCache: {}, objects: [],
   }
 }
 
@@ -57,16 +88,12 @@ export function emptyWorkbook(): Workbook {
   return { sheets: [s], activeSheetId: s.id }
 }
 
-/** Ensure a workbook loaded from DB has all fields (retro-compat). */
 export function normalizeWorkbook(raw: any): Workbook {
   if (!raw || !Array.isArray(raw.sheets) || raw.sheets.length === 0) return emptyWorkbook()
   const sheets: Sheet[] = raw.sheets.map((s: any, i: number) => {
     const data: (string | number | null)[][] = Array.isArray(s.data) ? s.data : []
-    // Ensure minimum size
     while (data.length < DEFAULT_ROWS) data.push(Array.from({ length: DEFAULT_COLS }, () => null))
-    for (const row of data) {
-      while (row.length < DEFAULT_COLS) row.push(null)
-    }
+    for (const row of data) while (row.length < DEFAULT_COLS) row.push(null)
     return {
       id: s.id ?? `s${i + 1}`,
       name: s.name ?? `Planilha${i + 1}`,
@@ -76,6 +103,7 @@ export function normalizeWorkbook(raw: any): Workbook {
       rowHeights: Array.isArray(s.rowHeights) ? s.rowHeights : [],
       styles: s.styles ?? {},
       sthaCache: s.sthaCache ?? {},
+      objects: Array.isArray(s.objects) ? s.objects : [],
     }
   })
   return { sheets, activeSheetId: raw.activeSheetId ?? sheets[0].id }
