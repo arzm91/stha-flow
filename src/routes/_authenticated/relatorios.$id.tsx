@@ -96,6 +96,48 @@ function ReportEditorPage() {
 
   const applyStyle = (patch: Partial<CellStyle>) => editorRef.current?.applyStyleToSelection(patch)
 
+  const addObject = (obj: SheetObject) => editorRef.current?.addObject(obj)
+
+  const handleImage = (file: File) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      const src = String(reader.result || '')
+      if (!src) return
+      const img = new Image()
+      img.onload = () => {
+        const maxW = 320
+        const ratio = img.width > maxW ? maxW / img.width : 1
+        addObject({
+          id: `img_${Date.now()}`,
+          kind: 'image',
+          x: 40, y: 40,
+          w: Math.round(img.width * ratio),
+          h: Math.round(img.height * ratio),
+          src,
+          alt: file.name,
+        })
+      }
+      img.src = src
+    }
+    reader.readAsDataURL(file)
+    if (imageInputRef.current) imageInputRef.current.value = ''
+  }
+
+  const addShape = (shape: 'rectangle' | 'ellipse' | 'line') => {
+    addObject({
+      id: `shp_${Date.now()}`,
+      kind: 'shape',
+      shape,
+      x: 60, y: 60,
+      w: shape === 'line' ? 240 : 160,
+      h: shape === 'line' ? 8 : 100,
+      fill: shape === 'line' ? 'transparent' : 'rgba(249,115,22,0.15)',
+      stroke: '#f97316',
+      strokeWidth: 2,
+      rounded: shape === 'rectangle' ? 6 : 0,
+    })
+  }
+
   if (isLoading || !report || !workbook) return <div className="p-6 text-sm text-muted-foreground">Carregando…</div>
 
   return (
@@ -105,7 +147,27 @@ function ReportEditorPage() {
         <Button variant="ghost" size="sm" onClick={() => navigate({ to: '/relatorios' })}><ArrowLeft className="w-4 h-4" /></Button>
         <Input value={nome} onChange={(e) => setNome(e.target.value)} className="max-w-xs h-8" placeholder="Nome do relatório" />
         <Button variant="outline" size="sm" onClick={() => setInsertOpen(true)}>
-          <Database className="w-4 h-4 mr-1" />Inserir dado do sistema
+          <Database className="w-4 h-4 mr-1" />Inserir dado
+        </Button>
+        <Button variant="outline" size="sm" onClick={() => imageInputRef.current?.click()}>
+          <ImageIcon className="w-4 h-4 mr-1" />Imagem
+        </Button>
+        <input ref={imageInputRef} type="file" accept="image/*" className="hidden"
+          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleImage(f) }} />
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm"><Shapes className="w-4 h-4 mr-1" />Forma</Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuLabel>Inserir forma</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => addShape('rectangle')}><Square className="w-4 h-4 mr-2" />Retângulo</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addShape('ellipse')}><Circle className="w-4 h-4 mr-2" />Elipse</DropdownMenuItem>
+            <DropdownMenuItem onClick={() => addShape('line')}><Minus className="w-4 h-4 mr-2" />Linha</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <Button variant="outline" size="sm" onClick={() => setChartOpen(true)}>
+          <BarChart3 className="w-4 h-4 mr-1" />Gráfico
         </Button>
         <Button variant="ghost" size="sm" onClick={() => editorRef.current?.recalcSthaAll()}>
           <RefreshCw className="w-4 h-4 mr-1" />Recalcular
@@ -120,6 +182,7 @@ function ReportEditorPage() {
         <Button variant="outline" size="sm" onClick={doExportPdf}><FileDown className="w-4 h-4 mr-1" />PDF</Button>
         <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}><Save className="w-4 h-4 mr-1" />Salvar</Button>
       </div>
+
 
       {/* Toolbar de formatação */}
       <div className="border-b bg-card px-3 py-1 flex items-center gap-1 flex-wrap">
