@@ -572,6 +572,7 @@ async function executeRunInternal(
     ...((run.trigger_context ?? {}) as Record<string, unknown>),
     __trigger_fired_at: run.trigger_fired_at ?? run.created_at,
     __approval: approvalPayload ?? null,
+    __run_id: runId,
   };
   const result = await runGraph(supabase, userId, graph, ctx);
 
