@@ -340,6 +340,17 @@ export function NodeConfigPanel({
                     Se a tag existir e tiver valor, será usada como <b>quantidade produzida</b>. Caso contrário, mantém a <b>quantidade planejada</b>.
                   </p>
                 </div>
+                <label className="flex items-start gap-2 text-xs">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={cfg.sem_aprovacao === true}
+                    onChange={(e) => set({ sem_aprovacao: e.target.checked })}
+                  />
+                  <span>
+                    <b>Finalizar sem aprovação</b> — usa o valor atual da tag como quantidade produzida e finaliza a OP automaticamente, sem exigir confirmação manual.
+                  </span>
+                </label>
               </>
             )}
 
