@@ -24,8 +24,15 @@ export async function importXlsx(file: File): Promise<Workbook> {
   const buf = await file.arrayBuffer()
   await wb.xlsx.load(buf)
   const sheets: Sheet[] = []
+  const usedNames = new Set<string>()
   wb.eachSheet((ws, idx) => {
-    const sheet = emptySheet(`s${idx}`, ws.name || `Planilha${idx}`)
+    const rawName = ws.name || `Planilha${idx}`
+    let safeName = rawName.replace(/[\\/?*[\]:'!]/g, ' ').trim().slice(0, 31) || `Planilha${idx}`
+    let dedup = safeName
+    let n = 2
+    while (usedNames.has(dedup)) dedup = `${safeName} (${n++})`.slice(0, 31)
+    usedNames.add(dedup)
+    const sheet = emptySheet(`s${idx}`, dedup)
     const rc = Math.max(1, Math.min(Number(ws.rowCount) || 0, MAX_ROWS))
     const cc0 = Math.max(1, Math.min(Number(ws.columnCount) || 0, MAX_COLS))
     const maxRow = Math.max(rc, DEFAULT_ROWS)
