@@ -44,7 +44,21 @@ export function PendingApprovalsDock() {
       .eq("status", "pending_approval")
       .order("created_at", { ascending: false })
       .limit(20);
-    setRuns(((data as unknown) as Run[]) ?? []);
+    const rows = ((data as unknown) as Run[]) ?? [];
+    setRuns(rows);
+    // Auto-aprova as pendentes marcadas como "finalizar sem aprovação".
+    for (const r of rows) {
+      if (autoRunning.current.has(r.id)) continue;
+      if (!runIsFullyAutomatic(r)) continue;
+      autoRunning.current.add(r.id);
+      approve({ data: { runId: r.id } })
+        .then((res) => {
+          if (res.ok) toast.success(`Automação "${r.flow?.nome ?? "Fluxo"}" finalizada`);
+          else toast.error(`Automação "${r.flow?.nome ?? "Fluxo"}" falhou em parte`);
+        })
+        .catch((e) => toast.error(e instanceof Error ? e.message : "Falha ao finalizar automação"))
+        .finally(() => autoRunning.current.delete(r.id));
+    }
   }
 
   async function autoRunApproved() {
