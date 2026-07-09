@@ -44,10 +44,12 @@ function ReportEditorPage() {
   const [workbook, setWorkbook] = useState<Workbook | null>(null)
   const [schedulesOpen, setSchedulesOpen] = useState(false)
   const [insertOpen, setInsertOpen] = useState(false)
+  const [chartOpen, setChartOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const editorRef = useRef<SpreadsheetEditorHandle>(null)
   const gridWrapperRef = useRef<HTMLDivElement>(null)
   const importRef = useRef<HTMLInputElement>(null)
+  const imageInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => { setMounted(true) }, [])
   useEffect(() => {
