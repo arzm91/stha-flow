@@ -12,7 +12,6 @@
     "format": "prettier --write ."
   },
   "dependencies": {
-    "@handsontable/react": "^16.2.0",
     "@hookform/resolvers": "^5.2.2",
     "@lovable.dev/email-js": "^0.0.4",
     "@lovable.dev/mcp-js": "^0.20.0",
@@ -60,9 +59,7 @@
     "embla-carousel-react": "^8.6.0",
     "exceljs": "^4.4.0",
     "firebase": "^12.15.0",
-    "handsontable": "^18.0.0",
     "html2canvas": "^1.4.1",
-    "hyperformula": "^3.3.0",
     "input-otp": "^1.4.2",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.8",
