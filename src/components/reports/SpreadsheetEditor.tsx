@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle, useLayoutEffect } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle, useLayoutEffect } from 'react'
 import { HotTable } from '@handsontable/react'
 import Handsontable from 'handsontable'
 import 'handsontable/styles/handsontable.min.css'
@@ -14,6 +14,7 @@ import { SpreadsheetObjectsLayer } from './SpreadsheetObjectsLayer'
 registerAllModules()
 
 const HANDSONTABLE_LICENSE = 'non-commercial-and-evaluation'
+const IGNORED_CHANGE_SOURCES = new Set(['loadData', 'updateData', 'auto'])
 
 export type SpreadsheetEditorHandle = {
   getWorkbook: () => Workbook
@@ -35,16 +36,22 @@ export const SpreadsheetEditor = forwardRef<SpreadsheetEditorHandle, Props>(func
 ) {
   const [wb, setWb] = useState<Workbook>(workbook)
   const [activeId, setActiveId] = useState(workbook.activeSheetId)
+  const activeIdRef = useRef(workbook.activeSheetId)
   const hotRef = useRef<any>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const [size, setSize] = useState<{ w: number; h: number }>({ w: 800, h: 500 })
   const resolve = useServerFn(resolveFormulas)
 
-  useEffect(() => { setWb(workbook); setActiveId(workbook.activeSheetId) }, [workbook])
+  useEffect(() => {
+    setWb((prev) => (prev === workbook ? prev : workbook))
+    setActiveId((prev) => (prev === workbook.activeSheetId ? prev : workbook.activeSheetId))
+  }, [workbook])
+
+  useEffect(() => { activeIdRef.current = activeId }, [activeId])
 
   const activeSheet = wb.sheets.find((s) => s.id === activeId) ?? wb.sheets[0]
 
-  useEffect(() => { onActiveSheetChange?.(activeSheet) }, [activeSheet, onActiveSheetChange])
+  useEffect(() => { onActiveSheetChange?.(activeSheet) }, [activeSheet.id, onActiveSheetChange])
 
   // Measure container to give Handsontable an explicit numeric height (percentages
   // don't render reliably inside flex containers here).
@@ -53,7 +60,8 @@ export const SpreadsheetEditor = forwardRef<SpreadsheetEditorHandle, Props>(func
     const el = containerRef.current
     const update = () => {
       const r = el.getBoundingClientRect()
-      setSize({ w: Math.max(200, Math.floor(r.width)), h: Math.max(200, Math.floor(r.height)) })
+      const next = { w: Math.max(200, Math.floor(r.width)), h: Math.max(200, Math.floor(r.height)) }
+      setSize((prev) => (prev.w === next.w && prev.h === next.h ? prev : next))
     }
     update()
     const ro = new ResizeObserver(update)
@@ -61,7 +69,12 @@ export const SpreadsheetEditor = forwardRef<SpreadsheetEditorHandle, Props>(func
     return () => ro.disconnect()
   }, [])
 
+  const hasSthaCells = useMemo(() => activeSheet.data.some((row) =>
+    row.some((val) => typeof val === 'string' && val.startsWith('=') && /STHA_/.test(val)),
+  ), [activeSheet.data])
+
   const displayData = useMemo(() => {
+    if (!hasSthaCells) return activeSheet.data
     return activeSheet.data.map((row, r) =>
       row.map((val, c) => {
         if (typeof val === 'string' && val.startsWith('=') && /STHA_/.test(val)) {
@@ -71,7 +84,7 @@ export const SpreadsheetEditor = forwardRef<SpreadsheetEditorHandle, Props>(func
         return val
       }),
     )
-  }, [activeSheet])
+  }, [activeSheet.data, activeSheet.sthaCache, hasSthaCells])
 
   const cellsFn = useMemo(() => {
     return (row: number, col: number) => {
@@ -99,24 +112,32 @@ export const SpreadsheetEditor = forwardRef<SpreadsheetEditorHandle, Props>(func
     }
   }, [activeSheet])
 
-  const updateSheet = (mut: (s: Sheet) => Sheet) => {
-    const next: Workbook = {
-      ...wb,
-      sheets: wb.sheets.map((s) => (s.id === activeId ? mut(s) : s)),
-    }
-    setWb(next); onChange?.(next)
-  }
+  const updateSheet = useCallback((mut: (s: Sheet) => Sheet) => {
+    setWb((prev) => {
+      const currentActiveId = activeIdRef.current
+      const next: Workbook = {
+        ...prev,
+        sheets: prev.sheets.map((s) => (s.id === currentActiveId ? mut(s) : s)),
+      }
+      onChange?.(next)
+      return next
+    })
+  }, [onChange])
 
   const handleAfterChange = (changes: any[] | null, source: string) => {
-    if (source === 'loadData' || !changes) return
+    if (!changes || IGNORED_CHANGE_SOURCES.has(source)) return
     updateSheet((s) => {
       const data = s.data.map((r) => [...r])
       const cache = { ...s.sthaCache }
       for (const [r, c, _old, next] of changes) {
         const cc = typeof c === 'number' ? c : Number(c)
+        const rr = Number(r)
+        if (!Number.isFinite(rr) || !Number.isFinite(cc) || rr < 0 || cc < 0) continue
+        while (data.length <= rr) data.push(Array.from({ length: DEFAULT_COLS }, () => null))
+        for (const row of data) while (row.length <= cc) row.push(null)
         const val: any = next
-        data[r as number][cc] = val === '' ? null : val
-        const key = `${r},${cc}`
+        data[rr][cc] = val === '' ? null : val
+        const key = `${rr},${cc}`
         if (typeof val !== 'string' || !val.startsWith('=') || !/STHA_/.test(val)) {
           if (cache[key] !== undefined) delete cache[key]
         }
