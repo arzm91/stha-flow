@@ -480,6 +480,7 @@ function OSDialog({
 }) {
   const qc = useQueryClient();
   const isEdit = !!editing;
+  const [createdOsId, setCreatedOsId] = useState<string | null>(null);
   const [form, setForm] = useState({
     numero: "", equipamento_id: "", tipo: "corretiva", prioridade: "media", status: "aberta",
     responsavel: "", descricao_problema: "", descricao_servico: "", pecas_utilizadas: "", custo: "", observacoes: "",
@@ -573,11 +574,15 @@ function OSDialog({
 
       return osId;
     },
-    onSuccess: () => {
+    onSuccess: (osId) => {
       toast.success(isEdit ? "OS atualizada" : "OS criada");
       qc.invalidateQueries({ queryKey: ["mnt-ordens"] });
       qc.invalidateQueries({ queryKey: ["mnt-equipamentos"] });
-      onOpenChange(false);
+      if (!isEdit) {
+        setCreatedOsId(osId);
+      } else {
+        onOpenChange(false);
+      }
     },
     onError: (e: Error) => toast.error(e.message),
   });
