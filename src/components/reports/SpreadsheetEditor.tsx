@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle, useLayoutEffect } from 'react'
 import { HotTable } from '@handsontable/react'
 import Handsontable from 'handsontable'
-import { HyperFormula } from 'hyperformula'
 import 'handsontable/styles/handsontable.min.css'
 import 'handsontable/styles/ht-theme-main.min.css'
 import { registerAllModules } from 'handsontable/registry'
