@@ -4,18 +4,21 @@ import { useEffect, useRef, useState, lazy, Suspense } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
 import { getReport, updateReport } from '@/lib/reports/reports.functions'
-import { normalizeWorkbook, type Workbook, type CellStyle } from '@/lib/reports/spreadsheet-types'
+import { normalizeWorkbook, type Workbook, type CellStyle, type SheetObject } from '@/lib/reports/spreadsheet-types'
 import { importXlsx, exportXlsx, exportCsv } from '@/lib/reports/xlsx-io'
 import { exportSpreadsheetToPdf } from '@/lib/reports/pdf-export-sheet'
 import { InsertSystemDataDialog } from '@/components/reports/InsertSystemDataDialog'
+import { InsertChartDialog } from '@/components/reports/InsertChartDialog'
 import { SchedulesDialog } from '@/components/reports/SchedulesDialog'
 import type { SpreadsheetEditorHandle } from '@/components/reports/SpreadsheetEditor'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from '@/components/ui/dropdown-menu'
 import {
   ArrowLeft, Save, FileDown, CalendarClock, FileSpreadsheet,
   Upload, RefreshCw, Bold, Italic, Underline as UnderlineIcon,
-  AlignLeft, AlignCenter, AlignRight, Plus, Database,
+  AlignLeft, AlignCenter, AlignRight, Database,
+  Image as ImageIcon, Shapes, BarChart3, Square, Circle, Minus,
 } from 'lucide-react'
 import { toast } from 'sonner'
 
