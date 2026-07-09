@@ -198,13 +198,13 @@ function toIso(v: string, endOfDay = false): string {
 
 export const resolveFormulas = createServerFn({ method: 'POST' })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { calls: Call[] }) => input)
+  .inputValidator((input: { calls: Call[]; ctx?: ResolveContext }) => input)
   .handler(async ({ data, context }) => {
     const supabase = context.supabase
     const out: Record<string, Result> = {}
     for (const call of data.calls) {
       const key = `${call.name}|${call.args.join('\u0001')}`
-      out[key] = await resolveOne(supabase, call)
+      out[key] = await resolveOneWithCtx(supabase, call, data.ctx)
     }
     return out
   })
