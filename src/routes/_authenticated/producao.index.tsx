@@ -19,7 +19,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/EmptyState";
-import { Factory, Play, Eye, LayoutGrid } from "lucide-react";
+import { Factory, Play, Eye, LayoutGrid, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { durationFromNow } from "@/lib/format";
 
@@ -89,6 +89,9 @@ function ProducaoPage() {
         description="Equipamentos disponíveis e produções em andamento."
         actions={
           <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link to="/relatorios/$slug" params={{ slug: "produtividade-total" }}><FileText className="mr-2 h-4 w-4" />Relatório</Link>
+            </Button>
             <Button asChild variant="outline">
               <Link to="/producao/dashboard"><LayoutGrid className="mr-2 h-4 w-4" />Dashboard</Link>
             </Button>

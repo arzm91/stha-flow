@@ -19,7 +19,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { KpiCard } from "@/components/KpiCard";
 import { toast } from "sonner";
 import {
-  Wrench, Plus, Printer, Trash2, Calendar as CalendarIcon, Activity, Clock, AlertTriangle, CheckCircle2,
+  Wrench, Plus, Printer, Trash2, Calendar as CalendarIcon, Activity, Clock, AlertTriangle, CheckCircle2, FileText,
 } from "lucide-react";
 import { format, parseISO, startOfMonth, endOfMonth, addDays, addMonths, subMonths, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -155,6 +155,9 @@ function ManutencaoPage() {
         description="OEE, MTTR, MTBF, ordens de serviço corretivas e preventivas."
         actions={
           <div className="flex flex-wrap gap-2">
+            <Button asChild variant="outline">
+              <Link to="/relatorios/$slug" params={{ slug: "manutencao-24h" }}><FileText className="mr-2 h-4 w-4" />Relatório 24h</Link>
+            </Button>
             <Button variant="outline" onClick={() => { setPrevEditing(null); setPrevOpen(true); }}>
               <CalendarIcon className="mr-2 h-4 w-4" />Nova preventiva
             </Button>
