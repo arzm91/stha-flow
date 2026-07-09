@@ -15,42 +15,72 @@ function hexFromArgb(argb?: string): string | undefined {
   return `#${h.toLowerCase()}`
 }
 
+const MAX_ROWS = 2000
+const MAX_COLS = 100
+
 /** Read .xlsx into internal Workbook, preserving values, formulas and basic styles. */
 export async function importXlsx(file: File): Promise<Workbook> {
   const wb = new ExcelJS.Workbook()
   const buf = await file.arrayBuffer()
   await wb.xlsx.load(buf)
   const sheets: Sheet[] = []
+  const usedNames = new Set<string>()
   wb.eachSheet((ws, idx) => {
-    const sheet = emptySheet(`s${idx}`, ws.name || `Planilha${idx}`)
-    const maxRow = Math.max(ws.rowCount, DEFAULT_ROWS)
-    const maxCol = Math.max(ws.columnCount, DEFAULT_COLS)
+    const rawName = ws.name || `Planilha${idx}`
+    let safeName = rawName.replace(/[\\/?*[\]:'!]/g, ' ').trim().slice(0, 31) || `Planilha${idx}`
+    let dedup = safeName
+    let n = 2
+    while (usedNames.has(dedup)) dedup = `${safeName} (${n++})`.slice(0, 31)
+    usedNames.add(dedup)
+    const sheet = emptySheet(`s${idx}`, dedup)
+    const rc = Math.max(1, Math.min(Number(ws.rowCount) || 0, MAX_ROWS))
+    const cc0 = Math.max(1, Math.min(Number(ws.columnCount) || 0, MAX_COLS))
+    const maxRow = Math.max(rc, DEFAULT_ROWS)
+    const maxCol = Math.max(cc0, DEFAULT_COLS)
     // Grow arrays if needed
     while (sheet.data.length < maxRow) sheet.data.push(Array.from({ length: maxCol }, () => null))
     for (const row of sheet.data) while (row.length < maxCol) row.push(null)
 
     ws.eachRow({ includeEmpty: false }, (row, r) => {
+      if (r > MAX_ROWS) return
       row.eachCell({ includeEmpty: false }, (cell, c) => {
+        if (c > MAX_COLS) return
         const rr = r - 1
         const cc = c - 1
         let value: string | number | null = null
-        if (cell.formula) {
-          value = `=${cell.formula}`
-        } else if (cell.value == null) {
+        try {
+          if ((cell.value as any) instanceof Date) {
+            value = (cell.value as unknown as Date).toISOString()
+          } else if (cell.formula) {
+            const f = typeof cell.formula === 'string' ? cell.formula : ''
+            if (f) {
+              value = `=${f}`
+            } else {
+              const res = (cell as any).result
+              value = res == null ? null : (typeof res === 'object' ? String(res) : (res as any))
+            }
+          } else if (cell.value == null) {
+            value = null
+          } else if (typeof cell.value === 'object') {
+            const v: any = cell.value
+            if (v instanceof Date) value = v.toISOString()
+            else if (v.richText) value = v.richText.map((t: any) => t.text ?? '').join('')
+            else if (v.text != null) value = String(v.text)
+            else if (v.result != null) value = typeof v.result === 'object' ? String(v.result) : v.result
+            else if (v.hyperlink && v.text) value = String(v.text)
+            else if (v.error) value = String(v.error)
+            else value = null
+          } else if (typeof cell.value === 'number' || typeof cell.value === 'string') {
+            value = cell.value as any
+          } else if (typeof cell.value === 'boolean') {
+            value = cell.value ? 'TRUE' : 'FALSE'
+          } else {
+            value = String(cell.value)
+          }
+        } catch {
           value = null
-        } else if (typeof cell.value === 'object') {
-          const v: any = cell.value
-          if (v.richText) value = v.richText.map((t: any) => t.text).join('')
-          else if (v.text) value = v.text
-          else if (v.result != null) value = v.result
-          else if (v && typeof (v as any).getTime === 'function') value = (v as unknown as Date).toISOString()
-          else value = String(cell.value)
-        } else if ((cell.value as unknown) instanceof Date) {
-          value = (cell.value as unknown as Date).toISOString()
-        } else {
-          value = cell.value as any
         }
-        sheet.data[rr][cc] = value
+        if (sheet.data[rr]) sheet.data[rr][cc] = value
         // Style
         const st: CellStyle = {}
         const f = cell.font
@@ -83,17 +113,18 @@ export async function importXlsx(file: File): Promise<Workbook> {
     ws.eachRow({ includeEmpty: false }, (row, r) => {
       if (row.height) sheet.rowHeights[r - 1] = row.height
     })
-    // Merges
+    // Merges (guard against out-of-bounds after clamp)
     const merges = (ws as any).model?.merges as string[] | undefined
     if (Array.isArray(merges)) {
       for (const range of merges) {
-        // e.g. "B2:D4"
         const m = range.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/)
         if (!m) continue
         const c1 = colLetterToIndex(m[1])
         const r1 = Number(m[2]) - 1
         const c2 = colLetterToIndex(m[3])
         const r2 = Number(m[4]) - 1
+        if (r1 < 0 || c1 < 0 || r2 < r1 || c2 < c1) continue
+        if (r2 >= sheet.data.length || c2 >= (sheet.data[0]?.length ?? 0)) continue
         sheet.mergeCells.push({ row: r1, col: c1, rowspan: r2 - r1 + 1, colspan: c2 - c1 + 1 })
       }
     }

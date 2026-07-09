@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, forwardRef, useImperativeHandle, useLayoutEffect } from 'react'
 import { HotTable } from '@handsontable/react'
 import Handsontable from 'handsontable'
-import { HyperFormula } from 'hyperformula'
 import 'handsontable/styles/handsontable.min.css'
 import 'handsontable/styles/ht-theme-main.min.css'
 import { registerAllModules } from 'handsontable/registry'
@@ -283,13 +282,13 @@ export const SpreadsheetEditor = forwardRef<SpreadsheetEditorHandle, Props>(func
     <div className="flex flex-col h-full min-h-0">
       <div ref={containerRef} className="flex-1 min-h-0 overflow-hidden hot-container ht-theme-main relative bg-white">
         <HotTable
+          key={`${activeSheet.id}:${activeSheet.name}`}
           ref={hotRef}
           data={displayData}
           colHeaders
           rowHeaders
           rowHeights={activeSheet.rowHeights.length ? (idx) => activeSheet.rowHeights[idx] || 24 : 24}
           colWidths={activeSheet.colWidths.length ? (idx) => activeSheet.colWidths[idx] || 100 : 100}
-          formulas={{ engine: HyperFormula, sheetName: activeSheet.name }}
           mergeCells={activeSheet.mergeCells}
           contextMenu
           manualColumnResize
