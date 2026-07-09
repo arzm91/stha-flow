@@ -106,17 +106,18 @@ export async function importXlsx(file: File): Promise<Workbook> {
     ws.eachRow({ includeEmpty: false }, (row, r) => {
       if (row.height) sheet.rowHeights[r - 1] = row.height
     })
-    // Merges
+    // Merges (guard against out-of-bounds after clamp)
     const merges = (ws as any).model?.merges as string[] | undefined
     if (Array.isArray(merges)) {
       for (const range of merges) {
-        // e.g. "B2:D4"
         const m = range.match(/^([A-Z]+)(\d+):([A-Z]+)(\d+)$/)
         if (!m) continue
         const c1 = colLetterToIndex(m[1])
         const r1 = Number(m[2]) - 1
         const c2 = colLetterToIndex(m[3])
         const r2 = Number(m[4]) - 1
+        if (r1 < 0 || c1 < 0 || r2 < r1 || c2 < c1) continue
+        if (r2 >= sheet.data.length || c2 >= (sheet.data[0]?.length ?? 0)) continue
         sheet.mergeCells.push({ row: r1, col: c1, rowspan: r2 - r1 + 1, colspan: c2 - c1 + 1 })
       }
     }
