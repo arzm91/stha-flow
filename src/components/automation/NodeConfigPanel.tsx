@@ -441,27 +441,7 @@ export function NodeConfigPanel({
             )}
 
             {cfg.type === "gerar_relatorio" && (
-              <>
-                <div className="space-y-1">
-                  <Label>Tipo de relatório</Label>
-                  <Select value={String(cfg.tipo ?? "producao")} onValueChange={(v) => set({ tipo: v })}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="producao">Produção</SelectItem>
-                      <SelectItem value="qualidade">Qualidade</SelectItem>
-                      <SelectItem value="estoque">Estoque</SelectItem>
-                      <SelectItem value="turno">Turno</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1">
-                  <Label>Título</Label>
-                  <Input value={String(cfg.titulo ?? "Relatório automático")} onChange={(e) => set({ titulo: e.target.value })} />
-                </div>
-                <p className="text-[11px] text-muted-foreground">
-                  Registra uma solicitação na aba Avisos. Envio por e-mail será adicionado quando o conector de e-mail estiver configurado.
-                </p>
-              </>
+              <ReportPickerConfig cfg={cfg} set={set} />
             )}
 
             {cfg.type === "enviar_email" && (
