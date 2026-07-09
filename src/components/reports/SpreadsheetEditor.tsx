@@ -96,7 +96,7 @@ export const SpreadsheetEditor = forwardRef<SpreadsheetEditorHandle, Props>(func
     onChange?.(next)
   }
 
-  const handleAfterChange: Handsontable.Hooks.Events['afterChange'] = (changes, source) => {
+  const handleAfterChange = (changes: any[] | null, source: string) => {
     if (source === 'loadData' || !changes) return
     let touched = false
     updateSheet((s) => {
