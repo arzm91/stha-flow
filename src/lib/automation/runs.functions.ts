@@ -218,6 +218,8 @@ async function runActionNode(
       .eq("id", prox.id);
     if (error) throw new Error(error.message);
     await supabase.from("equipamentos").update({ status: "ocupado" }).eq("id", equipId);
+    ctx.equipamento_id = equipId;
+    ctx.ordem_id = prox.id;
     return { info: `OP ${prox.numero} iniciada às ${startAt}` };
   }
 
