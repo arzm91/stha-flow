@@ -2132,6 +2132,7 @@ export type Database = {
           theme: Json
           tipo: string
           updated_at: string
+          workbook: Json
         }
         Insert: {
           analise_ids?: string[]
@@ -2152,6 +2153,7 @@ export type Database = {
           theme?: Json
           tipo?: string
           updated_at?: string
+          workbook?: Json
         }
         Update: {
           analise_ids?: string[]
@@ -2172,6 +2174,7 @@ export type Database = {
           theme?: Json
           tipo?: string
           updated_at?: string
+          workbook?: Json
         }
         Relationships: []
       }

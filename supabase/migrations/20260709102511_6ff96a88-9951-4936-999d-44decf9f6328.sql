@@ -1,0 +1,2 @@
+ALTER TABLE public.report_templates
+  ADD COLUMN IF NOT EXISTS workbook JSONB NOT NULL DEFAULT '{"sheets":[{"id":"s1","name":"Planilha1","data":[],"mergeCells":[],"cellMeta":[],"colWidths":[],"rowHeights":[]}],"activeSheetId":"s1"}'::jsonb;
