@@ -120,13 +120,14 @@ export function PendingApprovalsDock() {
       (n) => n.type === "action" && n.data?.config?.type === "finalizar_op",
     );
     const equipId = (finalAction?.data?.config?.equipamento_id as string) ?? null;
+    const qtdTag = (finalAction?.data?.config?.qtd_produzida_tag as string) ?? "";
     let qtd = 0;
     let numero = "";
     let produtoId: string | null = null;
     if (equipId) {
       const { data: op } = await supabase
         .from("ordens_producao")
-        .select("qtd_planejada, numero, produto_id")
+        .select("qtd_planejada, numero, produto_id, owner_id")
         .eq("equipamento_id", equipId)
         .eq("status", "em_andamento")
         .order("inicio_em", { ascending: false })
@@ -135,6 +136,14 @@ export function PendingApprovalsDock() {
       qtd = Number(op?.qtd_planejada ?? 0);
       numero = op?.numero ?? "";
       produtoId = op?.produto_id ?? null;
+
+      // Se há tag configurada como quantidade produzida, usa esse valor como sugestão.
+      if (qtdTag && op?.owner_id) {
+        const { data: tag } = await supabase
+          .from("tags_live").select("valor_num")
+          .eq("owner_id", op.owner_id).eq("nome", qtdTag).maybeSingle();
+        if (tag?.valor_num != null) qtd = Number(tag.valor_num);
+      }
     }
     setDialogQtd(qtd);
     setDialogNumero(numero);
