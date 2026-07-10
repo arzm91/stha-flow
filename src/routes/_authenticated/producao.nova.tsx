@@ -49,7 +49,7 @@ function NovaOPPage() {
 
   const create = useMutation({
     mutationFn: async () => {
-      if (!numero || !produtoId || !equipamentoId || qtdPlanejada === "") throw new Error("Preencha todos os campos");
+      if (!numero || !equipamentoId || qtdPlanejada === "") throw new Error("Preencha número, equipamento e quantidade");
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Não autenticado");
       const { data, error } = await supabase
@@ -57,7 +57,7 @@ function NovaOPPage() {
         .insert({
           owner_id: u.user.id,
           numero,
-          produto_id: produtoId,
+          produto_id: produtoId || null,
           equipamento_id: equipamentoId,
           qtd_planejada: Number(qtdPlanejada),
           obs_iniciais: obs || null,
