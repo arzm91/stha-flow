@@ -114,11 +114,12 @@ function OPPage() {
   if (!op.data) return <div className="text-sm text-muted-foreground">Ordem não encontrada.</div>;
 
   const isFinal = op.data.status === "finalizada";
-  const equip = op.data.equipamento as { tag_nomes?: string[]; tag_velocidade_producao?: string | null; tag_producao_total?: string | null; nome?: string } | null;
+  const equip = op.data.equipamento as { tag_nomes?: string[]; tag_velocidade_producao?: string | null; tag_producao_total?: string | null; nome?: string; capacidade_hora?: number | null; capacidade_dia?: number | null; capacidade_mes?: number | null; capacidade_unidade?: string | null } | null;
   const tagNomes = (equip?.tag_nomes ?? []) as string[];
   const tagVel = equip?.tag_velocidade_producao || null;
   const tagTotal = equip?.tag_producao_total || null;
   const qtdPlanejada = Number(op.data.qtd_planejada ?? 0);
+  const produtoNome = (op.data.produto as { nome?: string } | null)?.nome ?? null;
 
   return (
     <div ref={containerRef} className={isFs ? "h-screen w-screen overflow-auto bg-background p-6" : undefined}>
