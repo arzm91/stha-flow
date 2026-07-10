@@ -128,7 +128,7 @@ function OPPage() {
       </Button>
       <PageHeader
         title={`OP ${op.data.numero}`}
-        description={`${(op.data.produto as any)?.nome ?? ""} · ${equip?.nome ?? ""}`}
+        description={`${produtoNome ?? "Sem produto"} · ${equip?.nome ?? ""}`}
         actions={
           <div className="flex items-center gap-2">
             <Badge variant="outline" className={isFinal ? "bg-success/20 text-success border-success/30" : "bg-primary/20 text-primary border-primary/30"}>
