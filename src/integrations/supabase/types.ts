@@ -787,6 +787,10 @@ export type Database = {
       equipamentos: {
         Row: {
           ativo: boolean
+          capacidade_dia: number | null
+          capacidade_hora: number | null
+          capacidade_mes: number | null
+          capacidade_unidade: string | null
           categoria: string
           codigo: string
           created_at: string
@@ -806,6 +810,10 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          capacidade_dia?: number | null
+          capacidade_hora?: number | null
+          capacidade_mes?: number | null
+          capacidade_unidade?: string | null
           categoria?: string
           codigo: string
           created_at?: string
@@ -825,6 +833,10 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          capacidade_dia?: number | null
+          capacidade_hora?: number | null
+          capacidade_mes?: number | null
+          capacidade_unidade?: string | null
           categoria?: string
           codigo?: string
           created_at?: string
@@ -1408,7 +1420,7 @@ export type Database = {
           obs_iniciais: string | null
           owner_id: string
           prioridade: string
-          produto_id: string
+          produto_id: string | null
           qtd_planejada: number
           qtd_produzida: number | null
           status: string
@@ -1430,7 +1442,7 @@ export type Database = {
           obs_iniciais?: string | null
           owner_id: string
           prioridade?: string
-          produto_id: string
+          produto_id?: string | null
           qtd_planejada: number
           qtd_produzida?: number | null
           status?: string
@@ -1452,7 +1464,7 @@ export type Database = {
           obs_iniciais?: string | null
           owner_id?: string
           prioridade?: string
-          produto_id?: string
+          produto_id?: string | null
           qtd_planejada?: number
           qtd_produzida?: number | null
           status?: string

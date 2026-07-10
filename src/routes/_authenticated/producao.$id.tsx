@@ -38,7 +38,7 @@ function OPPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("ordens_producao")
-        .select("*, produto:produto_id(id,nome,codigo,unidade), equipamento:equipamento_id(id,codigo,nome,tag_nomes,tag_velocidade_producao,tag_producao_total), tanque:tanque_destino_id(nome,codigo)")
+        .select("*, produto:produto_id(id,nome,codigo,unidade), equipamento:equipamento_id(id,codigo,nome,tag_nomes,tag_velocidade_producao,tag_producao_total,capacidade_hora,capacidade_dia,capacidade_mes,capacidade_unidade), tanque:tanque_destino_id(nome,codigo)")
         .eq("id", id).maybeSingle();
       if (error) throw error;
       return data;
@@ -114,11 +114,12 @@ function OPPage() {
   if (!op.data) return <div className="text-sm text-muted-foreground">Ordem não encontrada.</div>;
 
   const isFinal = op.data.status === "finalizada";
-  const equip = op.data.equipamento as { tag_nomes?: string[]; tag_velocidade_producao?: string | null; tag_producao_total?: string | null; nome?: string } | null;
+  const equip = op.data.equipamento as { tag_nomes?: string[]; tag_velocidade_producao?: string | null; tag_producao_total?: string | null; nome?: string; capacidade_hora?: number | null; capacidade_dia?: number | null; capacidade_mes?: number | null; capacidade_unidade?: string | null } | null;
   const tagNomes = (equip?.tag_nomes ?? []) as string[];
   const tagVel = equip?.tag_velocidade_producao || null;
   const tagTotal = equip?.tag_producao_total || null;
   const qtdPlanejada = Number(op.data.qtd_planejada ?? 0);
+  const produtoNome = (op.data.produto as { nome?: string } | null)?.nome ?? null;
 
   return (
     <div ref={containerRef} className={isFs ? "h-screen w-screen overflow-auto bg-background p-6" : undefined}>
@@ -127,7 +128,7 @@ function OPPage() {
       </Button>
       <PageHeader
         title={`OP ${op.data.numero}`}
-        description={`${(op.data.produto as any)?.nome ?? ""} · ${equip?.nome ?? ""}`}
+        description={`${produtoNome ?? "Sem produto"} · ${equip?.nome ?? ""}`}
         actions={
           <div className="flex items-center gap-2">
             <Badge variant="outline" className={isFinal ? "bg-success/20 text-success border-success/30" : "bg-primary/20 text-primary border-primary/30"}>
@@ -164,10 +165,28 @@ function OPPage() {
         }
       />
 
+      {!produtoNome && !isFinal ? (
+        <VincularProdutoBanner ordemId={id} onDone={() => qc.invalidateQueries({ queryKey: ["op", id] })} />
+      ) : null}
+
       {op.data.equipamento_id ? <UtilidadesStrip equipamentoId={op.data.equipamento_id as string} /> : null}
 
       {(tagVel || tagTotal) ? (
         <AvancoProducaoHeader ordemId={id} tagVel={tagVel} tagTotal={tagTotal} qtdPlanejada={qtdPlanejada} />
+      ) : null}
+
+      {equip && (equip.capacidade_hora || equip.capacidade_dia || equip.capacidade_mes) && op.data.inicio_em ? (
+        <CapacidadeNominalCard
+          equipamentoId={op.data.equipamento_id as string}
+          inicioEm={op.data.inicio_em as string}
+          fimEm={(op.data.fim_em as string | null) ?? null}
+          qtdProduzida={Number(op.data.qtd_produzida ?? 0)}
+          tagTotal={tagTotal}
+          capacidadeHora={equip.capacidade_hora ?? null}
+          capacidadeDia={equip.capacidade_dia ?? null}
+          capacidadeMes={equip.capacidade_mes ?? null}
+          unidade={equip.capacidade_unidade ?? ((op.data.produto as { unidade?: string } | null)?.unidade ?? "")}
+        />
       ) : null}
 
       {op.data.inicio_em && !isFinal ? (
@@ -1614,4 +1633,142 @@ function ProcessosSection({ ordemId, equipamentoId }: { ordemId: string; equipam
   );
 }
 
+function VincularProdutoBanner({ ordemId, onDone }: { ordemId: string; onDone: () => void }) {
+  const [produtoId, setProdutoId] = useState("");
+  const [saving, setSaving] = useState(false);
+  const produtos = useQuery({
+    queryKey: ["produtos-ativos-vincular"],
+    queryFn: async () => {
+      const { data } = await supabase.from("produtos").select("id,codigo,nome").eq("ativo", true).order("nome");
+      return data ?? [];
+    },
+  });
+  const salvar = async () => {
+    if (!produtoId) return toast.error("Selecione um produto");
+    setSaving(true);
+    try {
+      const { error } = await supabase.from("ordens_producao").update({ produto_id: produtoId }).eq("id", ordemId);
+      if (error) throw error;
+      toast.success("Produto vinculado à ordem");
+      onDone();
+    } catch (e) { toast.error((e as Error).message); }
+    finally { setSaving(false); }
+  };
+  return (
+    <Card className="mb-4 border-warning/40 bg-warning/5">
+      <CardContent className="flex flex-wrap items-center gap-3 p-3">
+        <AlertTriangle className="h-4 w-4 text-warning" />
+        <div className="flex-1 text-sm">
+          Esta ordem está <span className="font-medium">sem produto</span>. O equipamento está operando normalmente; vincule um produto quando desejar.
+        </div>
+        <select value={produtoId} onChange={(e) => setProdutoId(e.target.value)}
+          className="flex h-9 min-w-[220px] rounded-md border border-input bg-background px-3 py-1 text-sm">
+          <option value="">— selecionar produto —</option>
+          {produtos.data?.map((p) => <option key={p.id} value={p.id}>{p.codigo} — {p.nome}</option>)}
+        </select>
+        <Button size="sm" onClick={salvar} disabled={saving || !produtoId}>Vincular</Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function CapacidadeNominalCard({
+  equipamentoId, inicioEm, fimEm, qtdProduzida, tagTotal,
+  capacidadeHora, capacidadeDia, capacidadeMes, unidade,
+}: {
+  equipamentoId: string;
+  inicioEm: string;
+  fimEm: string | null;
+  qtdProduzida: number;
+  tagTotal: string | null;
+  capacidadeHora: number | null;
+  capacidadeDia: number | null;
+  capacidadeMes: number | null;
+  unidade: string;
+}) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(t);
+  }, []);
+  const tagLive = useQuery({
+    queryKey: ["cap-tag-total", tagTotal],
+    enabled: !!tagTotal,
+    queryFn: async () => {
+      const { data } = await supabase.from("tags_live").select("valor_num").eq("nome", tagTotal as string).maybeSingle();
+      return data?.valor_num as number | null;
+    },
+    refetchInterval: 5_000,
+  });
+
+  const inicioMs = new Date(inicioEm).getTime();
+  const fimMs = fimEm ? new Date(fimEm).getTime() : now;
+  const horas = Math.max((fimMs - inicioMs) / 3_600_000, 1 / 60);
+  const totalAtual = tagLive.data ?? qtdProduzida ?? 0;
+  const taxaPorHora = totalAtual / horas;
+
+  // Produção acumulada hoje/mês no equipamento (via ordens finalizadas + atual).
+  const hoje = useQuery({
+    queryKey: ["cap-eq-dia", equipamentoId],
+    queryFn: async () => {
+      const start = new Date(); start.setHours(0, 0, 0, 0);
+      const { data } = await supabase.from("ordens_producao")
+        .select("qtd_produzida")
+        .eq("equipamento_id", equipamentoId)
+        .gte("inicio_em", start.toISOString());
+      return (data ?? []).reduce((s, r) => s + Number(r.qtd_produzida ?? 0), 0);
+    },
+    refetchInterval: 60_000,
+  });
+  const mes = useQuery({
+    queryKey: ["cap-eq-mes", equipamentoId],
+    queryFn: async () => {
+      const start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0);
+      const { data } = await supabase.from("ordens_producao")
+        .select("qtd_produzida")
+        .eq("equipamento_id", equipamentoId)
+        .gte("inicio_em", start.toISOString());
+      return (data ?? []).reduce((s, r) => s + Number(r.qtd_produzida ?? 0), 0);
+    },
+    refetchInterval: 60_000,
+  });
+
+  const efHora = capacidadeHora && capacidadeHora > 0 ? (taxaPorHora / capacidadeHora) * 100 : null;
+  const pctDia = capacidadeDia && capacidadeDia > 0 ? ((hoje.data ?? 0) / capacidadeDia) * 100 : null;
+  const pctMes = capacidadeMes && capacidadeMes > 0 ? ((mes.data ?? 0) / capacidadeMes) * 100 : null;
+
+  const Item = ({ label, real, nominal, pct, suffix }: { label: string; real: number; nominal: number | null; pct: number | null; suffix?: string }) => (
+    <div className="min-w-0">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-0.5 flex items-baseline gap-1">
+        <span className="font-mono text-lg font-semibold">{formatNumber(real)}</span>
+        <span className="text-xs text-muted-foreground">{unidade}{suffix ?? ""}</span>
+      </div>
+      <div className="text-[11px] text-muted-foreground">
+        de <span className="font-mono">{nominal != null ? formatNumber(nominal) : "—"}</span>{" "}
+        {pct != null ? <span className={pct >= 100 ? "text-success font-semibold" : pct >= 70 ? "text-primary font-semibold" : "text-warning font-semibold"}>({pct.toFixed(1)}%)</span> : null}
+      </div>
+      {pct != null ? (
+        <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
+          <div className={`h-full rounded-full ${pct >= 100 ? "bg-success" : pct >= 70 ? "bg-primary" : "bg-warning"}`} style={{ width: `${Math.min(100, pct)}%` }} />
+        </div>
+      ) : null}
+    </div>
+  );
+
+  return (
+    <Card className="mb-4 border-primary/20">
+      <CardContent className="p-4">
+        <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
+          <Gauge className="h-3.5 w-3.5" /> Capacidade nominal vs. real
+        </div>
+        <div className="grid gap-4 sm:grid-cols-3">
+          {capacidadeHora ? <Item label="Por hora (nesta OP)" real={taxaPorHora} nominal={capacidadeHora} pct={efHora} suffix="/h" /> : null}
+          {capacidadeDia ? <Item label="Hoje (equipamento)" real={hoje.data ?? 0} nominal={capacidadeDia} pct={pctDia} /> : null}
+          {capacidadeMes ? <Item label="Este mês (equipamento)" real={mes.data ?? 0} nominal={capacidadeMes} pct={pctMes} /> : null}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 

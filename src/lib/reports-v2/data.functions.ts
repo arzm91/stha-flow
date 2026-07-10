@@ -337,8 +337,8 @@ export const fetchOrdemProducao = createServerFn({ method: "POST" })
     const { data: op } = await supabase.from("ordens_producao").select("*").eq("id", data.id).maybeSingle();
     if (!op) throw new Error("Ordem não encontrada");
     const [{ data: equip }, { data: produto }, { data: mats }, { data: etapas }] = await Promise.all([
-      supabase.from("equipamentos").select("codigo, nome, tipo").eq("id", op.equipamento_id).maybeSingle(),
-      supabase.from("produtos").select("codigo, nome, unidade").eq("id", op.produto_id).maybeSingle(),
+      op.equipamento_id ? supabase.from("equipamentos").select("codigo, nome, tipo").eq("id", op.equipamento_id).maybeSingle() : Promise.resolve({ data: null as any }),
+      op.produto_id ? supabase.from("produtos").select("codigo, nome, unidade").eq("id", op.produto_id).maybeSingle() : Promise.resolve({ data: null as any }),
       supabase.from("ordem_materiais").select("materia_prima_id, percentual, quantidade_prevista, quantidade_consumida, tanque_id").eq("ordem_id", op.id),
       supabase.from("ordem_etapas").select("nome, ordem_seq, status, inicio_em, fim_em").eq("ordem_id", op.id).order("ordem_seq"),
     ]);

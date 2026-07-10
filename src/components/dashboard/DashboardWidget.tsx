@@ -573,7 +573,9 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
       if (!o) return { kind: "producao-prev", equipamento_nome, ordem: null };
       const nomes = [eq?.tag_producao_total, eq?.tag_velocidade_producao].filter(Boolean) as string[];
       const [{ data: prod }, tagsRes] = await Promise.all([
-        supabase.from("produtos").select("nome").eq("id", o.produto_id).maybeSingle(),
+        o.produto_id
+          ? supabase.from("produtos").select("nome").eq("id", o.produto_id).maybeSingle()
+          : Promise.resolve({ data: null as { nome: string } | null }),
         nomes.length
           ? supabase.from("tags_live").select("nome,valor_num,unidade").in("nome", nomes)
           : Promise.resolve({ data: [] as Array<{ nome: string; valor_num: number | null; unidade: string | null }> }),
