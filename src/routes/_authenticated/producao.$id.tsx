@@ -165,10 +165,28 @@ function OPPage() {
         }
       />
 
+      {!produtoNome && !isFinal ? (
+        <VincularProdutoBanner ordemId={id} onDone={() => qc.invalidateQueries({ queryKey: ["op", id] })} />
+      ) : null}
+
       {op.data.equipamento_id ? <UtilidadesStrip equipamentoId={op.data.equipamento_id as string} /> : null}
 
       {(tagVel || tagTotal) ? (
         <AvancoProducaoHeader ordemId={id} tagVel={tagVel} tagTotal={tagTotal} qtdPlanejada={qtdPlanejada} />
+      ) : null}
+
+      {equip && (equip.capacidade_hora || equip.capacidade_dia || equip.capacidade_mes) && op.data.inicio_em ? (
+        <CapacidadeNominalCard
+          equipamentoId={op.data.equipamento_id as string}
+          inicioEm={op.data.inicio_em as string}
+          fimEm={(op.data.fim_em as string | null) ?? null}
+          qtdProduzida={Number(op.data.qtd_produzida ?? 0)}
+          tagTotal={tagTotal}
+          capacidadeHora={equip.capacidade_hora ?? null}
+          capacidadeDia={equip.capacidade_dia ?? null}
+          capacidadeMes={equip.capacidade_mes ?? null}
+          unidade={equip.capacidade_unidade ?? ((op.data.produto as { unidade?: string } | null)?.unidade ?? "")}
+        />
       ) : null}
 
       {op.data.inicio_em && !isFinal ? (
