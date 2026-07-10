@@ -116,7 +116,7 @@ function EquipamentosPage() {
       description="Cadastro e gestão dos equipamentos de produção da planta."
       searchKeys={["nome", "codigo", "tipo", "localizacao"]}
       filter={{ categoria: "producao" }}
-      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [], utilidade_ids: [], tag_velocidade_producao: "", tag_producao_total: "" }}
+      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [], utilidade_ids: [], tag_velocidade_producao: "", tag_producao_total: "", capacidade_hora: "", capacidade_dia: "", capacidade_mes: "", capacidade_unidade: "" }}
       fields={fields}
 
 
