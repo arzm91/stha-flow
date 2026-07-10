@@ -108,10 +108,10 @@ function NovaOPPage() {
                 <Input id="qtd" type="number" step="any" value={qtdPlanejada} onChange={(e) => setQtdPlanejada(e.target.value === "" ? "" : Number(e.target.value))} required />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="produto">Produto</Label>
-                <select id="produto" value={produtoId} onChange={(e) => setProdutoId(e.target.value)} required
+                <Label htmlFor="produto">Produto <span className="text-xs text-muted-foreground">(opcional)</span></Label>
+                <select id="produto" value={produtoId} onChange={(e) => setProdutoId(e.target.value)}
                   className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm">
-                  <option value="">— selecione —</option>
+                  <option value="">— sem produto (vincular depois) —</option>
                   {produtos.data?.map((p) => <option key={p.id} value={p.id}>{p.codigo} — {p.nome}</option>)}
                 </select>
               </div>
