@@ -101,6 +101,10 @@ function EquipamentosPage() {
       options: [{ value: "", label: "— nenhuma —" }, ...tagOptions],
       help: "Tag usada para calcular o % de avanço vs. a quantidade planejada.",
     },
+    { key: "capacidade_hora", label: "Capacidade nominal por hora", type: "number", help: "Produção máxima esperada em 1 hora de operação." },
+    { key: "capacidade_dia", label: "Capacidade nominal por dia", type: "number", help: "Produção máxima esperada em 24 horas." },
+    { key: "capacidade_mes", label: "Capacidade nominal por mês", type: "number", help: "Produção máxima esperada em 30 dias." },
+    { key: "capacidade_unidade", label: "Unidade da capacidade", placeholder: "kg, L, un, ..." },
     { key: "ativo", label: "Ativo", type: "checkbox" },
   ];
 
