@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.ordens_producao_fire_auto_advance() FROM PUBLIC, anon, authenticated;
