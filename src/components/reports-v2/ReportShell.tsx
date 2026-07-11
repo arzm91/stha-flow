@@ -67,8 +67,26 @@ export function ReportShell({
       <style>{`
         @media print {
           @page { size: A4; margin: 12mm; }
-          body { background: white !important; }
-          .report-doc { padding: 0 !important; box-shadow: none !important; max-width: none !important; }
+          html, body {
+            background: white !important;
+            height: auto !important;
+            overflow: visible !important;
+            margin: 0 !important;
+            padding: 0 !important;
+          }
+          body * { visibility: hidden !important; }
+          .report-doc, .report-doc * { visibility: visible !important; }
+          .report-doc {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            max-width: none !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            box-shadow: none !important;
+            background: white !important;
+          }
           .print\\:hidden { display: none !important; }
           .break-avoid { break-inside: avoid; }
         }
