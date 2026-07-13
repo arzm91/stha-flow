@@ -2750,7 +2750,7 @@ export type Database = {
       sync_tag_endpoint_now: { Args: { p_endpoint_id: string }; Returns: Json }
     }
     Enums: {
-      app_role: "admin" | "operador"
+      app_role: "admin" | "operador" | "gerente"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2878,7 +2878,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "operador"],
+      app_role: ["admin", "operador", "gerente"],
     },
   },
 } as const
