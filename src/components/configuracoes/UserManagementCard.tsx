@@ -234,13 +234,16 @@ export function UserManagementCard() {
 function CreateUserDialog({
   onSubmit,
   loading,
+  canCreateGerente,
 }: {
-  onSubmit: (d: { email: string; password: string; nome?: string }) => void;
+  onSubmit: (d: { email: string; password: string; nome?: string; role?: "operador" | "gerente" }) => void;
   loading: boolean;
+  canCreateGerente: boolean;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nome, setNome] = useState("");
+  const [role, setRole] = useState<"operador" | "gerente">("operador");
   return (
     <DialogContent>
       <DialogHeader>
@@ -249,7 +252,7 @@ function CreateUserDialog({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          onSubmit({ email, password, nome: nome || undefined });
+          onSubmit({ email, password, nome: nome || undefined, role });
         }}
         className="space-y-3"
       >
@@ -265,6 +268,25 @@ function CreateUserDialog({
             onChange={(e) => setEmail(e.target.value)}
             required
           />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Papel</Label>
+          <Select
+            value={role}
+            onValueChange={(v) => setRole(v as "operador" | "gerente")}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="operador">Operador</SelectItem>
+              {canCreateGerente && (
+                <SelectItem value="gerente">
+                  Gerente (pode gerenciar outros operadores)
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1.5">
           <Label>Senha temporária</Label>
