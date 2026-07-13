@@ -125,8 +125,6 @@ function ProdutosPage() {
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Não autenticado");
-      if (editing) {
-      }
       const ownerId = u.user.id;
       const payload = {
         ...form,
