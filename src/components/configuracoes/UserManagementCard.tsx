@@ -209,8 +209,6 @@ export function UserManagementCard() {
           onClose={() => setEditingUser(null)}
           onSave={async ({ permissions, resources }) => {
             try {
-              const { requireAdminPassword } = await import("@/components/admin-password/AdminPasswordGate");
-              if (!(await requireAdminPassword(`alterar permissões de ${editingUser.email}`))) return;
               await setPermFn({ data: { user_id: editingUser.id, permissions } });
               await Promise.all(
                 (Object.keys(resources) as Array<keyof typeof resources>).map((rt) =>
