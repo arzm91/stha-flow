@@ -28,8 +28,15 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
-import { UserPlus, Trash2, ShieldCheck, KeyRound } from "lucide-react";
+import { UserPlus, Trash2, ShieldCheck, KeyRound, ShieldAlert } from "lucide-react";
 
 type ResourcePerm = { resource_type: string; resource_id: string };
 
