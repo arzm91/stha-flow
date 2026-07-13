@@ -2686,6 +2686,7 @@ export type Database = {
         Args: { _need_edit?: boolean; _page: string; _user: string }
         Returns: boolean
       }
+      can_manage_users: { Args: { _user: string }; Returns: boolean }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
