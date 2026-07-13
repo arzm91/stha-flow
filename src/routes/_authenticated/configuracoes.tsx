@@ -82,7 +82,7 @@ function ConfiguracoesPage() {
         <PushNotificationsCard />
         <EmailTemplatesCard />
       </div>
-      {isAdmin && (
+      {(isAdmin || isGerente) && (
         <div className="mt-4">
           <UserManagementCard />
         </div>
