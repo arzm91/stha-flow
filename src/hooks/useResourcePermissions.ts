@@ -17,7 +17,8 @@ type ResourcePermsState = {
  * Default policy: deny when no allowlist exists (admin always allowed).
  */
 export function useResourcePermissions(): ResourcePermsState {
-  const { isAdmin, loading: pagesLoading } = usePagePermissions();
+  const { isAdmin, isGerente, loading: pagesLoading } = usePagePermissions();
+  const bypass = isAdmin || isGerente;
 
   const q = useQuery({
     queryKey: ["resource-permissions:self"],
@@ -37,26 +38,26 @@ export function useResourcePermissions(): ResourcePermsState {
       return map as Record<ResourceType, Set<string>>;
     },
     staleTime: 60_000,
-    enabled: !isAdmin, // admins skip the lookup entirely
+    enabled: !bypass, // admins & gerentes skip the lookup entirely
   });
 
   const allowed = (type: ResourceType, id: string) => {
-    if (isAdmin) return true;
+    if (bypass) return true;
     const set = q.data?.[type];
     return !!set && set.has(id);
   };
 
   const filter = <T extends { id: string }>(type: ResourceType, rows: T[] | undefined | null): T[] => {
     if (!rows) return [];
-    if (isAdmin) return rows;
+    if (bypass) return rows;
     const set = q.data?.[type];
     if (!set) return [];
     return rows.filter((r) => set.has(r.id));
   };
 
   return {
-    isAdmin,
-    loading: pagesLoading || (!isAdmin && q.isLoading),
+    isAdmin: bypass,
+    loading: pagesLoading || (!bypass && q.isLoading),
     allowed,
     filter,
   };

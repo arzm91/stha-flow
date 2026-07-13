@@ -94,8 +94,6 @@ function EndpointsPage() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { guardAdmin } = await import("@/lib/security/guard-admin");
-      await guardAdmin("excluir este endpoint de tags");
       const { error } = await supabase.from("tag_endpoints" as never).delete().eq("id", id);
       if (error) throw error;
     },
@@ -104,8 +102,7 @@ function EndpointsPage() {
       qc.invalidateQueries({ queryKey: ["tag_endpoints"] });
     },
     onError: async (e: any) => {
-      const { isAdminCancelled } = await import("@/lib/security/guard-admin");
-      if (!isAdminCancelled(e)) toast.error(e.message);
+      toast.error(e.message);
     },
   });
 

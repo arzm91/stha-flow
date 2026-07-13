@@ -2686,6 +2686,7 @@ export type Database = {
         Args: { _need_edit?: boolean; _page: string; _user: string }
         Returns: boolean
       }
+      can_manage_users: { Args: { _user: string }; Returns: boolean }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
@@ -2750,7 +2751,7 @@ export type Database = {
       sync_tag_endpoint_now: { Args: { p_endpoint_id: string }; Returns: Json }
     }
     Enums: {
-      app_role: "admin" | "operador"
+      app_role: "admin" | "operador" | "gerente"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2878,7 +2879,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "operador"],
+      app_role: ["admin", "operador", "gerente"],
     },
   },
 } as const

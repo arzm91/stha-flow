@@ -1,71 +1,158 @@
-## Objetivo
+# Reforma de Segurança e Acesso
 
-Resolver três pedidos na produção:
+## Visão geral
 
-1. Coleta e processos iniciando automaticamente quando a OP começa (sem depender de abrir a tela).
-2. Produto opcional na OP (equipamento pode operar sem produto associado).
-3. Capacidades nominais no equipamento (hora/dia/mês) refletidas no acompanhamento.
+Consolidar controle de acesso em um **Centro de Segurança** único, adicionar o papel **gerente**, escopar alertas por destinatário, e reduzir o uso da senha admin a duas ações críticas. Multi-tenant por `effective_owner` fica intacto — nenhuma mudança nessa base.
 
----
-
-## 1) Iniciar coleta/processos automaticamente
-
-**Diagnóstico**
-- Coleta de tags (`producao_tag_historico`) e execução de atividades (`auto_advance_equipamento_atividades`) já rodam via trigger + cron server-side.
-- Porém há um atraso perceptível: o cron dispara a cada 10s e depende do próximo update de tag para o trigger encaixar. Quando a OP nasce "programada" e vira "em_andamento" por automação, nada dispara imediatamente o `auto_advance` — só o próximo tick de cron.
-- Além disso, `auto_advance_ordens_producao` filtra `produto_id IS NOT NULL` (importante para o item 2 também).
-
-**Ação**
-- Criar trigger `AFTER UPDATE OF status ON ordens_producao` (também `AFTER INSERT`) que, quando `NEW.status = 'em_andamento'`, chama `public.auto_advance_equipamento_atividades()` na hora — assim as etapas abertas por gatilho de "início" ou por estabilização são criadas imediatamente.
-- Também dispara `auto_advance_ordens_producao()` (para OPs com produto e receita clássica).
-- Nada muda no cron; ele continua como rede de segurança.
-
-## 2) Produto opcional na OP
-
-**Schema**
-- `ALTER TABLE public.ordens_producao ALTER COLUMN produto_id DROP NOT NULL;` (verificar antes; se já for nullable, pular).
-- `provisionar_ordem_materiais` já checa `IF NEW.produto_id IS NULL THEN RETURN NEW`, ok.
-- `auto_advance_ordens_producao` já pula sem produto; mantém.
-
-**UI**
-- `producao.nova.tsx`: campo produto vira opcional (label "Produto (opcional)"), remove `required`, permite salvar vazio (`produto_id: produtoId || null`).
-- `producao.$id.tsx`: adicionar botão "Vincular produto" quando `produto_id` for null, abrindo select de produto e atualizando a OP. Após vincular, o provisionamento de materiais é acionado (podemos chamar manualmente re-provisionar ou apenas invalidar; o trigger `provisionar_ordem_materiais` já responde a INSERT — para UPDATE, adicionaremos o trigger também em UPDATE quando `produto_id` mudar de null para valor).
-- Ao finalizar OP sem produto: o registro em `movimentacoes_estoque` só ocorre se houver `tanque_destino_id` e `produto_id`; mantemos a lógica existente já protegida.
-
-## 3) Capacidade nominal do equipamento
-
-**Schema**
-- Adicionar colunas em `public.equipamentos`:
-  - `capacidade_hora numeric`
-  - `capacidade_dia numeric`
-  - `capacidade_mes numeric`
-  - `capacidade_unidade text` (ex: "kg", "un", "L")
-
-**UI cadastro**
-- `cadastros.equipamentos.tsx`: adicionar 4 campos no formulário do CrudTable (numéricos + unidade).
-
-**UI acompanhamento (`producao.$id.tsx`)**
-- Novo card compacto **"Capacidade nominal vs. real"** exibindo:
-  - Capacidade/hora nominal · produção real média/hora desde `inicio_em` (via `tag_producao_total` se existir, senão via `qtd_produzida`).
-  - Progresso do dia e do mês (produção acumulada do equipamento no período / capacidade correspondente).
-  - Barra de eficiência (real / nominal * 100%).
-- Só aparece se ao menos uma capacidade estiver definida.
+Chat permanece restrito a admin nesta rodada (conforme sua escolha).
 
 ---
 
-## Arquivos afetados
+## 1. Novo papel: `gerente`
 
-**Migração SQL** (1 arquivo novo em `supabase/migrations/`)
-- Torna `produto_id` opcional em `ordens_producao`.
-- Adiciona colunas de capacidade em `equipamentos`.
-- Cria trigger `AFTER INSERT OR UPDATE OF status ON ordens_producao` chamando `auto_advance_*` quando entra em `em_andamento`.
-- Ajusta trigger `provisionar_ordem_materiais` para também rodar em UPDATE quando `produto_id` muda de null para valor.
+**Migration**
+- Adicionar `'gerente'` ao enum `public.app_role` (ADD VALUE — não destrutivo).
+- Atualizar `has_role` continua funcionando sem mudança (é genérica).
+- Criar função helper `public.can_manage_users(_user uuid)` = `has_role(admin) OR has_role(gerente)`.
+
+**Backend (`admin.functions.ts` renomeado conceitualmente para "user-management")**
+- Trocar `assertAdmin` por `assertCanManageUsers` em: `listManagedUsers`, `createManagedUser`, `setUserPermissions`, `setUserResourcePermissions`, `deleteManagedUser`.
+- Regras de proteção adicionadas ao gerente:
+  - Só pode criar/editar/excluir usuários com papel `operador` (não pode mexer em admin nem em outros gerentes).
+  - Só pode atribuir papel `operador` a novos usuários (admin continua podendo atribuir `operador` ou `gerente`).
+  - Não pode alterar `created_by` de usuários alheios (regra já existe no trigger `profiles_protect_created_by` — vamos estendê-la para permitir gerente).
 
 **Frontend**
-- `src/routes/_authenticated/cadastros.equipamentos.tsx` — 4 novos campos.
-- `src/routes/_authenticated/producao.nova.tsx` — produto opcional.
-- `src/routes/_authenticated/producao.$id.tsx` — botão "Vincular produto" + novo card de capacidade nominal.
+- `usePagePermissions` passa a expor `canManageUsers` (admin OU gerente).
+- `UserManagementCard`, seção "Segurança" em Configurações, e menu do sidebar liberam para gerente também.
+- Novo dropdown de papel no formulário de criação: admin vê `operador`/`gerente`; gerente só vê `operador`.
 
-**Fora de escopo**
-- Não mexe em relatórios, alertas, automações ou schema de outras tabelas.
-- Não altera as receitas de produto — apenas o vínculo tardio dispara o provisionamento existente.
+---
+
+## 2. Centro de Segurança (nova aba em Configurações)
+
+Reorganizar a página `/configuracoes` em abas:
+- **Perfil** (atual)
+- **Sessão** (atual)
+- **Notificações** (Push + Email templates — atuais)
+- **Segurança e Acessos** ← novo, visível para admin e gerente
+
+Dentro de "Segurança e Acessos":
+- Lista de usuários da conta (reaproveita `UserManagementCard`).
+- Por usuário selecionado, três painéis lado a lado:
+  1. **Papel** (operador / gerente / admin, conforme quem edita).
+  2. **Permissões de página** (view/edit por página — já existe).
+  3. **Permissões de recurso** (equipamentos, tanques, produtos, planilhas — já existe em `user_resource_permissions`, mas hoje só é aplicado em algumas telas).
+
+Novo hook `useResourceAccess(resourceType, resourceId)` que retorna `{ canView, canEdit }` e é usado para filtrar listas e esconder itens.
+
+**Aplicação real do filtro por recurso** (hoje inconsistente):
+- Página `/producao` (lista de equipamentos): filtra pelos IDs permitidos.
+- Página `/producao/$id` (acompanhamento): bloqueia se o equipamento não estiver na lista.
+- Página `/estoque` e `/estoque/tanques/$id`: filtra tanques.
+- Página `/cadastros/produtos`: filtra produtos.
+- Página `/tabelas`: filtra planilhas.
+- Dashboard: já filtra widgets por permissão de página; adicionar filtro por recurso quando o widget é escopado a um equipamento/tanque.
+
+Admin e gerente com permissão em tudo veem tudo (comportamento atual preservado).
+
+---
+
+## 3. Alertas escopados por destinatário
+
+**Regra escolhida:** "só quem está listado como destinatário no alerta". Isso vale para alertas com E sem equipamento.
+
+**Backend (sem mudança de schema)**
+- `alertas.email_recipients` (uuid[]) e `alertas.push_recipients` (uuid[]) já existem e definem quem recebe **e-mail/push**.
+- Nova coluna simples na leitura da tela: consideramos a mesma lista para **quem vê no popup e no sino de alertas**. Nenhuma coluna nova necessária.
+
+**Frontend**
+- `AlertasFloatingPopup` e a lista de alertas: filtrar `alertas_disparos` pelo `alerta_id` cujo `email_recipients` OU `push_recipients` contém o `auth.uid()` atual. Admin vê tudo (opt-out via toggle na UI).
+- Novo policy de leitura em `alertas_disparos`: usuário lê disparo se é admin OU está nos recipients do alerta associado.
+- Alertas sem `alerta_id` (rotinas semanais que caem em `alertas_disparos` via `rotinas_atividades`): usar `rotinas_atividades.email_recipients` da mesma forma.
+
+---
+
+## 4. Simplificação da senha admin
+
+**Manter** o `AdminPasswordGate` apenas em:
+- Excluir usuário (`deleteManagedUser`).
+- Alterar papel de um usuário (nova ação de admin).
+
+**Remover** de todos os outros pontos onde `guardAdmin(...)` é chamado hoje (exclusões de ordens, tanques, cadastros, planilhas, etc.). Nessas ações, o controle passa a ser 100% pela permissão `can_edit` no `user_permissions` — o botão de excluir só aparece para quem pode editar.
+
+Auditoria: vou rodar `rg "guardAdmin\("` para listar todos os usos e converter caso a caso.
+
+---
+
+## 5. O que NÃO muda nesta rodada
+
+- Chat permanece só para admin.
+- Multi-tenant `effective_owner`.
+- `handle_new_user` trigger.
+- Templates de e-mail, push, edge functions.
+- Nenhuma tabela é deletada.
+
+---
+
+## Detalhes técnicos
+
+**Migrations (2 arquivos):**
+
+1. `security-role-gerente.sql`:
+   - `ALTER TYPE public.app_role ADD VALUE IF NOT EXISTS 'gerente';`
+   - `CREATE FUNCTION public.can_manage_users(_user uuid) RETURNS boolean ...`
+   - Atualizar `profiles_protect_created_by` para aceitar gerente com restrições.
+
+2. `alertas-disparos-rls-por-destinatario.sql`:
+   - Nova policy SELECT em `alertas_disparos`:
+     ```sql
+     USING (
+       public.has_role(auth.uid(), 'admin')
+       OR EXISTS (SELECT 1 FROM public.alertas a
+                  WHERE a.id = alertas_disparos.alerta_id
+                    AND (auth.uid() = ANY(a.email_recipients)
+                         OR auth.uid() = ANY(a.push_recipients)))
+     )
+     ```
+   - Manter policy de admin/owner atual como fallback.
+
+**Arquivos frontend afetados (~12):**
+- `src/hooks/usePagePermissions.ts` — adicionar `canManageUsers`, `isGerente`.
+- `src/hooks/useResourcePermissions.ts` — já existe, expandir para ser usado em todas as listagens.
+- `src/lib/permissions/admin.functions.ts` — trocar assertions.
+- `src/components/configuracoes/UserManagementCard.tsx` — dropdown de papel.
+- `src/routes/_authenticated/configuracoes.tsx` — reorganizar em abas.
+- `src/components/alertas/AlertasFloatingPopup.tsx` — filtro por recipient.
+- `src/routes/_authenticated/alertas.index.tsx` — mesmo filtro.
+- `src/routes/_authenticated/producao.index.tsx`, `producao.$id.tsx` — filtro de equipamentos.
+- `src/routes/_authenticated/estoque.index.tsx`, `estoque.tanques.$id.tsx` — filtro de tanques.
+- `src/routes/_authenticated/cadastros.produtos.tsx` — filtro de produtos.
+- `src/routes/_authenticated/tabelas.index.tsx` — filtro de planilhas.
+- Todos os arquivos que usam `guardAdmin(...)` — remover chamada, deixar apenas onde a exclusão é de usuário/papel.
+- `src/components/PageAccessGuard.tsx` — reconhecer gerente para páginas admin-only relevantes (configurações fica liberada; algumas subseções podem ficar bloqueadas se você quiser).
+
+**Segurança preservada:**
+- RLS continua ativo em todas as tabelas.
+- Escopo por `owner_id`/`effective_owner` intacto.
+- Gerente é validado tanto no client (esconder UI) quanto no server (assertions e RLS).
+
+---
+
+## Riscos e como mitigo
+
+- **Enum `ALTER TYPE ADD VALUE`** não pode rodar em transação com uso do valor. Migration em duas etapas: (1) ADD VALUE, (2) próximas migrations podem usar.
+- **Filtro de alertas por recipient** pode fazer alertas antigos "sumirem" para admin. Solução: admin sempre vê tudo; toggle "mostrar apenas meus" na UI.
+- **Remover senha admin** de exclusões pode assustar. Vamos manter o `ConfirmDialog` (confirmação simples "tem certeza?") — só cai a senha.
+
+## Ordem de execução
+
+1. Migration do enum `gerente` + `can_manage_users`.
+2. Migration da policy de `alertas_disparos`.
+3. Backend: `admin.functions.ts` aceita gerente.
+4. Frontend: hooks + Centro de Segurança em abas.
+5. Aplicar filtro de recurso nas listagens.
+6. Remover `guardAdmin` de tudo exceto exclusão/alteração de usuário.
+7. Verificar build (`tsgo`) e testar login com um operador de teste.
+
+Posso começar?

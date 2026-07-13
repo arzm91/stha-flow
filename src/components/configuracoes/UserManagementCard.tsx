@@ -6,9 +6,11 @@ import {
   createManagedUser,
   setUserPermissions,
   setUserResourcePermissions,
+  setUserRole,
   deleteManagedUser,
 } from "@/lib/permissions/admin.functions";
 import { MANAGED_PAGES } from "@/lib/permissions/pages";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,8 +28,15 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
-import { UserPlus, Trash2, ShieldCheck, KeyRound } from "lucide-react";
+import { UserPlus, Trash2, ShieldCheck, KeyRound, ShieldAlert } from "lucide-react";
 
 type ResourcePerm = { resource_type: string; resource_id: string };
 
@@ -42,10 +51,12 @@ type ManagedUser = {
 
 export function UserManagementCard() {
   const qc = useQueryClient();
+  const { isAdmin } = usePagePermissions();
   const listFn = useServerFn(listManagedUsers);
   const createFn = useServerFn(createManagedUser);
   const setPermFn = useServerFn(setUserPermissions);
   const setResFn = useServerFn(setUserResourcePermissions);
+  const setRoleFn = useServerFn(setUserRole);
   const deleteFn = useServerFn(deleteManagedUser);
 
 
@@ -58,7 +69,7 @@ export function UserManagementCard() {
   const [createOpen, setCreateOpen] = useState(false);
 
   const createMut = useMutation({
-    mutationFn: (data: { email: string; password: string; nome?: string }) =>
+    mutationFn: (data: { email: string; password: string; nome?: string; role?: "operador" | "gerente" }) =>
       createFn({ data }),
     onSuccess: () => {
       toast.success("Usuário criado");
@@ -70,6 +81,7 @@ export function UserManagementCard() {
 
   const deleteMut = useMutation({
     mutationFn: async (user_id: string) => {
+      // Senha admin ainda exigida para exclusão de usuário.
       const { guardAdmin } = await import("@/lib/security/guard-admin");
       await guardAdmin("excluir este usuário");
       return deleteFn({ data: { user_id } });
@@ -84,6 +96,24 @@ export function UserManagementCard() {
     },
   });
 
+  const roleMut = useMutation({
+    mutationFn: async (v: { user_id: string; role: "operador" | "gerente" }) => {
+      // Senha admin exigida para alterar papel.
+      const { guardAdmin } = await import("@/lib/security/guard-admin");
+      await guardAdmin(`alterar papel para "${v.role}"`);
+      return setRoleFn({ data: v });
+    },
+    onSuccess: () => {
+      toast.success("Papel atualizado");
+      qc.invalidateQueries({ queryKey: ["managed-users"] });
+    },
+    onError: async (e: Error) => {
+      const { isAdminCancelled } = await import("@/lib/security/guard-admin");
+      if (!isAdminCancelled(e)) toast.error(e.message);
+    },
+  });
+
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-2">
@@ -96,7 +126,11 @@ export function UserManagementCard() {
               <UserPlus className="mr-2 h-4 w-4" /> Novo usuário
             </Button>
           </DialogTrigger>
-          <CreateUserDialog onSubmit={(d) => createMut.mutate(d)} loading={createMut.isPending} />
+          <CreateUserDialog
+            onSubmit={(d) => createMut.mutate(d)}
+            loading={createMut.isPending}
+            canCreateGerente={isAdmin}
+          />
         </Dialog>
       </CardHeader>
       <CardContent>
@@ -114,13 +148,34 @@ export function UserManagementCard() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium truncate">{u.nome || u.email}</span>
-                    {u.roles.includes("admin") && (
+                    {u.roles.includes("admin") ? (
                       <Badge variant="secondary">admin</Badge>
+                    ) : u.roles.includes("gerente") ? (
+                      <Badge variant="default">gerente</Badge>
+                    ) : (
+                      <Badge variant="outline">operador</Badge>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                 </div>
                 <div className="flex items-center gap-1">
+                  {!u.roles.includes("admin") && isAdmin && (
+                    <Select
+                      value={u.roles.includes("gerente") ? "gerente" : "operador"}
+                      onValueChange={(v) =>
+                        roleMut.mutate({ user_id: u.id, role: v as "operador" | "gerente" })
+                      }
+                    >
+                      <SelectTrigger className="h-8 w-[110px] text-xs">
+                        <ShieldAlert className="mr-1 h-3 w-3" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="operador">Operador</SelectItem>
+                        <SelectItem value="gerente">Gerente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                   {!u.roles.includes("admin") && (
                     <Button
                       variant="outline"
@@ -154,8 +209,6 @@ export function UserManagementCard() {
           onClose={() => setEditingUser(null)}
           onSave={async ({ permissions, resources }) => {
             try {
-              const { requireAdminPassword } = await import("@/components/admin-password/AdminPasswordGate");
-              if (!(await requireAdminPassword(`alterar permissões de ${editingUser.email}`))) return;
               await setPermFn({ data: { user_id: editingUser.id, permissions } });
               await Promise.all(
                 (Object.keys(resources) as Array<keyof typeof resources>).map((rt) =>
@@ -179,13 +232,16 @@ export function UserManagementCard() {
 function CreateUserDialog({
   onSubmit,
   loading,
+  canCreateGerente,
 }: {
-  onSubmit: (d: { email: string; password: string; nome?: string }) => void;
+  onSubmit: (d: { email: string; password: string; nome?: string; role?: "operador" | "gerente" }) => void;
   loading: boolean;
+  canCreateGerente: boolean;
 }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [nome, setNome] = useState("");
+  const [role, setRole] = useState<"operador" | "gerente">("operador");
   return (
     <DialogContent>
       <DialogHeader>
@@ -194,7 +250,7 @@ function CreateUserDialog({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          onSubmit({ email, password, nome: nome || undefined });
+          onSubmit({ email, password, nome: nome || undefined, role });
         }}
         className="space-y-3"
       >
@@ -210,6 +266,25 @@ function CreateUserDialog({
             onChange={(e) => setEmail(e.target.value)}
             required
           />
+        </div>
+        <div className="space-y-1.5">
+          <Label>Papel</Label>
+          <Select
+            value={role}
+            onValueChange={(v) => setRole(v as "operador" | "gerente")}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="operador">Operador</SelectItem>
+              {canCreateGerente && (
+                <SelectItem value="gerente">
+                  Gerente (pode gerenciar outros operadores)
+                </SelectItem>
+              )}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1.5">
           <Label>Senha temporária</Label>

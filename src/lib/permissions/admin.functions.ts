@@ -1,26 +1,51 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
-async function assertAdmin(ctx: { supabase: any; userId: string }) {
+type Ctx = { supabase: any; userId: string };
+
+async function isAdmin(ctx: Ctx): Promise<boolean> {
   const { data, error } = await ctx.supabase.rpc("has_role", {
     _user_id: ctx.userId,
     _role: "admin",
   });
   if (error) throw new Error(error.message);
-  if (!data) throw new Error("Forbidden: admin role required");
+  return !!data;
+}
+
+async function isGerente(ctx: Ctx): Promise<boolean> {
+  const { data, error } = await ctx.supabase.rpc("has_role", {
+    _user_id: ctx.userId,
+    _role: "gerente",
+  });
+  if (error) throw new Error(error.message);
+  return !!data;
+}
+
+async function assertCanManageUsers(ctx: Ctx): Promise<{ isAdmin: boolean }> {
+  const admin = await isAdmin(ctx);
+  if (admin) return { isAdmin: true };
+  const gerente = await isGerente(ctx);
+  if (!gerente) throw new Error("Forbidden: acesso restrito a admins e gerentes");
+  return { isAdmin: false };
 }
 
 export const listManagedUsers = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertAdmin(context);
+    await assertCanManageUsers(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    // Only users created by the current admin, plus the admin's own profile.
+    // Compute effective owner (works whether caller is admin or gerente)
+    const { data: ownerRow, error: ownerErr } = await supabaseAdmin.rpc("effective_owner", {
+      _user: context.userId,
+    });
+    if (ownerErr) throw new Error(ownerErr.message);
+    const ownerId = (ownerRow as string | null) ?? context.userId;
+
     const { data: ownedProfiles, error: profErr } = await supabaseAdmin
       .from("profiles")
       .select("id, nome, created_by")
-      .or(`created_by.eq.${context.userId},id.eq.${context.userId}`);
+      .or(`created_by.eq.${ownerId},id.eq.${ownerId}`);
     if (profErr) throw new Error(profErr.message);
 
     const ids = (ownedProfiles ?? []).map((p) => p.id);
@@ -73,7 +98,7 @@ export const listManagedUsers = createServerFn({ method: "GET" })
 
 
 async function assertOwnsUser(
-  ctx: { userId: string },
+  ownerId: string,
   supabaseAdmin: any,
   targetId: string,
 ) {
@@ -83,17 +108,47 @@ async function assertOwnsUser(
     .eq("id", targetId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  if (!data || data.created_by !== ctx.userId) {
-    throw new Error("Forbidden: usuário não pertence a você.");
+  if (!data || data.created_by !== ownerId) {
+    throw new Error("Forbidden: usuário não pertence a esta conta.");
   }
 }
 
+async function getOwnerId(supabaseAdmin: any, userId: string): Promise<string> {
+  const { data, error } = await supabaseAdmin.rpc("effective_owner", { _user: userId });
+  if (error) throw new Error(error.message);
+  return (data as string | null) ?? userId;
+}
+
+async function targetIsAdminOrGerente(supabaseAdmin: any, userId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", userId);
+  const roles = (data ?? []).map((r: any) => r.role);
+  return roles.includes("admin") || roles.includes("gerente");
+}
+
+type NewUserRole = "operador" | "gerente";
+
 export const createManagedUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { email: string; password: string; nome?: string }) => d)
+  .inputValidator((d: { email: string; password: string; nome?: string; role?: NewUserRole }) => {
+    if (d.role && d.role !== "operador" && d.role !== "gerente") {
+      throw new Error("Papel inválido");
+    }
+    return d;
+  })
   .handler(async ({ data, context }) => {
-    await assertAdmin(context);
+    const { isAdmin: callerIsAdmin } = await assertCanManageUsers(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    // Gerentes só podem criar operadores.
+    const requestedRole: NewUserRole = data.role ?? "operador";
+    if (!callerIsAdmin && requestedRole !== "operador") {
+      throw new Error("Gerentes só podem criar usuários operadores.");
+    }
+
+    const ownerId = await getOwnerId(supabaseAdmin, context.userId);
 
     const { data: created, error } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
@@ -105,14 +160,14 @@ export const createManagedUser = createServerFn({ method: "POST" })
     const newId = created.user!.id;
 
     // handle_new_user trigger creates profile + grants 'admin' role.
-    // Demote to 'operador' and stamp ownership.
+    // Demote to requested role and stamp ownership on the effective owner.
     await supabaseAdmin.from("user_roles").delete().eq("user_id", newId);
     await supabaseAdmin
       .from("user_roles")
-      .insert({ user_id: newId, role: "operador" });
+      .insert({ user_id: newId, role: requestedRole });
     await supabaseAdmin
       .from("profiles")
-      .update({ created_by: context.userId })
+      .update({ created_by: ownerId })
       .eq("id", newId);
 
     return { id: newId };
@@ -128,9 +183,15 @@ export const setUserPermissions = createServerFn({ method: "POST" })
     }) => d,
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context);
+    const { isAdmin: callerIsAdmin } = await assertCanManageUsers(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await assertOwnsUser(context, supabaseAdmin, data.user_id);
+    const ownerId = await getOwnerId(supabaseAdmin, context.userId);
+    await assertOwnsUser(ownerId, supabaseAdmin, data.user_id);
+
+    // Gerentes não podem editar admins ou outros gerentes.
+    if (!callerIsAdmin && (await targetIsAdminOrGerente(supabaseAdmin, data.user_id))) {
+      throw new Error("Gerentes só podem editar operadores.");
+    }
 
     await supabaseAdmin.from("user_permissions").delete().eq("user_id", data.user_id);
     const rows = data.permissions
@@ -166,9 +227,14 @@ export const setUserResourcePermissions = createServerFn({ method: "POST" })
     },
   )
   .handler(async ({ data, context }) => {
-    await assertAdmin(context);
+    const { isAdmin: callerIsAdmin } = await assertCanManageUsers(context);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await assertOwnsUser(context, supabaseAdmin, data.user_id);
+    const ownerId = await getOwnerId(supabaseAdmin, context.userId);
+    await assertOwnsUser(ownerId, supabaseAdmin, data.user_id);
+
+    if (!callerIsAdmin && (await targetIsAdminOrGerente(supabaseAdmin, data.user_id))) {
+      throw new Error("Gerentes só podem editar operadores.");
+    }
 
     await supabaseAdmin
       .from("user_resource_permissions")
@@ -192,16 +258,62 @@ export const setUserResourcePermissions = createServerFn({ method: "POST" })
   });
 
 
+export const setUserRole = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { user_id: string; role: "operador" | "gerente" }) => {
+    if (d.role !== "operador" && d.role !== "gerente") {
+      throw new Error("Papel inválido");
+    }
+    return d;
+  })
+  .handler(async ({ data, context }) => {
+    // Só admin pode promover/rebaixar entre operador e gerente.
+    if (!(await isAdmin(context))) {
+      throw new Error("Forbidden: apenas administradores podem alterar papéis.");
+    }
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const ownerId = await getOwnerId(supabaseAdmin, context.userId);
+    await assertOwnsUser(ownerId, supabaseAdmin, data.user_id);
+
+    if (data.user_id === context.userId) {
+      throw new Error("Você não pode alterar seu próprio papel.");
+    }
+
+    // Não rebaixa admin por essa rota.
+    const { data: existing } = await supabaseAdmin
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", data.user_id);
+    const roles = (existing ?? []).map((r: any) => r.role);
+    if (roles.includes("admin")) {
+      throw new Error("Este usuário é admin. Não é possível alterar por aqui.");
+    }
+
+    await supabaseAdmin.from("user_roles").delete().eq("user_id", data.user_id);
+    const { error } = await supabaseAdmin
+      .from("user_roles")
+      .insert({ user_id: data.user_id, role: data.role });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+
 export const deleteManagedUser = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { user_id: string }) => d)
   .handler(async ({ data, context }) => {
-    await assertAdmin(context);
+    const { isAdmin: callerIsAdmin } = await assertCanManageUsers(context);
     if (data.user_id === context.userId) {
       throw new Error("Você não pode excluir a si mesmo.");
     }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    await assertOwnsUser(context, supabaseAdmin, data.user_id);
+    const ownerId = await getOwnerId(supabaseAdmin, context.userId);
+    await assertOwnsUser(ownerId, supabaseAdmin, data.user_id);
+
+    if (!callerIsAdmin && (await targetIsAdminOrGerente(supabaseAdmin, data.user_id))) {
+      throw new Error("Gerentes só podem excluir operadores.");
+    }
+
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.user_id);
     if (error) throw new Error(error.message);
     return { ok: true };

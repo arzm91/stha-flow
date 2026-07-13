@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
 function ConfiguracoesPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { isAdmin } = usePagePermissions();
+  const { isAdmin, isGerente } = usePagePermissions();
   const [nome, setNome] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [email, setEmail] = useState("");
@@ -82,7 +82,7 @@ function ConfiguracoesPage() {
         <PushNotificationsCard />
         <EmailTemplatesCard />
       </div>
-      {isAdmin && (
+      {(isAdmin || isGerente) && (
         <div className="mt-4">
           <UserManagementCard />
         </div>

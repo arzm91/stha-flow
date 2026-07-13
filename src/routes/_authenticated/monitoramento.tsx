@@ -209,8 +209,6 @@ function MonitoramentoPage() {
 
   const deleteDash = useMutation({
     mutationFn: async (id: string) => {
-      const { guardAdmin } = await import("@/lib/security/guard-admin");
-      await guardAdmin("excluir este painel de monitoramento");
       const { error } = await supabase.from("monitoring_dashboards" as never).delete().eq("id", id);
       if (error) throw error;
     },
@@ -220,16 +218,13 @@ function MonitoramentoPage() {
       toast.success("Painel removido");
     },
     onError: async (e: Error) => {
-      const { isAdminCancelled } = await import("@/lib/security/guard-admin");
-      if (!isAdminCancelled(e)) toast.error(e.message);
+      toast.error(e.message);
     },
   });
 
   const saveWidget = useMutation({
     mutationFn: async (w: Partial<Widget> & { id?: string; dashboard_id: string }) => {
       if (w.id) {
-        const { guardAdmin } = await import("@/lib/security/guard-admin");
-        await guardAdmin("editar este widget");
         const { error } = await supabase
           .from("monitoring_widgets" as never)
           .update({
@@ -253,22 +248,18 @@ function MonitoramentoPage() {
       setNewWidgetOpen(false);
     },
     onError: async (e: Error) => {
-      const { isAdminCancelled } = await import("@/lib/security/guard-admin");
-      if (!isAdminCancelled(e)) toast.error(e.message);
+      toast.error(e.message);
     },
   });
 
   const deleteWidget = useMutation({
     mutationFn: async (id: string) => {
-      const { guardAdmin } = await import("@/lib/security/guard-admin");
-      await guardAdmin("excluir este widget");
       const { error } = await supabase.from("monitoring_widgets" as never).delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["monitoring_widgets", activeId] }),
     onError: async (e: Error) => {
-      const { isAdminCancelled } = await import("@/lib/security/guard-admin");
-      if (!isAdminCancelled(e)) toast.error(e.message);
+      toast.error(e.message);
     },
   });
 

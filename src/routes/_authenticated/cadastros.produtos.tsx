@@ -125,10 +125,6 @@ function ProdutosPage() {
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Não autenticado");
-      if (editing) {
-        const { guardAdmin } = await import("@/lib/security/guard-admin");
-        await guardAdmin(`editar o produto "${editing.nome}"`);
-      }
       const ownerId = u.user.id;
       const payload = {
         ...form,
@@ -178,8 +174,6 @@ function ProdutosPage() {
       setReceita([]);
     },
     onError: async (e: Error & { code?: string; details?: string; hint?: string }) => {
-      const { isAdminCancelled } = await import("@/lib/security/guard-admin");
-      if (isAdminCancelled(e)) return;
       const raw = (e?.message || "") + " " + (e?.details || "");
       let friendly = e.message;
       if (e.code === "23503" || /foreign key|violates|forgrei/i.test(raw)) {
@@ -197,8 +191,6 @@ function ProdutosPage() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { guardAdmin } = await import("@/lib/security/guard-admin");
-      await guardAdmin("excluir este produto");
       const { error } = await supabase.from("produtos").delete().eq("id", id);
       if (error) throw error;
     },
@@ -207,8 +199,7 @@ function ProdutosPage() {
       qc.invalidateQueries({ queryKey: ["produtos"] });
     },
     onError: async (e: Error) => {
-      const { isAdminCancelled } = await import("@/lib/security/guard-admin");
-      if (!isAdminCancelled(e)) toast.error(e.message);
+      toast.error(e.message);
     },
   });
 
