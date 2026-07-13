@@ -67,8 +67,6 @@ function TabelasIndex() {
 
   const deleteMut = useMutation({
     mutationFn: async (id: string) => {
-      const { guardAdmin } = await import("@/lib/security/guard-admin");
-      await guardAdmin("excluir esta tabela");
       const { error } = await supabase.from("custom_sheets").delete().eq("id", id);
       if (error) throw error;
     },
@@ -77,8 +75,7 @@ function TabelasIndex() {
       qc.invalidateQueries({ queryKey: ["custom_sheets"] });
     },
     onError: async (e: Error) => {
-      const { isAdminCancelled } = await import("@/lib/security/guard-admin");
-      if (!isAdminCancelled(e)) toast.error(e.message);
+      toast.error(e.message);
     },
   });
 

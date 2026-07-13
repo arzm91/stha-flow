@@ -163,8 +163,6 @@ function TurnosPage() {
 
   const deleteMut = useMutation({
     mutationFn: async (ev: EventoRow) => {
-      const { guardAdmin } = await import("@/lib/security/guard-admin");
-      await guardAdmin("excluir este evento de turno");
       if (ev.imagens && ev.imagens.length > 0) {
         await supabase.storage.from(BUCKET).remove(ev.imagens);
       }
@@ -176,8 +174,7 @@ function TurnosPage() {
       qc.invalidateQueries({ queryKey: ["turnos_eventos"] });
     },
     onError: async (e: Error) => {
-      const { isAdminCancelled } = await import("@/lib/security/guard-admin");
-      if (!isAdminCancelled(e)) toast.error(e.message);
+      toast.error(e.message);
     },
   });
 

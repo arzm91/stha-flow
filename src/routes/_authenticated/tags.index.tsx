@@ -582,8 +582,6 @@ function DeleteTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => 
   const remover = useMutation({
     mutationFn: async () => {
       if (!tag) return;
-      const { guardAdmin } = await import("@/lib/security/guard-admin");
-      await guardAdmin(`excluir a tag "${tag.nome}"`);
       const { error } = await supabase.from("tags_live").delete().eq("nome", tag.nome);
       if (error) throw error;
     },
@@ -593,8 +591,7 @@ function DeleteTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => 
       onClose();
     },
     onError: async (e: any) => {
-      const { isAdminCancelled } = await import("@/lib/security/guard-admin");
-      if (!isAdminCancelled(e)) toast.error(e.message);
+      toast.error(e.message);
     },
   });
   return (
