@@ -6,9 +6,11 @@ import {
   createManagedUser,
   setUserPermissions,
   setUserResourcePermissions,
+  setUserRole,
   deleteManagedUser,
 } from "@/lib/permissions/admin.functions";
 import { MANAGED_PAGES } from "@/lib/permissions/pages";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
