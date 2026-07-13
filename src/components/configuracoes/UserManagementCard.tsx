@@ -148,13 +148,34 @@ export function UserManagementCard() {
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="font-medium truncate">{u.nome || u.email}</span>
-                    {u.roles.includes("admin") && (
+                    {u.roles.includes("admin") ? (
                       <Badge variant="secondary">admin</Badge>
+                    ) : u.roles.includes("gerente") ? (
+                      <Badge variant="default">gerente</Badge>
+                    ) : (
+                      <Badge variant="outline">operador</Badge>
                     )}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">{u.email}</p>
                 </div>
                 <div className="flex items-center gap-1">
+                  {!u.roles.includes("admin") && isAdmin && (
+                    <Select
+                      value={u.roles.includes("gerente") ? "gerente" : "operador"}
+                      onValueChange={(v) =>
+                        roleMut.mutate({ user_id: u.id, role: v as "operador" | "gerente" })
+                      }
+                    >
+                      <SelectTrigger className="h-8 w-[110px] text-xs">
+                        <ShieldAlert className="mr-1 h-3 w-3" />
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="operador">Operador</SelectItem>
+                        <SelectItem value="gerente">Gerente</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                   {!u.roles.includes("admin") && (
                     <Button
                       variant="outline"
