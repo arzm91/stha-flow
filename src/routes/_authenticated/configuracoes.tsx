@@ -23,7 +23,7 @@ export const Route = createFileRoute("/_authenticated/configuracoes")({
 function ConfiguracoesPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
-  const { isAdmin } = usePagePermissions();
+  const { isAdmin, isGerente } = usePagePermissions();
   const [nome, setNome] = useState("");
   const [empresa, setEmpresa] = useState("");
   const [email, setEmail] = useState("");
