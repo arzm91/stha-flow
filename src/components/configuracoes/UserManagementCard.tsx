@@ -126,7 +126,11 @@ export function UserManagementCard() {
               <UserPlus className="mr-2 h-4 w-4" /> Novo usuário
             </Button>
           </DialogTrigger>
-          <CreateUserDialog onSubmit={(d) => createMut.mutate(d)} loading={createMut.isPending} />
+          <CreateUserDialog
+            onSubmit={(d) => createMut.mutate(d)}
+            loading={createMut.isPending}
+            canCreateGerente={isAdmin}
+          />
         </Dialog>
       </CardHeader>
       <CardContent>
