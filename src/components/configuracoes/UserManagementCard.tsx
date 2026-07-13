@@ -51,10 +51,12 @@ type ManagedUser = {
 
 export function UserManagementCard() {
   const qc = useQueryClient();
+  const { isAdmin } = usePagePermissions();
   const listFn = useServerFn(listManagedUsers);
   const createFn = useServerFn(createManagedUser);
   const setPermFn = useServerFn(setUserPermissions);
   const setResFn = useServerFn(setUserResourcePermissions);
+  const setRoleFn = useServerFn(setUserRole);
   const deleteFn = useServerFn(deleteManagedUser);
 
 
@@ -67,7 +69,7 @@ export function UserManagementCard() {
   const [createOpen, setCreateOpen] = useState(false);
 
   const createMut = useMutation({
-    mutationFn: (data: { email: string; password: string; nome?: string }) =>
+    mutationFn: (data: { email: string; password: string; nome?: string; role?: "operador" | "gerente" }) =>
       createFn({ data }),
     onSuccess: () => {
       toast.success("Usuário criado");
@@ -79,6 +81,7 @@ export function UserManagementCard() {
 
   const deleteMut = useMutation({
     mutationFn: async (user_id: string) => {
+      // Senha admin ainda exigida para exclusão de usuário.
       const { guardAdmin } = await import("@/lib/security/guard-admin");
       await guardAdmin("excluir este usuário");
       return deleteFn({ data: { user_id } });
@@ -92,6 +95,24 @@ export function UserManagementCard() {
       if (!isAdminCancelled(e)) toast.error(e.message);
     },
   });
+
+  const roleMut = useMutation({
+    mutationFn: async (v: { user_id: string; role: "operador" | "gerente" }) => {
+      // Senha admin exigida para alterar papel.
+      const { guardAdmin } = await import("@/lib/security/guard-admin");
+      await guardAdmin(`alterar papel para "${v.role}"`);
+      return setRoleFn({ data: v });
+    },
+    onSuccess: () => {
+      toast.success("Papel atualizado");
+      qc.invalidateQueries({ queryKey: ["managed-users"] });
+    },
+    onError: async (e: Error) => {
+      const { isAdminCancelled } = await import("@/lib/security/guard-admin");
+      if (!isAdminCancelled(e)) toast.error(e.message);
+    },
+  });
+
 
   return (
     <Card>
