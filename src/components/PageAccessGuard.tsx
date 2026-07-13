@@ -6,13 +6,13 @@ import { toast } from "sonner";
 
 export function PageAccessGuard({ children }: { children: React.ReactNode }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const { isAdmin, loading, canView } = usePagePermissions();
+  const { isAdmin, isGerente, loading, canView } = usePagePermissions();
   const navigate = useNavigate();
 
   useEffect(() => {
     if (loading) return;
-    if (isAdminOnlyPath(pathname) && !isAdmin) {
-      toast.error("Acesso restrito a administradores");
+    if (isAdminOnlyPath(pathname) && !isAdmin && !isGerente) {
+      toast.error("Acesso restrito a administradores e gerentes");
       navigate({ to: "/dashboard", replace: true });
       return;
     }
@@ -21,7 +21,7 @@ export function PageAccessGuard({ children }: { children: React.ReactNode }) {
       toast.error("Você não tem permissão para acessar essa página");
       navigate({ to: "/dashboard", replace: true });
     }
-  }, [pathname, isAdmin, loading, canView, navigate]);
+  }, [pathname, isAdmin, isGerente, loading, canView, navigate]);
 
   return <>{children}</>;
 }
