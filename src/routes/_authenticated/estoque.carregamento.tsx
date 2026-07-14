@@ -463,7 +463,7 @@ function CargaCard({ carga, config }: { carga: Carregamento; config: Config | nu
             </Button>
           )}
           {carga.modo === "manual" ? (
-            <ConcluirManualButton onConcluir={concluir} unidade={carga.unidade} />
+            <ConcluirManualButton onConcluir={async (q) => { await concluir(q); }} unidade={carga.unidade} />
           ) : (
             <Button size="sm" onClick={() => concluir()}>
               <Square className="mr-1 h-4 w-4" />
