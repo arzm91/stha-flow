@@ -87,17 +87,11 @@ function EquipamentosPage() {
         ? "Carregando utilidades..."
         : `${utilidadeOptions.length} utilidade(s) cadastradas. Aparecerão no acompanhamento da produção.`,
     },
-    {
-      key: "tag_velocidade_producao",
-      label: "Tag de velocidade de produção (opcional)",
-      type: "select",
+    { key: "tag_velocidade_producao", label: "Tag de velocidade de produção (opcional)", type: "select",
       options: [{ value: "", label: "— nenhuma —" }, ...tagOptions],
       help: "Tag exibida como velocidade instantânea no acompanhamento.",
     },
-    {
-      key: "tag_producao_total",
-      label: "Tag de produção total (opcional)",
-      type: "select",
+    { key: "tag_producao_total", label: "Tag de produção total (opcional)", type: "select",
       options: [{ value: "", label: "— nenhuma —" }, ...tagOptions],
       help: "Tag usada para calcular o % de avanço vs. a quantidade planejada.",
     },
@@ -105,8 +99,49 @@ function EquipamentosPage() {
     { key: "capacidade_dia", label: "Capacidade nominal por dia", type: "number", help: "Produção máxima esperada em 24 horas." },
     { key: "capacidade_mes", label: "Capacidade nominal por mês", type: "number", help: "Produção máxima esperada em 30 dias." },
     { key: "capacidade_unidade", label: "Unidade da capacidade", placeholder: "kg, L, un, ..." },
-    { key: "ativo", label: "Ativo", type: "checkbox" },
-  ];
+
+    // ===== Gestão de paradas =====
+    { key: "parada_tag_nome", label: "Tag de parada (opcional)", type: "select", section: "Gestão de paradas",
+      options: [{ value: "", label: "— nenhuma (não monitorar paradas) —" }, ...tagOptions],
+      help: "Quando esta tag atender à condição definida abaixo, o sistema abrirá automaticamente um registro de parada.",
+    },
+    { key: "parada_modo", label: "Modo de detecção", type: "select",
+      options: [
+        { value: "", label: "— selecione —" },
+        { value: "valor", label: "Valor específico (=, <, >, ≤, ≥)" },
+        { value: "faixa", label: "Fora da faixa normal (mín/máx)" },
+        { value: "velocidade_zero", label: "Velocidade abaixo de X (parada por inatividade)" },
+      ],
+      help: "Como o sistema interpreta que o equipamento parou.",
+    },
+    { key: "parada_operador", label: "Operador (modo Valor específico)", type: "select",
+      options: [
+        { value: "", label: "— selecione —" },
+        { value: "=",  label: "= igual" },
+        { value: "<",  label: "< menor que" },
+        { value: ">",  label: "> maior que" },
+        { value: "<=", label: "≤ menor ou igual" },
+        { value: ">=", label: "≥ maior ou igual" },
+      ],
+    },
+    { key: "parada_valor", label: "Valor de referência", type: "number", step: "any",
+      help: "Usado nos modos Valor específico e Velocidade abaixo de X.",
+    },
+    { key: "parada_valor_min", label: "Mínimo da faixa normal", type: "number", step: "any" },
+    { key: "parada_valor_max", label: "Máximo da faixa normal", type: "number", step: "any" },
+    { key: "parada_tempo_min_seg", label: "Tempo mínimo para confirmar parada (segundos)", type: "number",
+      help: "Evita disparo em oscilações curtas. Padrão: 15 segundos.",
+    },
+    { key: "parada_alerta_apos_min", label: "Alertar supervisor após (minutos)", type: "number",
+      help: "Dispara alerta se a parada exceder esse tempo. Deixe vazio para não alertar.",
+    },
+    { key: "parada_motivos", label: "Motivos disponíveis para este equipamento", type: "chips",
+      placeholder: "Ex.: Troca de rolo",
+      help: "Lista que aparece no popup ao operador. Os motivos-padrão são preenchidos automaticamente ao criar; personalize por equipamento.",
+    },
+
+    { key: "ativo", label: "Ativo", type: "checkbox", section: "Estado" },
+
 
   return (
     <CrudTable
