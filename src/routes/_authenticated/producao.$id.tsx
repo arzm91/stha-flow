@@ -1722,11 +1722,29 @@ function CapacidadeNominalCard({
   const totalAtual = tagLive.data ?? qtdProduzida ?? 0;
   const taxaPorHora = totalAtual / horas;
 
-  // Produção acumulada hoje/mês no equipamento (via ordens finalizadas + atual).
+  // Produção acumulada hoje/mês no equipamento.
+  // Preferimos a tag totalizadora (tag_producao_total) — diferença entre o valor
+  // atual e o primeiro valor registrado no período (via producao_tag_historico).
+  // Fallback: soma de qtd_produzida das ordens do período.
+  const liveNum = tagLive.data ?? null;
   const hoje = useQuery({
-    queryKey: ["cap-eq-dia", equipamentoId],
+    queryKey: ["cap-eq-dia", equipamentoId, tagTotal, liveNum],
     queryFn: async () => {
       const start = new Date(); start.setHours(0, 0, 0, 0);
+      if (tagTotal && liveNum != null) {
+        const { data: hist } = await supabase.from("producao_tag_historico")
+          .select("valor_num")
+          .eq("equipamento_id", equipamentoId)
+          .eq("tag_nome", tagTotal)
+          .gte("registrado_em", start.toISOString())
+          .order("registrado_em", { ascending: true })
+          .limit(1);
+        const base = hist?.[0]?.valor_num;
+        if (base != null) {
+          const diff = Number(liveNum) - Number(base);
+          if (diff >= 0) return diff;
+        }
+      }
       const { data } = await supabase.from("ordens_producao")
         .select("qtd_produzida")
         .eq("equipamento_id", equipamentoId)
@@ -1736,9 +1754,23 @@ function CapacidadeNominalCard({
     refetchInterval: 60_000,
   });
   const mes = useQuery({
-    queryKey: ["cap-eq-mes", equipamentoId],
+    queryKey: ["cap-eq-mes", equipamentoId, tagTotal, liveNum],
     queryFn: async () => {
       const start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0);
+      if (tagTotal && liveNum != null) {
+        const { data: hist } = await supabase.from("producao_tag_historico")
+          .select("valor_num")
+          .eq("equipamento_id", equipamentoId)
+          .eq("tag_nome", tagTotal)
+          .gte("registrado_em", start.toISOString())
+          .order("registrado_em", { ascending: true })
+          .limit(1);
+        const base = hist?.[0]?.valor_num;
+        if (base != null) {
+          const diff = Number(liveNum) - Number(base);
+          if (diff >= 0) return diff;
+        }
+      }
       const { data } = await supabase.from("ordens_producao")
         .select("qtd_produzida")
         .eq("equipamento_id", equipamentoId)
