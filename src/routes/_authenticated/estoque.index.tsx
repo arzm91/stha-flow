@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
-import { Boxes, ArrowDownToLine, FileText } from "lucide-react";
+import { Boxes, ArrowDownToLine, FileText, Truck } from "lucide-react";
 import { StorageLocationCard, type StorageLocation, type LatestAnalise } from "@/components/StorageLocationCard";
 import { TanqueAjusteDialog } from "@/components/TanqueAjusteDialog";
 import { useResourcePermissions } from "@/hooks/useResourcePermissions";
@@ -98,6 +98,7 @@ function EstoquePage() {
           <div className="flex gap-2">
             <Button asChild variant="outline"><Link to="/relatorios/$slug" params={{ slug: "estoque-total" }}><FileText className="mr-2 h-4 w-4" />Relatório de estoque</Link></Button>
             <Button asChild variant="secondary"><Link to="/estoque/movimentacao"><ArrowDownToLine className="mr-2 h-4 w-4" />Movimentar</Link></Button>
+            <Button asChild><Link to="/estoque/carregamento"><Truck className="mr-2 h-4 w-4" />Carregamento</Link></Button>
             <Button asChild variant="outline"><Link to="/cadastros/tanques">Cadastrar local</Link></Button>
           </div>
         }
