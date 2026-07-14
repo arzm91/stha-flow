@@ -19,13 +19,16 @@ import { useResourcePermissions, type ResourceType } from "@/hooks/useResourcePe
 export type FieldDef = {
   key: string;
   label: string;
-  type?: "text" | "number" | "checkbox" | "select" | "textarea" | "multiselect";
+  type?: "text" | "number" | "checkbox" | "select" | "textarea" | "multiselect" | "chips";
   required?: boolean;
   options?: { value: string; label: string; hint?: string }[];
   step?: string;
   placeholder?: string;
   help?: string;
+  /** When set, renders a section heading + divider before this field. */
+  section?: string;
 };
+
 
 type Row = Record<string, unknown> & { id: string };
 
@@ -150,6 +153,11 @@ export function CrudTable({
               <form onSubmit={async (e) => { e.preventDefault(); if (editing && !(await requireAdminPassword(`editar este registro de ${title.toLowerCase()}`))) return; save.mutate(form); }} className="space-y-3">
                 {fields.map((f) => (
                   <div className="space-y-1.5" key={f.key}>
+                    {f.section ? (
+                      <div className="mb-1 mt-3 border-t border-border/60 pt-3">
+                        <h3 className="text-sm font-semibold text-foreground">{f.section}</h3>
+                      </div>
+                    ) : null}
                     <Label htmlFor={f.key}>{f.label}{f.required ? " *" : ""}</Label>
                     {f.type === "checkbox" ? (
                       <div className="flex items-center gap-2">
@@ -175,6 +183,12 @@ export function CrudTable({
                         options={f.options ?? []}
                         placeholder={f.placeholder ?? "Selecione..."}
                       />
+                    ) : f.type === "chips" ? (
+                      <ChipsField
+                        value={Array.isArray(form[f.key]) ? (form[f.key] as string[]) : []}
+                        onChange={(v) => setForm({ ...form, [f.key]: v })}
+                        placeholder={f.placeholder ?? "Digite e pressione Enter"}
+                      />
                     ) : (
                       <Input id={f.key} type={f.type ?? "text"} step={f.step} required={f.required}
                         placeholder={f.placeholder}
@@ -184,6 +198,7 @@ export function CrudTable({
                     {f.help ? <p className="text-xs text-muted-foreground">{f.help}</p> : null}
                   </div>
                 ))}
+
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
                   <Button type="submit" disabled={save.isPending}>{editing ? "Salvar" : "Criar"}</Button>
@@ -277,3 +292,48 @@ function MultiSelectField({
     </div>
   );
 }
+
+function ChipsField({
+  value, onChange, placeholder,
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+  placeholder?: string;
+}) {
+  const [input, setInput] = useState("");
+  const add = () => {
+    const v = input.trim();
+    if (!v) return;
+    if (value.includes(v)) { setInput(""); return; }
+    onChange([...value, v]);
+    setInput("");
+  };
+  const remove = (v: string) => onChange(value.filter((x) => x !== v));
+  return (
+    <div className="space-y-2 rounded-md border border-input bg-background p-2">
+      <div className="flex gap-2">
+        <Input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+          placeholder={placeholder}
+          className="h-8"
+        />
+        <Button type="button" size="sm" variant="secondary" onClick={add}>Adicionar</Button>
+      </div>
+      {value.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {value.map((v) => (
+            <button type="button" key={v} onClick={() => remove(v)}
+              className="inline-flex items-center gap-1 rounded-md bg-primary/15 px-2 py-0.5 text-xs text-primary hover:bg-primary/25">
+              {v} <span aria-hidden>×</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">Nenhum item. Digite e pressione Enter ou clique em Adicionar.</p>
+      )}
+    </div>
+  );
+}
+

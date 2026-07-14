@@ -799,6 +799,17 @@ export type Database = {
           localizacao: string | null
           nome: string
           owner_id: string
+          parada_alerta_apos_min: number | null
+          parada_last_state: string | null
+          parada_modo: string | null
+          parada_motivos: string[] | null
+          parada_operador: string | null
+          parada_pending_since: string | null
+          parada_tag_nome: string | null
+          parada_tempo_min_seg: number | null
+          parada_valor: number | null
+          parada_valor_max: number | null
+          parada_valor_min: number | null
           pfd_graph: Json
           status: string
           tag_nomes: string[]
@@ -822,6 +833,17 @@ export type Database = {
           localizacao?: string | null
           nome: string
           owner_id: string
+          parada_alerta_apos_min?: number | null
+          parada_last_state?: string | null
+          parada_modo?: string | null
+          parada_motivos?: string[] | null
+          parada_operador?: string | null
+          parada_pending_since?: string | null
+          parada_tag_nome?: string | null
+          parada_tempo_min_seg?: number | null
+          parada_valor?: number | null
+          parada_valor_max?: number | null
+          parada_valor_min?: number | null
           pfd_graph?: Json
           status?: string
           tag_nomes?: string[]
@@ -845,6 +867,17 @@ export type Database = {
           localizacao?: string | null
           nome?: string
           owner_id?: string
+          parada_alerta_apos_min?: number | null
+          parada_last_state?: string | null
+          parada_modo?: string | null
+          parada_motivos?: string[] | null
+          parada_operador?: string | null
+          parada_pending_since?: string | null
+          parada_tag_nome?: string | null
+          parada_tempo_min_seg?: number | null
+          parada_valor?: number | null
+          parada_valor_max?: number | null
+          parada_valor_min?: number | null
           pfd_graph?: Json
           status?: string
           tag_nomes?: string[]
@@ -1491,6 +1524,87 @@ export type Database = {
             columns: ["tanque_destino_id"]
             isOneToOne: false
             referencedRelation: "tanques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      paradas_equipamento: {
+        Row: {
+          alerta_disparado: boolean
+          categoria: string | null
+          created_at: string
+          duracao_seg: number | null
+          equipamento_id: string
+          fim_em: string | null
+          id: string
+          inicio_em: string
+          motivo: string | null
+          observacao: string | null
+          ordem_producao_id: string | null
+          owner_id: string
+          registrado_em: string | null
+          registrado_por: string | null
+          status: string
+          tag_nome: string | null
+          tag_valor_fim: number | null
+          tag_valor_inicio: number | null
+          updated_at: string
+        }
+        Insert: {
+          alerta_disparado?: boolean
+          categoria?: string | null
+          created_at?: string
+          duracao_seg?: number | null
+          equipamento_id: string
+          fim_em?: string | null
+          id?: string
+          inicio_em?: string
+          motivo?: string | null
+          observacao?: string | null
+          ordem_producao_id?: string | null
+          owner_id: string
+          registrado_em?: string | null
+          registrado_por?: string | null
+          status?: string
+          tag_nome?: string | null
+          tag_valor_fim?: number | null
+          tag_valor_inicio?: number | null
+          updated_at?: string
+        }
+        Update: {
+          alerta_disparado?: boolean
+          categoria?: string | null
+          created_at?: string
+          duracao_seg?: number | null
+          equipamento_id?: string
+          fim_em?: string | null
+          id?: string
+          inicio_em?: string
+          motivo?: string | null
+          observacao?: string | null
+          ordem_producao_id?: string | null
+          owner_id?: string
+          registrado_em?: string | null
+          registrado_por?: string | null
+          status?: string
+          tag_nome?: string | null
+          tag_valor_fim?: number | null
+          tag_valor_inicio?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "paradas_equipamento_equipamento_id_fkey"
+            columns: ["equipamento_id"]
+            isOneToOne: false
+            referencedRelation: "equipamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "paradas_equipamento_ordem_producao_id_fkey"
+            columns: ["ordem_producao_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_producao"
             referencedColumns: ["id"]
           },
         ]
@@ -2680,6 +2794,17 @@ export type Database = {
         Args: { p_cur: number; p_op: string; p_prev: number; p_ref: number }
         Returns: boolean
       }
+      _parada_condicao: {
+        Args: {
+          p_max: number
+          p_min: number
+          p_modo: string
+          p_operador: string
+          p_valor: number
+          p_valor_ref: number
+        }
+        Returns: boolean
+      }
       auto_advance_equipamento_atividades: { Args: never; Returns: number }
       auto_advance_ordens_producao: { Args: never; Returns: number }
       can_access_page: {
@@ -2695,6 +2820,7 @@ export type Database = {
         Args: { p_context: Json; p_owner_id: string; p_trigger_type: string }
         Returns: number
       }
+      dispatch_paradas_alertas: { Args: never; Returns: number }
       dispatch_rotinas_atividades: { Args: never; Returns: number }
       effective_owner: { Args: { _user: string }; Returns: string }
       email_queue_dispatch: { Args: never; Returns: undefined }

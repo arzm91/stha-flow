@@ -4,6 +4,8 @@ import { AppShell } from "@/components/layout/AppShell";
 import { AutoTagSync } from "@/components/AutoTagSync";
 import { PendingApprovalsDock } from "@/components/automation/PendingApprovalsDock";
 import { AlertasFloatingPopup } from "@/components/alertas/AlertasFloatingPopup";
+import { ParadaMotivoDialog } from "@/components/paradas/ParadaMotivoDialog";
+
 import { PageAccessGuard } from "@/components/PageAccessGuard";
 import { AdminPasswordGate } from "@/components/admin-password/AdminPasswordGate";
 
@@ -32,6 +34,8 @@ export const Route = createFileRoute("/_authenticated")({
       </PageAccessGuard>
       <PendingApprovalsDock />
       <AlertasFloatingPopup />
+      <ParadaMotivoDialog />
+
       <AdminPasswordGate />
     </AppShell>
   ),
