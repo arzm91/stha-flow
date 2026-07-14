@@ -167,7 +167,7 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
   if (data.kind === "tank") {
     return (
       <div className="h-full overflow-auto">
-        <StorageLocationCard loc={data.loc} saldo={data.saldo} tag={data.tag} />
+        <StorageLocationCard loc={data.loc} saldo={data.saldo} tag={data.tag} latestAnalise={data.latestAnalise} />
       </div>
     );
   }
