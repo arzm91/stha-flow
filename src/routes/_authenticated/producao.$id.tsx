@@ -248,8 +248,10 @@ function OPPage() {
           <TabsTrigger value="analises"><FlaskConical className="mr-1 h-4 w-4" />Análises</TabsTrigger>
           <TabsTrigger value="observacoes"><MessageSquare className="mr-1 h-4 w-4" />Observações</TabsTrigger>
           <TabsTrigger value="tabelas"><TableIcon className="mr-1 h-4 w-4" />Tabelas</TabsTrigger>
+          <TabsTrigger value="paradas"><AlertOctagon className="mr-1 h-4 w-4" />Paradas</TabsTrigger>
           <TabsTrigger value="historico"><History className="mr-1 h-4 w-4" />Histórico</TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="processos">
           <ProcessosSection ordemId={id} equipamentoId={(op.data as any).equipamento_id ?? null} />
