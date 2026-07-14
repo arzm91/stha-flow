@@ -320,7 +320,7 @@ type WidgetData =
   | { kind: "pie"; points: { label: string; value: number }[] }
   | { kind: "list"; items: { title: string; subtitle?: string; value?: string }[] }
   | { kind: "gauge"; value: number; max: number; unit?: string; tag: string }
-  | { kind: "tank"; loc: StorageLocation; saldo: number; tag: { nome: string; valor_num: number | null; valor: string | null; unidade: string | null } | null }
+  | { kind: "tank"; loc: StorageLocation; saldo: number; tag: { nome: string; valor_num: number | null; valor: string | null; unidade: string | null } | null; latestAnalise: import("@/components/StorageLocationCard").LatestAnalise | null }
   | { kind: "producao-prev"; equipamento_nome: string; ordem: { id: string; numero: string; status: string; produto_nome: string; qtd_planejada: number; qtd_produzida: number; inicio_em: string | null } | null; tag_total?: { nome: string; valor_num: number | null; unidade: string | null } | null; tag_vel?: { nome: string; valor_num: number | null; unidade: string | null } | null }
   | { kind: "xray-manut"; abertas: number; em_andamento: number; atrasadas: number; concluidas_30d: number; proximas: { numero: string; prioridade: string; data: string }[] }
   | { kind: "xray-qual"; conformes: number; naoconformes: number; ultimas_nc: { titulo: string; valor: string }[] };
@@ -375,9 +375,27 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
 
     // ---- Estoque ----
     case "kpi.estoque.saldo": {
-      const { data } = await supabase.from("movimentacoes_estoque").select("tipo,quantidade");
-      const saldo = (data ?? []).reduce((s, r) => s + (r.tipo === "entrada" ? 1 : -1) * Number(r.quantidade), 0);
-      return { kind: "kpi", value: formatNumber(saldo), tone: "text-primary", to: "/estoque" };
+      const [{ data: movs }, { data: ajustes }] = await Promise.all([
+        supabase.from("movimentacoes_estoque").select("tanque_id,tipo,quantidade,ocorrido_em"),
+        supabase.from("tanque_ajustes_saldo").select("tanque_id,saldo,ajustado_em").order("ajustado_em", { ascending: false }),
+      ]);
+      const ultimoAjuste = new Map<string, { saldo: number; ts: number }>();
+      for (const a of ajustes ?? []) {
+        if (!a.tanque_id || ultimoAjuste.has(a.tanque_id)) continue;
+        ultimoAjuste.set(a.tanque_id, { saldo: Number(a.saldo), ts: new Date(a.ajustado_em).getTime() });
+      }
+      const saldos = new Map<string, number>();
+      for (const [tid, aj] of ultimoAjuste) saldos.set(tid, aj.saldo);
+      let semTanque = 0;
+      for (const m of movs ?? []) {
+        const q = (m.tipo === "entrada" ? 1 : -1) * Number(m.quantidade);
+        if (!m.tanque_id) { semTanque += q; continue; }
+        const aj = ultimoAjuste.get(m.tanque_id);
+        if (aj && new Date(m.ocorrido_em).getTime() <= aj.ts) continue;
+        saldos.set(m.tanque_id, (saldos.get(m.tanque_id) ?? 0) + q);
+      }
+      const total = Array.from(saldos.values()).reduce((s, v) => s + v, 0) + semTanque;
+      return { kind: "kpi", value: formatNumber(total), tone: "text-primary", to: "/estoque" };
     }
     case "kpi.estoque.entradas_hoje": {
       const { data } = await supabase.from("movimentacoes_estoque").select("quantidade")
