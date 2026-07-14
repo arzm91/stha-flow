@@ -141,9 +141,10 @@ function EquipamentosPage() {
     },
 
     { key: "ativo", label: "Ativo", type: "checkbox", section: "Estado" },
-
+  ];
 
   return (
+
     <CrudTable
       table="equipamentos"
       resourceType="equipamento"
