@@ -16,7 +16,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import {
   Table,
@@ -27,7 +26,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import {
   ArrowLeft,
@@ -38,7 +37,6 @@ import {
   X,
   Weight,
   ShieldAlert,
-  RefreshCw,
 } from "lucide-react";
 import { TagPicker } from "@/components/automation/TagPicker";
 import { formatDate, formatNumber } from "@/lib/format";
