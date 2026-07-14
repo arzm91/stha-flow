@@ -153,6 +153,11 @@ export function CrudTable({
               <form onSubmit={async (e) => { e.preventDefault(); if (editing && !(await requireAdminPassword(`editar este registro de ${title.toLowerCase()}`))) return; save.mutate(form); }} className="space-y-3">
                 {fields.map((f) => (
                   <div className="space-y-1.5" key={f.key}>
+                    {f.section ? (
+                      <div className="mb-1 mt-3 border-t border-border/60 pt-3">
+                        <h3 className="text-sm font-semibold text-foreground">{f.section}</h3>
+                      </div>
+                    ) : null}
                     <Label htmlFor={f.key}>{f.label}{f.required ? " *" : ""}</Label>
                     {f.type === "checkbox" ? (
                       <div className="flex items-center gap-2">
@@ -178,6 +183,12 @@ export function CrudTable({
                         options={f.options ?? []}
                         placeholder={f.placeholder ?? "Selecione..."}
                       />
+                    ) : f.type === "chips" ? (
+                      <ChipsField
+                        value={Array.isArray(form[f.key]) ? (form[f.key] as string[]) : []}
+                        onChange={(v) => setForm({ ...form, [f.key]: v })}
+                        placeholder={f.placeholder ?? "Digite e pressione Enter"}
+                      />
                     ) : (
                       <Input id={f.key} type={f.type ?? "text"} step={f.step} required={f.required}
                         placeholder={f.placeholder}
@@ -187,6 +198,7 @@ export function CrudTable({
                     {f.help ? <p className="text-xs text-muted-foreground">{f.help}</p> : null}
                   </div>
                 ))}
+
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
                   <Button type="submit" disabled={save.isPending}>{editing ? "Salvar" : "Criar"}</Button>
