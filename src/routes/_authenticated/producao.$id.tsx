@@ -320,6 +320,17 @@ function OPPage() {
           <TabelasSection ordemId={id} equipamentoId={(op.data as any).equipamento_id ?? null} inicioEm={(op.data as any).inicio_em ?? null} fimEm={(op.data as any).fim_em ?? null} />
         </TabsContent>
 
+        <TabsContent value="paradas">
+          <ParadasSection
+            equipamentoId={(op.data as any).equipamento_id ?? null}
+            ordemId={id}
+            inicioEm={(op.data as any).inicio_em ?? null}
+            fimEm={(op.data as any).fim_em ?? null}
+          />
+        </TabsContent>
+
+
+
         <TabsContent value="historico">
           <TimelineUnificada ordemId={id} />
         </TabsContent>
