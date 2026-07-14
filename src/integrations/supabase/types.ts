@@ -435,6 +435,154 @@ export type Database = {
           },
         ]
       }
+      carregamento_config: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          permitir_ajuste_manual: boolean
+          tag_peso_nome: string | null
+          tag_tara_nome: string | null
+          tempo_estabilizacao_seg: number | null
+          unidade: string | null
+          updated_at: string
+          variacao_min_kg: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          permitir_ajuste_manual?: boolean
+          tag_peso_nome?: string | null
+          tag_tara_nome?: string | null
+          tempo_estabilizacao_seg?: number | null
+          unidade?: string | null
+          updated_at?: string
+          variacao_min_kg?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          permitir_ajuste_manual?: boolean
+          tag_peso_nome?: string | null
+          tag_tara_nome?: string | null
+          tempo_estabilizacao_seg?: number | null
+          unidade?: string | null
+          updated_at?: string
+          variacao_min_kg?: number | null
+        }
+        Relationships: []
+      }
+      carregamentos: {
+        Row: {
+          ajuste_manual: boolean
+          created_at: string
+          destino: string | null
+          duracao_seg: number | null
+          finalizado_em: string | null
+          id: string
+          iniciado_em: string
+          modo: string
+          motivo_ajuste: string | null
+          motorista: string | null
+          movimentacao_id: string | null
+          observacao: string | null
+          operador_id: string | null
+          operador_nome: string | null
+          owner_id: string
+          peso_final: number | null
+          peso_inicial: number | null
+          placa_veiculo: string | null
+          produto_id: string
+          quantidade: number | null
+          status: string
+          tag_peso_nome: string | null
+          tanque_id: string | null
+          tara: number | null
+          unidade: string | null
+          updated_at: string
+        }
+        Insert: {
+          ajuste_manual?: boolean
+          created_at?: string
+          destino?: string | null
+          duracao_seg?: number | null
+          finalizado_em?: string | null
+          id?: string
+          iniciado_em?: string
+          modo?: string
+          motivo_ajuste?: string | null
+          motorista?: string | null
+          movimentacao_id?: string | null
+          observacao?: string | null
+          operador_id?: string | null
+          operador_nome?: string | null
+          owner_id: string
+          peso_final?: number | null
+          peso_inicial?: number | null
+          placa_veiculo?: string | null
+          produto_id: string
+          quantidade?: number | null
+          status?: string
+          tag_peso_nome?: string | null
+          tanque_id?: string | null
+          tara?: number | null
+          unidade?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ajuste_manual?: boolean
+          created_at?: string
+          destino?: string | null
+          duracao_seg?: number | null
+          finalizado_em?: string | null
+          id?: string
+          iniciado_em?: string
+          modo?: string
+          motivo_ajuste?: string | null
+          motorista?: string | null
+          movimentacao_id?: string | null
+          observacao?: string | null
+          operador_id?: string | null
+          operador_nome?: string | null
+          owner_id?: string
+          peso_final?: number | null
+          peso_inicial?: number | null
+          placa_veiculo?: string | null
+          produto_id?: string
+          quantidade?: number | null
+          status?: string
+          tag_peso_nome?: string | null
+          tanque_id?: string | null
+          tara?: number | null
+          unidade?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "carregamentos_movimentacao_id_fkey"
+            columns: ["movimentacao_id"]
+            isOneToOne: false
+            referencedRelation: "movimentacoes_estoque"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "carregamentos_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "carregamentos_tanque_id_fkey"
+            columns: ["tanque_id"]
+            isOneToOne: false
+            referencedRelation: "tanques"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chat_messages: {
         Row: {
           content: string
