@@ -34,6 +34,8 @@ export const Route = createFileRoute("/_authenticated")({
       </PageAccessGuard>
       <PendingApprovalsDock />
       <AlertasFloatingPopup />
+      <ParadaMotivoDialog />
+
       <AdminPasswordGate />
     </AppShell>
   ),
