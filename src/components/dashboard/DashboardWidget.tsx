@@ -566,14 +566,39 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
         .select("id,codigo,nome,tipo,capacidade,unidade,tag_nivel_nome,tag_nivel_modo,cor")
         .eq("id", tankId).maybeSingle();
       if (!t) return { kind: "kpi", value: "—", hint: "Tanque não encontrado" };
-      const [{ data: movs }, tagRes] = await Promise.all([
-        supabase.from("movimentacoes_estoque").select("tipo,quantidade").eq("tanque_id", tankId),
+      const [{ data: movs }, { data: ajustes }, tagRes, analiseRes] = await Promise.all([
+        supabase.from("movimentacoes_estoque").select("tipo,quantidade,ocorrido_em").eq("tanque_id", tankId),
+        supabase.from("tanque_ajustes_saldo").select("saldo,ajustado_em").eq("tanque_id", tankId).order("ajustado_em", { ascending: false }).limit(1),
         t.tag_nivel_nome
           ? supabase.from("tags_live").select("nome,valor,valor_num,unidade").eq("nome", t.tag_nivel_nome).maybeSingle()
           : Promise.resolve({ data: null } as { data: null }),
+        supabase.from("tanque_analises")
+          .select("resultado,registrado_em, analise:analise_id(nome,unidade,valor_min,valor_max)")
+          .eq("tanque_id", tankId)
+          .order("registrado_em", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
       ]);
-      const saldo = (movs ?? []).reduce((s, r) => s + (r.tipo === "entrada" ? 1 : -1) * Number(r.quantidade), 0);
-      return { kind: "tank", loc: t as StorageLocation, saldo, tag: (tagRes.data as { nome: string; valor: string | null; valor_num: number | null; unidade: string | null } | null) };
+      const aj = (ajustes ?? [])[0];
+      const ajTs = aj ? new Date(aj.ajustado_em).getTime() : null;
+      let saldo = aj ? Number(aj.saldo) : 0;
+      for (const m of movs ?? []) {
+        if (ajTs != null && new Date(m.ocorrido_em).getTime() <= ajTs) continue;
+        saldo += (m.tipo === "entrada" ? 1 : -1) * Number(m.quantidade);
+      }
+      const an = analiseRes.data as { resultado: number; registrado_em: string; analise: { nome: string | null; unidade: string | null; valor_min: number | null; valor_max: number | null } | null } | null;
+      const latestAnalise = an
+        ? {
+            nome: an.analise?.nome ?? null,
+            resultado: Number(an.resultado),
+            unidade: an.analise?.unidade ?? null,
+            valor_min: an.analise?.valor_min != null ? Number(an.analise.valor_min) : null,
+            valor_max: an.analise?.valor_max != null ? Number(an.analise.valor_max) : null,
+            registrado_em: an.registrado_em,
+          }
+        : null;
+      return { kind: "tank", loc: t as StorageLocation, saldo, tag: (tagRes.data as { nome: string; valor: string | null; valor_num: number | null; unidade: string | null } | null), latestAnalise };
+    }
     }
 
     // ---- Prévia de produção por equipamento ----
