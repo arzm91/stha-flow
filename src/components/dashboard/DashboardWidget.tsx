@@ -599,7 +599,6 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
         : null;
       return { kind: "tank", loc: t as StorageLocation, saldo, tag: (tagRes.data as { nome: string; valor: string | null; valor_num: number | null; unidade: string | null } | null), latestAnalise };
     }
-    }
 
     // ---- Prévia de produção por equipamento ----
     case "producao.equipamento": {
