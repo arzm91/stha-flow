@@ -292,3 +292,48 @@ function MultiSelectField({
     </div>
   );
 }
+
+function ChipsField({
+  value, onChange, placeholder,
+}: {
+  value: string[];
+  onChange: (v: string[]) => void;
+  placeholder?: string;
+}) {
+  const [input, setInput] = useState("");
+  const add = () => {
+    const v = input.trim();
+    if (!v) return;
+    if (value.includes(v)) { setInput(""); return; }
+    onChange([...value, v]);
+    setInput("");
+  };
+  const remove = (v: string) => onChange(value.filter((x) => x !== v));
+  return (
+    <div className="space-y-2 rounded-md border border-input bg-background p-2">
+      <div className="flex gap-2">
+        <Input
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); add(); } }}
+          placeholder={placeholder}
+          className="h-8"
+        />
+        <Button type="button" size="sm" variant="secondary" onClick={add}>Adicionar</Button>
+      </div>
+      {value.length > 0 ? (
+        <div className="flex flex-wrap gap-1">
+          {value.map((v) => (
+            <button type="button" key={v} onClick={() => remove(v)}
+              className="inline-flex items-center gap-1 rounded-md bg-primary/15 px-2 py-0.5 text-xs text-primary hover:bg-primary/25">
+              {v} <span aria-hidden>×</span>
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground">Nenhum item. Digite e pressione Enter ou clique em Adicionar.</p>
+      )}
+    </div>
+  );
+}
+
