@@ -19,13 +19,16 @@ import { useResourcePermissions, type ResourceType } from "@/hooks/useResourcePe
 export type FieldDef = {
   key: string;
   label: string;
-  type?: "text" | "number" | "checkbox" | "select" | "textarea" | "multiselect";
+  type?: "text" | "number" | "checkbox" | "select" | "textarea" | "multiselect" | "chips";
   required?: boolean;
   options?: { value: string; label: string; hint?: string }[];
   step?: string;
   placeholder?: string;
   help?: string;
+  /** When set, renders a section heading + divider before this field. */
+  section?: string;
 };
+
 
 type Row = Record<string, unknown> & { id: string };
 
