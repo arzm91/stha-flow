@@ -210,6 +210,37 @@ function OPPage() {
               <FileSpreadsheet className="mr-1 h-4 w-4" /> Exportar Excel
             </Button>
             {!isFinal && <FinalizarDialog op={op.data} tanques={tanquesProd.data ?? []} onDone={() => { qc.invalidateQueries(); navigate({ to: "/producao" }); }} />}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" title="Personalizar seções visíveis">
+                  <SlidersHorizontal className="mr-1 h-4 w-4" /> Personalizar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>Mostrar nesta página</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {(Object.keys(VIS_LABELS) as (keyof VisState)[]).map((k) => (
+                  <DropdownMenuCheckboxItem
+                    key={k}
+                    checked={vis[k]}
+                    onCheckedChange={() => toggleVis(k)}
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    {VIS_LABELS[k]}
+                  </DropdownMenuCheckboxItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={Object.values(vis).every(Boolean)}
+                  onCheckedChange={(v) => {
+                    setVis(v ? VIS_DEFAULT : (Object.fromEntries(Object.keys(VIS_DEFAULT).map(k => [k, false])) as VisState));
+                  }}
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  Mostrar todos
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         }
       />
