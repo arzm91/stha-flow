@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 
 type EventoPonto = {
   key: string;
-  tipo: "parametro" | "analise" | "observacao" | "tag_captura" | "tabela";
+  tipo: "parametro" | "analise" | "observacao" | "tag_captura" | "tabela" | "troca";
   when: number; // epoch ms
   titulo: string;
   detalhe?: string;
