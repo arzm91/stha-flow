@@ -26,17 +26,10 @@ function json(body: unknown, status = 200) {
 }
 
 function hasValidApiKey(request: Request) {
-  const url = new URL(request.url);
   const internalProvided = request.headers.get("x-tags-poll-secret");
   const internalExpected = Deno.env.get("TAGS_POLL_SECRET");
-  if (internalProvided && internalExpected && internalProvided === internalExpected) return true;
-
-  const publicProvided = request.headers.get("apikey") || request.headers.get("x-api-key") || url.searchParams.get("key");
-  const publicExpected = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY");
-  return Boolean(
-    publicProvided &&
-      ((publicExpected && publicProvided === publicExpected) || /^eyJ[\w-]+\.[\w-]+\.[\w-]+$/.test(publicProvided)),
-  );
+  if (!internalExpected) return false;
+  return Boolean(internalProvided && internalProvided === internalExpected);
 }
 
 function createAdminClient() {
