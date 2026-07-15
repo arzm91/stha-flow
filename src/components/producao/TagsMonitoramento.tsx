@@ -364,8 +364,19 @@ export function TagsMonitoramento({
         cor: EVT_CORES.tabela,
       });
     }
+    for (const tr of trocasQuery.data ?? []) {
+      const unidade = tr.produto_anterior?.unidade ?? "";
+      pontos.push({
+        key: `troca-${tr.id}`,
+        tipo: "troca",
+        when: new Date(tr.ocorrido_em).getTime(),
+        titulo: `Troca → ${tr.produto_novo?.nome ?? "—"}`,
+        detalhe: `${Number(tr.qtd_produto_anterior)} ${unidade} do anterior`.trim(),
+        cor: EVT_CORES.troca,
+      });
+    }
     return { eventosPontos: pontos, eventosFaixas: faixas };
-  }, [eventosQuery.data, tabelasQuery.data]);
+  }, [eventosQuery.data, tabelasQuery.data, trocasQuery.data]);
 
   // Janela visível = período exato selecionado (mesmo sem dados)
   const janela = useMemo(
