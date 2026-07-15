@@ -597,26 +597,47 @@ export function TagsMonitoramento({
                   />
                 ))}
                 {/* Faixas de processos (duração) */}
-                {faixasVisiveis.map((f) => (
-                  <ReferenceArea
-                    key={f.key}
-                    x1={f.inicio}
-                    x2={f.fim}
-                    fill={f.cor}
-                    fillOpacity={f.emCurso ? 0.08 : 0.14}
-                    stroke={f.cor}
-                    strokeOpacity={0.5}
-                    strokeDasharray={f.emCurso ? "4 3" : undefined}
-                    ifOverflow="hidden"
-                    label={{
-                      value: f.titulo,
-                      position: "insideTop",
-                      fill: f.cor,
-                      fontSize: 10,
-                      fontWeight: 600,
-                    }}
-                  />
-                ))}
+                {faixasVisiveis.map((f) => {
+                  const dur = formatDuration(f.fim - f.inicio) + (f.emCurso ? " (em curso)" : "");
+                  return (
+                    <ReferenceArea
+                      key={f.key}
+                      x1={f.inicio}
+                      x2={f.fim}
+                      fill={f.cor}
+                      fillOpacity={f.emCurso ? 0.1 : 0.18}
+                      stroke={f.cor}
+                      strokeOpacity={0.6}
+                      strokeDasharray={f.emCurso ? "4 3" : undefined}
+                      ifOverflow="hidden"
+                      label={{
+                        position: "insideTop",
+                        content: (props: any) => {
+                          const vb = props?.viewBox;
+                          if (!vb) return null;
+                          const cx = vb.x + vb.width / 2;
+                          const showText = vb.width > 34;
+                          if (!showText) return null;
+                          return (
+                            <g style={{ pointerEvents: "none" }}>
+                              <text x={cx} y={vb.y + 11} textAnchor="middle" fill={f.cor} fontSize={10} fontWeight={700}>
+                                {f.titulo}
+                              </text>
+                              <text x={cx} y={vb.y + 23} textAnchor="middle" fill={f.cor} fontSize={9} opacity={0.9}>
+                                {dur}
+                              </text>
+                              {f.qtdLabel ? (
+                                <text x={cx} y={vb.y + 34} textAnchor="middle" fill={f.cor} fontSize={9} opacity={0.9}>
+                                  {f.qtdLabel}
+                                </text>
+                              ) : null}
+                            </g>
+                          );
+                        },
+                      }}
+                    />
+                  );
+                })}
                 {/* Eventos pontuais */}
                 {pontosVisiveis.map((p) => (
                   <ReferenceLine
