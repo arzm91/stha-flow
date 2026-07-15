@@ -128,7 +128,7 @@ export function PushNotificationsCard() {
               onClick={async () => {
                 setTesting(true);
                 try {
-                  const res = await testFn({});
+                  const res = await testFn({ data: undefined as unknown as never });
                   if (res.ok) toast.success(`Push de teste enviado para ${res.sent}/${res.total} dispositivo(s).`);
                   else if (res.reason === "no_devices") toast.error("Nenhum dispositivo ativo. Ative o push primeiro.");
                   else if (res.reason === "fcm_not_configured") toast.error("Firebase não está configurado no servidor.");
