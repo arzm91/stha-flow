@@ -1,7 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { createClient } from "@supabase/supabase-js";
 
-// Endpoint chamado pela tela e por automações. Ele delega a busca real para a
-// função de backend dedicada, que não sofre a restrição HTTP 403 do ambiente do app publicado.
+// Endpoint chamado pela tela e por automações. Delega a busca real para a
+// função de backend dedicada. Requer usuário autenticado (Bearer token
+// validado via Supabase Auth) — o segredo interno TAGS_POLL_SECRET nunca
+// sai do servidor.
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -16,14 +19,25 @@ function json(body: unknown, status = 200) {
   });
 }
 
-function hasValidApiKey(request: Request) {
-  const provided = request.headers.get("apikey") || request.headers.get("x-api-key");
-  const expected = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY;
-  return Boolean(provided && expected && provided === expected);
+async function isAuthenticated(request: Request) {
+  const authHeader = request.headers.get("authorization") || request.headers.get("Authorization");
+  if (!authHeader?.toLowerCase().startsWith("bearer ")) return false;
+  const token = authHeader.slice(7).trim();
+  if (!token) return false;
+  const url = process.env.SUPABASE_URL;
+  const publishable = process.env.SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_ANON_KEY;
+  if (!url || !publishable) return false;
+  const client = createClient(url, publishable, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  const { data, error } = await client.auth.getUser(token);
+  return Boolean(!error && data?.user?.id);
 }
 
 async function handle(request: Request) {
-  if (!hasValidApiKey(request)) return json({ ok: false, message: "Não autorizado" }, 401);
+  if (!(await isAuthenticated(request))) {
+    return json({ ok: false, message: "Não autorizado" }, 401);
+  }
   const url = new URL(request.url);
 
   const backendUrl = process.env.SUPABASE_URL;
@@ -63,4 +77,3 @@ export const Route = createFileRoute("/api/public/tags/poll")({
     },
   },
 });
-
