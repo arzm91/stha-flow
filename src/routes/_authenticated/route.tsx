@@ -36,10 +36,10 @@ export const Route = createFileRoute("/_authenticated")({
     }
 
     if (!session) {
-      // Preserva a rota atual para retornar após o login.
+      // Preserva a rota atual para retornar após o login (validado em /auth).
       throw redirect({
         to: "/auth",
-        search: { redirect: location.href },
+        search: { next: location.pathname + location.searchStr + location.hash },
       });
     }
     return { user: session.user };
