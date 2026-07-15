@@ -146,12 +146,15 @@ function TurnosPage() {
 
   const eventosFiltrados = useMemo(() => {
     const term = busca.trim().toLowerCase();
-    if (!term) return eventos;
-    return eventos.filter((e) =>
-      (e.descricao ?? "").toLowerCase().includes(term) ||
-      (e.responsavel ?? "").toLowerCase().includes(term),
-    );
-  }, [eventos, busca]);
+    return eventos.filter((e) => {
+      if (filtroCrit !== "todas" && getCriticidade(e.categoria).key !== filtroCrit) return false;
+      if (!term) return true;
+      return (
+        (e.descricao ?? "").toLowerCase().includes(term) ||
+        (e.responsavel ?? "").toLowerCase().includes(term)
+      );
+    });
+  }, [eventos, busca, filtroCrit]);
 
   // Signed URLs for image previews
   const allPaths = useMemo(() => {
