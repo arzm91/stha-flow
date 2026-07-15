@@ -12,22 +12,21 @@ export type TagEndpoint = {
   ultima_execucao: string | null;
 };
 
-function getPublicApiKey() {
-  return import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string | undefined;
-}
-
 async function callPollRoute(search: string) {
+  const { data } = await supabase.auth.getSession();
+  const token = data.session?.access_token;
+  if (!token) throw new Error("Sessão expirada. Faça login novamente.");
   const res = await fetch(`/api/public/tags/poll${search}`, {
     method: "POST",
     headers: {
       Accept: "application/json",
       "Content-Type": "application/json",
-      ...(getPublicApiKey() ? { apikey: getPublicApiKey()! } : {}),
+      Authorization: `Bearer ${token}`,
     },
   });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data?.message || data?.error || `HTTP ${res.status}`);
-  return data as { ok?: boolean; processed?: number; results?: Array<{ id: string; ok: boolean; count?: number; error?: string; status?: number }> };
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body?.message || body?.error || `HTTP ${res.status}`);
+  return body as { ok?: boolean; processed?: number; results?: Array<{ id: string; ok: boolean; count?: number; error?: string; status?: number }> };
 }
 
 /**
