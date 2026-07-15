@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, BellOff, Smartphone, Trash2 } from "lucide-react";
+import { Bell, BellOff, Smartphone, Trash2, Send, Info } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { enablePushNotifications, getPushSupportStatus } from "@/lib/push/client";
+import { enablePushNotifications, getPushSupportStatus, refreshPushRegistration } from "@/lib/push/client";
+import { sendTestPushToSelf } from "@/lib/push/notifications.functions";
+import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 type Device = {
@@ -23,6 +25,8 @@ export function PushNotificationsCard() {
   const [supportReason, setSupportReason] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermission | "unknown">("unknown");
   const [busy, setBusy] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const testFn = useServerFn(sendTestPushToSelf);
 
   useEffect(() => {
     getPushSupportStatus().then((status) => {
@@ -30,7 +34,11 @@ export function PushNotificationsCard() {
       setSupportReason(status.reason ?? null);
     });
     if (typeof Notification !== "undefined") setPermission(Notification.permission);
-  }, []);
+    // Silent token refresh — mantém o dispositivo ativo mesmo sem clicar em "Ativar"
+    refreshPushRegistration().then((r) => {
+      if (r.ok) qc.invalidateQueries({ queryKey: ["push_devices:self"] });
+    });
+  }, [qc]);
 
   const { data: devices = [] } = useQuery({
     queryKey: ["push_devices:self"],
@@ -81,10 +89,24 @@ export function PushNotificationsCard() {
     <Card>
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
-          <Bell className="h-4 w-4" /> Notificações no celular
+          <Bell className="h-4 w-4" /> Notificações push (celular e computador)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex gap-2 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+          <Info className="h-4 w-4 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p>
+              As notificações são entregues pelo Firebase Cloud Messaging <strong>diretamente ao aparelho</strong>, então chegam
+              mesmo com o STHApc <strong>fechado</strong> ou com você <strong>desconectado</strong> do sistema.
+            </p>
+            <p>
+              <strong>iPhone:</strong> instale o STHApc pela opção “Adicionar à Tela de Início” do Safari e abra pelo ícone —
+              o Safari comum não libera push. <strong>Android/Chrome/Edge:</strong> basta ativar aqui uma vez.
+            </p>
+          </div>
+        </div>
+
         {supported === false && (
           <p className="text-sm text-muted-foreground">
             {supportReason === "preview_unavailable"
@@ -99,6 +121,28 @@ export function PushNotificationsCard() {
             <Button onClick={handleEnable} disabled={busy}>
               <Bell className="mr-2 h-4 w-4" />
               {permission === "granted" ? "Ativar neste dispositivo" : "Ativar notificações"}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={testing || devices.length === 0}
+              onClick={async () => {
+                setTesting(true);
+                try {
+                  const res = await testFn({ data: undefined as unknown as never });
+                  if (res.ok) toast.success(`Push de teste enviado para ${res.sent}/${res.total} dispositivo(s).`);
+                  else if (res.reason === "no_devices") toast.error("Nenhum dispositivo ativo. Ative o push primeiro.");
+                  else if (res.reason === "fcm_not_configured") toast.error("Firebase não está configurado no servidor.");
+                  else toast.error(`Falha ao enviar push (${res.sent}/${res.total}).`);
+                  qc.invalidateQueries({ queryKey: ["push_devices:self"] });
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Erro ao enviar push de teste");
+                } finally {
+                  setTesting(false);
+                }
+              }}
+            >
+              <Send className="mr-2 h-4 w-4" />
+              {testing ? "Enviando..." : "Enviar push de teste"}
             </Button>
             <span className="text-xs text-muted-foreground">
               Permissão do navegador: <Badge variant="outline">{permission}</Badge>

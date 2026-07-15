@@ -139,3 +139,51 @@ export async function disablePushDevice(deviceId: string): Promise<{ ok: boolean
   if (error) return { ok: false, reason: error.message };
   return { ok: true };
 }
+
+/**
+ * Silently re-registers the FCM token for the current signed-in user WITHOUT
+ * prompting for permission. Used on app boot to keep the device token fresh
+ * so pushes keep being delivered even if the user hasn't opened the app in a
+ * while. No-op if permission was never granted or push is unsupported here.
+ */
+export async function refreshPushRegistration(): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    if (typeof window === "undefined") return { ok: false, reason: "unsupported" };
+    if (!("serviceWorker" in navigator) || !("Notification" in window) || !("PushManager" in window)) {
+      return { ok: false, reason: "unsupported" };
+    }
+    if (isLovablePreviewHost()) return { ok: false, reason: "preview_unavailable" };
+    if (Notification.permission !== "granted") return { ok: false, reason: "no_permission" };
+    if (!(await isPushSupported())) return { ok: false, reason: "unsupported" };
+
+    const { data: u } = await supabase.auth.getUser();
+    if (!u.user) return { ok: false, reason: "not_authenticated" };
+
+    const registration = await registerServiceWorker();
+    const { vapidKey } = await getApp();
+    const messaging = await getMessagingInstance();
+
+    const token = await getToken(messaging, {
+      ...(vapidKey.length >= 80 ? { vapidKey } : {}),
+      serviceWorkerRegistration: registration,
+    });
+    if (!token) return { ok: false, reason: "no_token" };
+
+    const { error } = await supabase.from("push_devices").upsert(
+      {
+        user_id: u.user.id,
+        owner_id: u.user.id,
+        fcm_token: token,
+        plataforma: detectPlatform(),
+        rotulo: `${detectPlatform()} • ${new Date().toLocaleDateString("pt-BR")}`,
+        user_agent: navigator.userAgent.slice(0, 300),
+      },
+      { onConflict: "fcm_token" },
+    );
+    if (error) return { ok: false, reason: error.message };
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, reason: err instanceof Error ? err.message : String(err) };
+  }
+}
+
