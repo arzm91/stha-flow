@@ -224,6 +224,7 @@ function TurnosPage() {
       setResponsavel("");
       setOcorridoEm(toLocalInput(new Date()));
       setImagens([]);
+      setCriticidade("informativa");
       if (fileRef.current) fileRef.current.value = "";
       qc.invalidateQueries({ queryKey: ["turnos_eventos"] });
     },
