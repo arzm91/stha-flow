@@ -89,10 +89,24 @@ export function PushNotificationsCard() {
     <Card>
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
-          <Bell className="h-4 w-4" /> Notificações no celular
+          <Bell className="h-4 w-4" /> Notificações push (celular e computador)
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
+        <div className="flex gap-2 rounded-md border bg-muted/40 p-3 text-xs text-muted-foreground">
+          <Info className="h-4 w-4 shrink-0 mt-0.5" />
+          <div className="space-y-1">
+            <p>
+              As notificações são entregues pelo Firebase Cloud Messaging <strong>diretamente ao aparelho</strong>, então chegam
+              mesmo com o STHApc <strong>fechado</strong> ou com você <strong>desconectado</strong> do sistema.
+            </p>
+            <p>
+              <strong>iPhone:</strong> instale o STHApc pela opção “Adicionar à Tela de Início” do Safari e abra pelo ícone —
+              o Safari comum não libera push. <strong>Android/Chrome/Edge:</strong> basta ativar aqui uma vez.
+            </p>
+          </div>
+        </div>
+
         {supported === false && (
           <p className="text-sm text-muted-foreground">
             {supportReason === "preview_unavailable"
@@ -107,6 +121,28 @@ export function PushNotificationsCard() {
             <Button onClick={handleEnable} disabled={busy}>
               <Bell className="mr-2 h-4 w-4" />
               {permission === "granted" ? "Ativar neste dispositivo" : "Ativar notificações"}
+            </Button>
+            <Button
+              variant="outline"
+              disabled={testing || devices.length === 0}
+              onClick={async () => {
+                setTesting(true);
+                try {
+                  const res = await testFn({});
+                  if (res.ok) toast.success(`Push de teste enviado para ${res.sent}/${res.total} dispositivo(s).`);
+                  else if (res.reason === "no_devices") toast.error("Nenhum dispositivo ativo. Ative o push primeiro.");
+                  else if (res.reason === "fcm_not_configured") toast.error("Firebase não está configurado no servidor.");
+                  else toast.error(`Falha ao enviar push (${res.sent}/${res.total}).`);
+                  qc.invalidateQueries({ queryKey: ["push_devices:self"] });
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Erro ao enviar push de teste");
+                } finally {
+                  setTesting(false);
+                }
+              }}
+            >
+              <Send className="mr-2 h-4 w-4" />
+              {testing ? "Enviando..." : "Enviar push de teste"}
             </Button>
             <span className="text-xs text-muted-foreground">
               Permissão do navegador: <Badge variant="outline">{permission}</Badge>
