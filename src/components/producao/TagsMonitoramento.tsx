@@ -544,6 +544,7 @@ export function TagsMonitoramento({
             { k: "tag_captura", label: "Capturas", icon: TagIcon },
             { k: "observacao", label: "Observações", icon: MessageSquare },
             { k: "tabela", label: "Tabelas", icon: TableIcon },
+            { k: "troca", label: "Trocas", icon: Repeat },
           ] as const).map(({ k, label, icon: Icon }) => {
             const on = evtAtivos[k];
             const cor = EVT_CORES[k];
