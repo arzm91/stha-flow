@@ -246,6 +246,15 @@ export async function gerarRelatorioProducaoXlsx(ordemId: string) {
       valor: Number(m.quantidade),
     });
   }
+  for (const t of trocas) {
+    rows.push({
+      when: t.ocorrido_em, tipo: "Troca de produto",
+      titulo: `${t.produto_anterior?.nome ?? "—"} → ${t.produto_novo?.nome ?? "—"}`,
+      detalhe: t.observacao ?? "",
+      valor: Number(t.qtd_produto_anterior),
+      unidade: t.produto_anterior?.unidade ?? "",
+    });
+  }
   rows.sort((a, b) => new Date(a.when).getTime() - new Date(b.when).getTime());
   for (const r of rows) {
     s2.addRow({
