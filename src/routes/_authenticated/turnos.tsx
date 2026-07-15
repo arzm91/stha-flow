@@ -578,13 +578,24 @@ function TurnosPage() {
                               )}
                             </div>
                             {editable && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => { if (confirm("Remover evento?")) deleteMut.mutate(ev); }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="flex flex-col gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title="Fixar por 48h"
+                                  onClick={() => pinMut.mutate(ev)}
+                                  disabled={pinMut.isPending}
+                                >
+                                  <Pin className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => { if (confirm("Remover evento?")) deleteMut.mutate(ev); }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             )}
                           </div>
                         </CardContent>
