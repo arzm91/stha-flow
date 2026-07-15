@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Brush, ReferenceLine, ReferenceArea } from "recharts";
-import { LineChart as LineChartIcon, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon, Search, X, Table as TableIcon } from "lucide-react";
+import { LineChart as LineChartIcon, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon, Search, X, Table as TableIcon, Repeat } from "lucide-react";
 import { formatNumber, formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
