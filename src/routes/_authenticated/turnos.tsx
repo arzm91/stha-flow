@@ -105,6 +105,7 @@ type EventoRow = {
   responsavel: string | null;
   imagens: string[] | null;
   categoria: string | null;
+  fixado_ate: string | null;
 };
 
 function TurnosPage() {
