@@ -324,11 +324,23 @@ export function TagsMonitoramento({
         const fimRaw = (e as any).finalizado_em;
         const emCurso = !fimRaw;
         const fim = fimRaw ? new Date(fimRaw).getTime() : Date.now();
+        const ea = (e as any).equipamento_atividade;
+        const cor = (ea?.cor as string) || EVT_CORES.processo;
+        const qtd =
+          (e as any).valor_capturado ??
+          (e as any).valor_fim ??
+          ea?.quantidade ??
+          null;
+        const unidade = (e as any).unidade ?? ea?.unidade ?? null;
+        const qtdLabel =
+          qtd != null && !Number.isNaN(Number(qtd))
+            ? `${formatNumber(Number(qtd))}${unidade ? " " + unidade : ""}`
+            : undefined;
         faixas.push({
           key: `proc-${e.id}`, tipo: "processo", inicio: ini, fim,
           titulo: (e as any).processo_nome,
           detalhe: (e as any).motivo_atraso || (e as any).observacao || undefined,
-          emCurso, cor: EVT_CORES.processo,
+          emCurso, cor, qtdLabel,
         });
       }
     }
