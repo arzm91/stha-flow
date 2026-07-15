@@ -70,6 +70,7 @@ export function SessionKeeper() {
       document.removeEventListener("visibilitychange", onVisibility);
       window.removeEventListener("online", onOnline);
       window.clearInterval(interval);
+      authSub.subscription.unsubscribe();
     };
   }, []);
 
