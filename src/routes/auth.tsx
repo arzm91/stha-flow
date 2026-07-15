@@ -65,23 +65,33 @@ function AuthPage() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (accessCode.trim() !== SIGNUP_ACCESS_CODE) {
+    if (!accessCode.trim()) {
       setShowAccessDeniedDialog(true);
       return;
     }
     if (!nome.trim()) return toast.error("Informe seu nome");
     setLoading(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}${next ?? "/dashboard"}`,
-        data: { nome, empresa },
-      },
-    });
-    setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Cadastro realizado. Você já pode entrar.");
+    try {
+      await signUpWithAccessCode({
+        data: {
+          email,
+          password,
+          nome,
+          empresa,
+          accessCode: accessCode.trim(),
+        },
+      });
+      toast.success("Cadastro realizado. Você já pode entrar.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Falha ao cadastrar";
+      if (/código.*acesso|access code/i.test(msg)) {
+        setShowAccessDeniedDialog(true);
+      } else {
+        toast.error(msg);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRecover = async (e: React.FormEvent) => {
