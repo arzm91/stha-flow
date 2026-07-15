@@ -738,7 +738,7 @@ export function TagsMonitoramento({
                   when: f.inicio,
                   cor: f.cor,
                   label: `Processo: ${f.titulo}`,
-                  extra: `${formatDuration(f.fim - f.inicio)}${f.emCurso ? " (em curso)" : ""}${f.detalhe ? " — " + f.detalhe : ""}`,
+                  extra: `${formatDuration(f.fim - f.inicio)}${f.emCurso ? " (em curso)" : ""}${f.qtdLabel ? " · " + f.qtdLabel : ""}${f.detalhe ? " — " + f.detalhe : ""}`,
                 })),
                 ...pontosVisiveis.map((p) => ({
                   when: p.when,
