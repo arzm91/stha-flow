@@ -53,6 +53,18 @@ export function SessionKeeper() {
     // Primeira execução imediata garante token fresco ao entrar.
     void refresh();
 
+    // Auto-subscrição silenciosa de push logo após login (ou ao abrir o app
+    // já logado). Não bloqueia nem incomoda o usuário: se o navegador já
+    // autorizou, apenas registra o token; se ainda não, pede uma única vez
+    // (fora de iOS Safari, que exige gesto explícito).
+    void autoSubscribeAfterLogin();
+
+    const { data: authSub } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+        void autoSubscribeAfterLogin();
+      }
+    });
+
     return () => {
       cancelled = true;
       document.removeEventListener("visibilitychange", onVisibility);
