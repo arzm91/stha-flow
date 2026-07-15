@@ -183,7 +183,7 @@ export function TagsMonitoramento({
   });
 
   const [evtAtivos, setEvtAtivos] = useState<Record<string, boolean>>({
-    parametro: true, analise: true, observacao: true, tag_captura: true, processo: true, tabela: true,
+    parametro: true, analise: true, observacao: true, tag_captura: true, processo: true, tabela: true, troca: true,
   });
 
   // Dados em ordem cronológica (do mais antigo para o mais recente) para o gráfico.
