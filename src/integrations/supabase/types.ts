@@ -1508,6 +1508,67 @@ export type Database = {
           },
         ]
       }
+      ordem_trocas_produto: {
+        Row: {
+          created_at: string
+          id: string
+          observacao: string | null
+          ocorrido_em: string
+          ordem_id: string
+          owner_id: string
+          produto_anterior_id: string
+          produto_novo_id: string
+          qtd_produto_anterior: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          observacao?: string | null
+          ocorrido_em?: string
+          ordem_id: string
+          owner_id: string
+          produto_anterior_id: string
+          produto_novo_id: string
+          qtd_produto_anterior: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          observacao?: string | null
+          ocorrido_em?: string
+          ordem_id?: string
+          owner_id?: string
+          produto_anterior_id?: string
+          produto_novo_id?: string
+          qtd_produto_anterior?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordem_trocas_produto_ordem_id_fkey"
+            columns: ["ordem_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_producao"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordem_trocas_produto_produto_anterior_id_fkey"
+            columns: ["produto_anterior_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordem_trocas_produto_produto_novo_id_fkey"
+            columns: ["produto_novo_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ordens_manutencao: {
         Row: {
           agendada_para: string | null
