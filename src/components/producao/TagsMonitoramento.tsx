@@ -26,6 +26,7 @@ type EventoFaixa = {
   detalhe?: string;
   emCurso: boolean;
   cor: string;
+  qtdLabel?: string;
 };
 
 const EVT_CORES = {
@@ -124,7 +125,7 @@ export function TagsMonitoramento({
         supabase.from("observacoes_producao")
           .select("id,texto,registrado_em").eq("ordem_id", ordemId),
         supabase.from("ordem_etapas")
-          .select("id,tipo,processo_nome,atividade_descricao,iniciado_em,finalizado_em,observacao,motivo_atraso,equipamento_atividade_id,processo_id,estab_fase")
+          .select("id,tipo,processo_nome,atividade_descricao,iniciado_em,finalizado_em,observacao,motivo_atraso,equipamento_atividade_id,processo_id,estab_fase,valor_capturado,valor_fim,valor_inicio,unidade,equipamento_atividade:equipamento_atividade_id(cor,quantidade,unidade)")
           .eq("ordem_id", ordemId),
       ]);
       return {
@@ -323,11 +324,23 @@ export function TagsMonitoramento({
         const fimRaw = (e as any).finalizado_em;
         const emCurso = !fimRaw;
         const fim = fimRaw ? new Date(fimRaw).getTime() : Date.now();
+        const ea = (e as any).equipamento_atividade;
+        const cor = (ea?.cor as string) || EVT_CORES.processo;
+        const qtd =
+          (e as any).valor_capturado ??
+          (e as any).valor_fim ??
+          ea?.quantidade ??
+          null;
+        const unidade = (e as any).unidade ?? ea?.unidade ?? null;
+        const qtdLabel =
+          qtd != null && !Number.isNaN(Number(qtd))
+            ? `${formatNumber(Number(qtd))}${unidade ? " " + unidade : ""}`
+            : undefined;
         faixas.push({
           key: `proc-${e.id}`, tipo: "processo", inicio: ini, fim,
           titulo: (e as any).processo_nome,
           detalhe: (e as any).motivo_atraso || (e as any).observacao || undefined,
-          emCurso, cor: EVT_CORES.processo,
+          emCurso, cor, qtdLabel,
         });
       }
     }
@@ -584,26 +597,47 @@ export function TagsMonitoramento({
                   />
                 ))}
                 {/* Faixas de processos (duração) */}
-                {faixasVisiveis.map((f) => (
-                  <ReferenceArea
-                    key={f.key}
-                    x1={f.inicio}
-                    x2={f.fim}
-                    fill={f.cor}
-                    fillOpacity={f.emCurso ? 0.08 : 0.14}
-                    stroke={f.cor}
-                    strokeOpacity={0.5}
-                    strokeDasharray={f.emCurso ? "4 3" : undefined}
-                    ifOverflow="hidden"
-                    label={{
-                      value: f.titulo,
-                      position: "insideTop",
-                      fill: f.cor,
-                      fontSize: 10,
-                      fontWeight: 600,
-                    }}
-                  />
-                ))}
+                {faixasVisiveis.map((f) => {
+                  const dur = formatDuration(f.fim - f.inicio) + (f.emCurso ? " (em curso)" : "");
+                  return (
+                    <ReferenceArea
+                      key={f.key}
+                      x1={f.inicio}
+                      x2={f.fim}
+                      fill={f.cor}
+                      fillOpacity={f.emCurso ? 0.1 : 0.18}
+                      stroke={f.cor}
+                      strokeOpacity={0.6}
+                      strokeDasharray={f.emCurso ? "4 3" : undefined}
+                      ifOverflow="hidden"
+                      label={{
+                        position: "insideTop",
+                        content: (props: any) => {
+                          const vb = props?.viewBox;
+                          if (!vb) return null;
+                          const cx = vb.x + vb.width / 2;
+                          const showText = vb.width > 34;
+                          if (!showText) return null;
+                          return (
+                            <g style={{ pointerEvents: "none" }}>
+                              <text x={cx} y={vb.y + 11} textAnchor="middle" fill={f.cor} fontSize={10} fontWeight={700}>
+                                {f.titulo}
+                              </text>
+                              <text x={cx} y={vb.y + 23} textAnchor="middle" fill={f.cor} fontSize={9} opacity={0.9}>
+                                {dur}
+                              </text>
+                              {f.qtdLabel ? (
+                                <text x={cx} y={vb.y + 34} textAnchor="middle" fill={f.cor} fontSize={9} opacity={0.9}>
+                                  {f.qtdLabel}
+                                </text>
+                              ) : null}
+                            </g>
+                          );
+                        },
+                      }}
+                    />
+                  );
+                })}
                 {/* Eventos pontuais */}
                 {pontosVisiveis.map((p) => (
                   <ReferenceLine
@@ -704,7 +738,7 @@ export function TagsMonitoramento({
                   when: f.inicio,
                   cor: f.cor,
                   label: `Processo: ${f.titulo}`,
-                  extra: `${formatDuration(f.fim - f.inicio)}${f.emCurso ? " (em curso)" : ""}${f.detalhe ? " — " + f.detalhe : ""}`,
+                  extra: `${formatDuration(f.fim - f.inicio)}${f.emCurso ? " (em curso)" : ""}${f.qtdLabel ? " · " + f.qtdLabel : ""}${f.detalhe ? " — " + f.detalhe : ""}`,
                 })),
                 ...pontosVisiveis.map((p) => ({
                   when: p.when,
