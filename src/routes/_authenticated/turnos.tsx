@@ -481,16 +481,22 @@ function TurnosPage() {
                 {items.map((ev) => {
                   const dt = new Date(ev.ocorrido_em);
                   const imgs = ev.imagens ?? [];
+                  const crit = getCriticidade(ev.categoria);
+                  const CritIcon = crit.icon;
                   return (
                     <li key={ev.id} className="relative">
-                      <span className="absolute -left-[34px] flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary ring-4 ring-background">
-                        <Clock className="h-3.5 w-3.5" />
+                      <span className={`absolute -left-[34px] flex h-7 w-7 items-center justify-center rounded-full ring-4 ring-background ${crit.dot}`}>
+                        <CritIcon className="h-3.5 w-3.5" />
                       </span>
-                      <Card>
+                      <Card className={crit.border}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                <Badge variant="outline" className={`gap-1 text-xs ${crit.badgeClass}`}>
+                                  <CritIcon className="h-3 w-3" />
+                                  {crit.label}
+                                </Badge>
                                 <span>
                                   {dt.toLocaleString("pt-BR", {
                                     day: "2-digit", month: "2-digit", year: "numeric",
