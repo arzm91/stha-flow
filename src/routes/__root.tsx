@@ -122,9 +122,16 @@ function RootComponent() {
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event) => {
-      if (event !== "SIGNED_IN" && event !== "SIGNED_OUT" && event !== "USER_UPDATED") return;
-      router.invalidate();
-      if (event !== "SIGNED_OUT") queryClient.invalidateQueries();
+      // SIGNED_IN e SIGNED_OUT alteram o estado autenticado da rota;
+      // USER_UPDATED só reflete mudança de metadata do usuário — invalidar a
+      // rota nesse caso re-executa o beforeLoad no meio do trabalho e pode
+      // deslogar em corridas com refresh de token. Só invalidamos queries.
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT") {
+        router.invalidate();
+      }
+      if (event === "SIGNED_IN" || event === "USER_UPDATED") {
+        queryClient.invalidateQueries();
+      }
     });
     return () => sub.subscription.unsubscribe();
   }, [router, queryClient]);
