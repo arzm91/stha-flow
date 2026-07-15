@@ -127,6 +127,7 @@ function TurnosPage() {
   const [dataInicio, setDataInicio] = useState(toDateInput(sevenAgo));
   const [dataFim, setDataFim] = useState(toDateInput(today));
   const [busca, setBusca] = useState("");
+  const [filtroCrit, setFiltroCrit] = useState<CriticidadeKey | "todas">("todas");
 
   const { data: eventos = [], isLoading } = useQuery({
     queryKey: ["turnos_eventos", dataInicio, dataFim],
