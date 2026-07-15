@@ -933,12 +933,24 @@ function OrdemDetalheSheet({
                   </Button>
                 </>
               )}
-              {(ordem.status === "em_andamento" || ordem.status === "finalizada") && (
+              {ordem.status === "em_andamento" && (
                 <Button asChild>
                   <Link to="/producao/$id" params={{ id: ordem.id }} onClick={onClose}>
-                    <Eye className="mr-2 h-4 w-4" />Abrir produção
+                    <Eye className="mr-2 h-4 w-4" />Abrir acompanhamento
                   </Link>
                 </Button>
+              )}
+              {ordem.status === "finalizada" && (
+                <>
+                  <Button asChild>
+                    <Link to="/producao/finalizada/$id" params={{ id: ordem.id }} onClick={onClose}>
+                      <Eye className="mr-2 h-4 w-4" />Ver detalhes e eventos
+                    </Link>
+                  </Button>
+                  <Button variant="outline" onClick={() => onEditNumero(ordem)}>
+                    <Pencil className="mr-2 h-4 w-4" />Editar OP
+                  </Button>
+                </>
               )}
             </div>
           </>
