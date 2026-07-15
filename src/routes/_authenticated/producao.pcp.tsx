@@ -184,9 +184,14 @@ function PcpPage() {
         title="PCP / Ordens"
         description="Programe, acompanhe e priorize a produção por equipamento."
         actions={
-          <Button onClick={() => { setEditing(null); setProgramarOpen(true); }}>
-            <CalendarPlus className="mr-2 h-4 w-4" />Programar ordem
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setManualOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />Registrar produção manual
+            </Button>
+            <Button onClick={() => { setEditing(null); setProgramarOpen(true); }}>
+              <CalendarPlus className="mr-2 h-4 w-4" />Programar ordem
+            </Button>
+          </div>
         }
       />
 
