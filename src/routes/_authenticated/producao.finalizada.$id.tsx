@@ -171,6 +171,17 @@ function FinalizadaPage() {
     },
   });
 
+  const trocas = useQuery({
+    queryKey: ["trocas-final", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ordem_trocas_produto")
+        .select("id, ocorrido_em, qtd_produto_anterior, produto_anterior:produto_anterior_id(nome,unidade), produto_novo:produto_novo_id(nome)")
+        .eq("ordem_id", id);
+      return (data ?? []) as any[];
+    },
+  });
+
   const eventos = useMemo<Evento[]>(() => {
     if (!op.data) return [];
     const evs: Evento[] = [];
