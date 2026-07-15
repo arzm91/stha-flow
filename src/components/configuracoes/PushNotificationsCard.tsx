@@ -97,12 +97,17 @@ export function PushNotificationsCard() {
           <Info className="h-4 w-4 shrink-0 mt-0.5" />
           <div className="space-y-1">
             <p>
+              O seu dispositivo é registrado <strong>automaticamente ao entrar</strong> no STHApc — não é preciso cadastrar nada.
+              Basta autorizar as notificações uma única vez quando o navegador perguntar.
+            </p>
+            <p>
               As notificações são entregues pelo Firebase Cloud Messaging <strong>diretamente ao aparelho</strong>, então chegam
               mesmo com o STHApc <strong>fechado</strong> ou com você <strong>desconectado</strong> do sistema.
             </p>
             <p>
-              <strong>iPhone:</strong> instale o STHApc pela opção “Adicionar à Tela de Início” do Safari e abra pelo ícone —
-              o Safari comum não libera push. <strong>Android/Chrome/Edge:</strong> basta ativar aqui uma vez.
+              <strong>iPhone:</strong> instale o STHApc pela opção "Adicionar à Tela de Início" do Safari, abra pelo ícone e toque
+              em <em>Ativar notificações</em> abaixo (o Safari exige essa confirmação manual uma vez).
+              <strong> Android / Chrome / Edge:</strong> o registro acontece sozinho depois de aceitar o aviso do navegador.
             </p>
           </div>
         </div>
