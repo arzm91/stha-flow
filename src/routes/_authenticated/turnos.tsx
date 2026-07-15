@@ -425,6 +425,31 @@ function TurnosPage() {
               <Label htmlFor="busca" className="text-xs">Buscar</Label>
               <Input id="busca" placeholder="Descrição ou responsável" value={busca} onChange={(e) => setBusca(e.target.value)} className="w-[240px]" />
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Criticidade</Label>
+              <Select value={filtroCrit} onValueChange={(v) => setFiltroCrit(v as CriticidadeKey | "todas")}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas</SelectItem>
+                  {CRITICIDADE_KEYS.map((k) => {
+                    const c = CRITICIDADES[k];
+                    const Icon = c.icon;
+                    return (
+                      <SelectItem key={k} value={k}>
+                        <span className="flex items-center gap-2">
+                          <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full ${c.dot}`}>
+                            <Icon className="h-3 w-3" />
+                          </span>
+                          {c.label}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="ml-auto flex gap-2">
               <Button type="button" variant="outline" size="sm" onClick={() => setRangeShortcut(0)}>Hoje</Button>
               <Button type="button" variant="outline" size="sm" onClick={() => setRangeShortcut(7)}>7 dias</Button>
