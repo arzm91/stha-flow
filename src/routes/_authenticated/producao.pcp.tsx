@@ -42,6 +42,18 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { toast } from "sonner";
+import { guardAdmin, isAdminCancelled } from "@/lib/security/guard-admin";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_authenticated/producao/pcp")({
   head: pageHead({ title: "Produção · PCP / Ordens — STHApc", description: "Acesse e gerencie Produção · PCP / Ordens no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/producao/pcp" }),
