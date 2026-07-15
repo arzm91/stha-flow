@@ -141,6 +141,9 @@ export async function gerarRelatorioProducaoXlsx(ordemId: string) {
     supabase.from("producao_tag_historico")
       .select("tag_nome,valor_num,unidade,registrado_em")
       .eq("ordem_id", ordemId).order("registrado_em", { ascending: true }),
+    supabase.from("ordem_trocas_produto")
+      .select("id, ocorrido_em, qtd_produto_anterior, observacao, produto_anterior:produto_anterior_id(nome,unidade), produto_novo:produto_novo_id(nome)")
+      .eq("ordem_id", ordemId).order("ocorrido_em", { ascending: true }),
   ]);
 
   const op: any = opRes.data;
@@ -151,6 +154,7 @@ export async function gerarRelatorioProducaoXlsx(ordemId: string) {
   const etapas = (etapasRes.data ?? []) as any[];
   const movs = (movsRes.data ?? []) as any[];
   const tagHist = (tagHistRes.data ?? []) as TagPoint[];
+  const trocas = (trocasRes.data ?? []) as any[];
 
   const wb = new ExcelJS.Workbook();
   wb.creator = "STHA Flow";
