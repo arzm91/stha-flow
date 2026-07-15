@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { ArrowLeft, CheckCircle2, Gauge, FlaskConical, MessageSquare, Activity, AlertTriangle, Play, Square, ListChecks, Clock, History, Maximize2, Minimize2, FileText, FileSpreadsheet, Table as TableIcon, AlertOctagon } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Gauge, FlaskConical, MessageSquare, Activity, AlertTriangle, Play, Square, ListChecks, Clock, History, Maximize2, Minimize2, FileText, FileSpreadsheet, Table as TableIcon, AlertOctagon, SlidersHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import { formatDate, formatNumber, durationFromNow, durationBetween } from "@/lib/format";
 import { ScadaViewer } from "@/components/scada/ScadaViewer";
@@ -112,6 +113,52 @@ function OPPage() {
     }
   };
 
+  // Visibilidade das seções (persistida em localStorage)
+  const VIS_KEY = "producao-acompanhar-visibility-v1";
+  type VisState = {
+    utilidadesStrip: boolean;
+    avanco: boolean;
+    capacidade: boolean;
+    tempo: boolean;
+    info: boolean;
+    scada: boolean;
+    utilidadesLive: boolean;
+    tagsMonitoramento: boolean;
+    observacoes: boolean;
+    tagsEquipamento: boolean;
+    abas: boolean;
+  };
+  const VIS_DEFAULT: VisState = {
+    utilidadesStrip: true, avanco: true, capacidade: true, tempo: true, info: true,
+    scada: true, utilidadesLive: true, tagsMonitoramento: true, observacoes: true,
+    tagsEquipamento: true, abas: true,
+  };
+  const [vis, setVis] = useState<VisState>(() => {
+    if (typeof window === "undefined") return VIS_DEFAULT;
+    try {
+      const raw = window.localStorage.getItem(VIS_KEY);
+      if (!raw) return VIS_DEFAULT;
+      return { ...VIS_DEFAULT, ...JSON.parse(raw) };
+    } catch { return VIS_DEFAULT; }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem(VIS_KEY, JSON.stringify(vis)); } catch { /* noop */ }
+  }, [vis]);
+  const toggleVis = (k: keyof VisState) => setVis((s) => ({ ...s, [k]: !s[k] }));
+  const VIS_LABELS: Record<keyof VisState, string> = {
+    utilidadesStrip: "Utilidades (barra)",
+    avanco: "Avanço de produção",
+    capacidade: "Capacidade nominal vs. real",
+    tempo: "Tempo de produção",
+    info: "Resumo (início, fim, operador...)",
+    scada: "Sinóptico SCADA",
+    utilidadesLive: "Utilidades ao vivo",
+    tagsMonitoramento: "Monitoramento de tags",
+    observacoes: "Observações iniciais/finais",
+    tagsEquipamento: "Tags do equipamento",
+    abas: "Abas (Processos, Parâmetros, etc.)",
+  };
+
   if (op.isLoading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
   if (!op.data) return <div className="text-sm text-muted-foreground">Ordem não encontrada.</div>;
 
@@ -163,6 +210,37 @@ function OPPage() {
               <FileSpreadsheet className="mr-1 h-4 w-4" /> Exportar Excel
             </Button>
             {!isFinal && <FinalizarDialog op={op.data} tanques={tanquesProd.data ?? []} onDone={() => { qc.invalidateQueries(); navigate({ to: "/producao" }); }} />}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" title="Personalizar seções visíveis">
+                  <SlidersHorizontal className="mr-1 h-4 w-4" /> Personalizar
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel>Mostrar nesta página</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {(Object.keys(VIS_LABELS) as (keyof VisState)[]).map((k) => (
+                  <DropdownMenuCheckboxItem
+                    key={k}
+                    checked={vis[k]}
+                    onCheckedChange={() => toggleVis(k)}
+                    onSelect={(e) => e.preventDefault()}
+                  >
+                    {VIS_LABELS[k]}
+                  </DropdownMenuCheckboxItem>
+                ))}
+                <DropdownMenuSeparator />
+                <DropdownMenuCheckboxItem
+                  checked={Object.values(vis).every(Boolean)}
+                  onCheckedChange={(v) => {
+                    setVis(v ? VIS_DEFAULT : (Object.fromEntries(Object.keys(VIS_DEFAULT).map(k => [k, false])) as VisState));
+                  }}
+                  onSelect={(e) => e.preventDefault()}
+                >
+                  Mostrar todos
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         }
       />
@@ -171,13 +249,13 @@ function OPPage() {
         <VincularProdutoBanner ordemId={id} onDone={() => qc.invalidateQueries({ queryKey: ["op", id] })} />
       ) : null}
 
-      {op.data.equipamento_id ? <UtilidadesStrip equipamentoId={op.data.equipamento_id as string} /> : null}
+      {vis.utilidadesStrip && op.data.equipamento_id ? <UtilidadesStrip equipamentoId={op.data.equipamento_id as string} /> : null}
 
-      {(tagVel || tagTotal) ? (
+      {vis.avanco && (tagVel || tagTotal) ? (
         <AvancoProducaoHeader ordemId={id} tagVel={tagVel} tagTotal={tagTotal} qtdPlanejada={qtdPlanejada} />
       ) : null}
 
-      {equip && (equip.capacidade_hora || equip.capacidade_dia || equip.capacidade_mes) && op.data.inicio_em ? (
+      {vis.capacidade && equip && (equip.capacidade_hora || equip.capacidade_dia || equip.capacidade_mes) && op.data.inicio_em ? (
         <CapacidadeNominalCard
           equipamentoId={op.data.equipamento_id as string}
           inicioEm={op.data.inicio_em as string}
@@ -191,36 +269,40 @@ function OPPage() {
         />
       ) : null}
 
-      {op.data.inicio_em && !isFinal ? (
+      {vis.tempo && op.data.inicio_em && !isFinal ? (
         <TempoProducaoHeader
           inicioEm={op.data.inicio_em as string}
           duracaoEstimadaMin={(op.data as any).duracao_estimada_min ?? null}
         />
       ) : null}
 
-      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
-        <Info label="Início" value={op.data.inicio_em ? formatDate(op.data.inicio_em) : "—"} />
-        <Info label="Fim" value={op.data.fim_em ? formatDate(op.data.fim_em) : "—"} />
-        <Info label="Duração total" value={op.data.inicio_em ? (op.data.fim_em ? durationBetween(op.data.inicio_em, op.data.fim_em) : durationFromNow(op.data.inicio_em)) : "—"} />
-        <Info label="Qtd. planejada / produzida" value={`${formatNumber(Number(op.data.qtd_planejada))} / ${op.data.qtd_produzida != null ? formatNumber(Number(op.data.qtd_produzida)) : "—"}`} />
-        <Info label="Operador" value={operador.data?.nome ?? "—"} />
-        <Info label="Equipamento" value={equip?.nome ?? "—"} />
-      </div>
+      {vis.info ? (
+        <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
+          <Info label="Início" value={op.data.inicio_em ? formatDate(op.data.inicio_em) : "—"} />
+          <Info label="Fim" value={op.data.fim_em ? formatDate(op.data.fim_em) : "—"} />
+          <Info label="Duração total" value={op.data.inicio_em ? (op.data.fim_em ? durationBetween(op.data.inicio_em, op.data.fim_em) : durationFromNow(op.data.inicio_em)) : "—"} />
+          <Info label="Qtd. planejada / produzida" value={`${formatNumber(Number(op.data.qtd_planejada))} / ${op.data.qtd_produzida != null ? formatNumber(Number(op.data.qtd_produzida)) : "—"}`} />
+          <Info label="Operador" value={operador.data?.nome ?? "—"} />
+          <Info label="Equipamento" value={equip?.nome ?? "—"} />
+        </div>
+      ) : null}
 
-      {op.data.equipamento_id ? <ScadaViewer equipamentoId={op.data.equipamento_id as string} /> : null}
+      {vis.scada && op.data.equipamento_id ? <ScadaViewer equipamentoId={op.data.equipamento_id as string} /> : null}
 
-      {op.data.equipamento_id ? <UtilidadesLive equipamentoId={op.data.equipamento_id as string} /> : null}
+      {vis.utilidadesLive && op.data.equipamento_id ? <UtilidadesLive equipamentoId={op.data.equipamento_id as string} /> : null}
 
-      <TagsMonitoramento
-        ordemId={id}
-        tagNomes={tagNomes}
-        ativa={!isFinal}
-        equipamentoId={(op.data as any).equipamento_id ?? null}
-        inicioEm={(op.data as any).inicio_em ?? null}
-        fimEm={(op.data as any).fim_em ?? null}
-      />
+      {vis.tagsMonitoramento ? (
+        <TagsMonitoramento
+          ordemId={id}
+          tagNomes={tagNomes}
+          ativa={!isFinal}
+          equipamentoId={(op.data as any).equipamento_id ?? null}
+          inicioEm={(op.data as any).inicio_em ?? null}
+          fimEm={(op.data as any).fim_em ?? null}
+        />
+      ) : null}
 
-      {(op.data.obs_iniciais || op.data.obs_finais) ? (
+      {vis.observacoes && (op.data.obs_iniciais || op.data.obs_finais) ? (
         <Card className="mb-4">
           <CardContent className="grid gap-3 p-4 md:grid-cols-2">
             {op.data.obs_iniciais ? (
@@ -239,8 +321,9 @@ function OPPage() {
         </Card>
       ) : null}
 
-      <TagsDoEquipamento tagNomes={tagNomes} ordemId={id} disabled={isFinal} />
+      {vis.tagsEquipamento ? <TagsDoEquipamento tagNomes={tagNomes} ordemId={id} disabled={isFinal} /> : null}
 
+      {vis.abas ? (
       <Tabs defaultValue="processos">
         <TabsList>
           <TabsTrigger value="processos"><ListChecks className="mr-1 h-4 w-4" />Processos</TabsTrigger>
@@ -335,6 +418,7 @@ function OPPage() {
           <TimelineUnificada ordemId={id} />
         </TabsContent>
       </Tabs>
+      ) : null}
     </div>
   );
 }
