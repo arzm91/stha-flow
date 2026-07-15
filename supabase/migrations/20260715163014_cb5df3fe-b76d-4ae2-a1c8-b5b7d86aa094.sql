@@ -1,0 +1,1 @@
+ALTER TABLE public.relatorio_turno_eventos ADD COLUMN IF NOT EXISTS fixado_ate timestamptz;
