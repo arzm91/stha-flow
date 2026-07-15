@@ -2228,6 +2228,7 @@ export type Database = {
           created_at: string
           created_by: string
           descricao: string | null
+          fixado_ate: string | null
           id: string
           imagens: string[]
           ocorrido_em: string
@@ -2241,6 +2242,7 @@ export type Database = {
           created_at?: string
           created_by: string
           descricao?: string | null
+          fixado_ate?: string | null
           id?: string
           imagens?: string[]
           ocorrido_em?: string
@@ -2254,6 +2256,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           descricao?: string | null
+          fixado_ate?: string | null
           id?: string
           imagens?: string[]
           ocorrido_em?: string

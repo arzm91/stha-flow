@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import {
   Clock, Trash2, Filter, ImagePlus, X, User as UserIcon,
-  AlertOctagon, AlertTriangle, AlertCircle, Info, Wrench,
+  AlertOctagon, AlertTriangle, AlertCircle, Info, Wrench, Pin, PinOff,
 } from "lucide-react";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 
@@ -105,6 +105,7 @@ type EventoRow = {
   responsavel: string | null;
   imagens: string[] | null;
   categoria: string | null;
+  fixado_ate: string | null;
 };
 
 function TurnosPage() {
@@ -134,7 +135,7 @@ function TurnosPage() {
     queryFn: async () => {
       let q = supabase
         .from("relatorio_turno_eventos")
-        .select("id, ocorrido_em, descricao, responsavel, imagens, categoria")
+        .select("id, ocorrido_em, descricao, responsavel, imagens, categoria, fixado_ate")
         .order("ocorrido_em", { ascending: false });
       if (dataInicio) q = q.gte("ocorrido_em", new Date(`${dataInicio}T00:00:00`).toISOString());
       if (dataFim) q = q.lte("ocorrido_em", new Date(`${dataFim}T23:59:59`).toISOString());
@@ -142,6 +143,20 @@ function TurnosPage() {
       if (error) throw error;
       return (data ?? []) as EventoRow[];
     },
+  });
+
+  const { data: fixados = [] } = useQuery({
+    queryKey: ["turnos_eventos_fixados"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("relatorio_turno_eventos")
+        .select("id, ocorrido_em, descricao, responsavel, imagens, categoria, fixado_ate")
+        .gt("fixado_ate", new Date().toISOString())
+        .order("fixado_ate", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as EventoRow[];
+    },
+    refetchInterval: 60_000,
   });
 
   const eventosFiltrados = useMemo(() => {
@@ -160,8 +175,9 @@ function TurnosPage() {
   const allPaths = useMemo(() => {
     const s = new Set<string>();
     for (const e of eventos) for (const p of e.imagens ?? []) if (p) s.add(p);
+    for (const e of fixados) for (const p of e.imagens ?? []) if (p) s.add(p);
     return Array.from(s);
-  }, [eventos]);
+  }, [eventos, fixados]);
 
   const signedQ = useQuery({
     queryKey: ["turno_eventos_signed", allPaths.join("|")],
@@ -227,6 +243,7 @@ function TurnosPage() {
       setCriticidade("informativa");
       if (fileRef.current) fileRef.current.value = "";
       qc.invalidateQueries({ queryKey: ["turnos_eventos"] });
+      qc.invalidateQueries({ queryKey: ["turnos_eventos_fixados"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -242,15 +259,38 @@ function TurnosPage() {
     onSuccess: () => {
       toast.success("Evento removido");
       qc.invalidateQueries({ queryKey: ["turnos_eventos"] });
+      qc.invalidateQueries({ queryKey: ["turnos_eventos_fixados"] });
     },
     onError: async (e: Error) => {
       toast.error(e.message);
     },
   });
 
+  const pinMut = useMutation({
+    mutationFn: async (ev: EventoRow) => {
+      const isPinned = ev.fixado_ate && new Date(ev.fixado_ate) > new Date();
+      const newValue = isPinned ? null : new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+      const { error } = await supabase
+        .from("relatorio_turno_eventos")
+        .update({ fixado_ate: newValue })
+        .eq("id", ev.id);
+      if (error) throw error;
+      return !isPinned;
+    },
+    onSuccess: (pinned) => {
+      toast.success(pinned ? "Mensagem fixada por 48h" : "Mensagem desafixada");
+      qc.invalidateQueries({ queryKey: ["turnos_eventos"] });
+      qc.invalidateQueries({ queryKey: ["turnos_eventos_fixados"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const fixadosIds = useMemo(() => new Set(fixados.map((f) => f.id)), [fixados]);
+
   const grupos = useMemo(() => {
     const map = new Map<string, EventoRow[]>();
     for (const ev of eventosFiltrados) {
+      if (fixadosIds.has(ev.id)) continue;
       const d = new Date(ev.ocorrido_em);
       const key = d.toLocaleDateString("pt-BR", {
         weekday: "long", day: "2-digit", month: "long", year: "numeric",
@@ -260,7 +300,7 @@ function TurnosPage() {
       map.set(key, arr);
     }
     return Array.from(map.entries());
-  }, [eventosFiltrados]);
+  }, [eventosFiltrados, fixadosIds]);
 
   const setRangeShortcut = (days: number) => {
     const end = new Date();
@@ -460,7 +500,104 @@ function TurnosPage() {
       </Card>
 
       <div className="space-y-6">
+        {fixados.length > 0 && (
+          <div>
+            <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-primary">
+              <Pin className="h-4 w-4 fill-current" />
+              Mensagens fixadas
+              <span className="text-xs font-normal text-muted-foreground">({fixados.length})</span>
+            </div>
+            <div className="space-y-3">
+              {fixados.map((ev) => {
+                const dt = new Date(ev.ocorrido_em);
+                const imgs = ev.imagens ?? [];
+                const crit = getCriticidade(ev.categoria);
+                const CritIcon = crit.icon;
+                const expiraEm = ev.fixado_ate ? new Date(ev.fixado_ate) : null;
+                const horasRestantes = expiraEm
+                  ? Math.max(0, Math.round((expiraEm.getTime() - Date.now()) / (60 * 60 * 1000)))
+                  : 0;
+                return (
+                  <Card key={ev.id} className={`${crit.border} border-2 border-primary/40 bg-primary/5 shadow-md`}>
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="mb-2 flex items-center gap-2">
+                            <Badge className="gap-1 bg-primary text-primary-foreground">
+                              <Pin className="h-3 w-3 fill-current" />
+                              FIXADA
+                            </Badge>
+                            <span className="text-xs text-muted-foreground">
+                              expira em ~{horasRestantes}h
+                            </span>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                            <Badge variant="outline" className={`gap-1 text-xs ${crit.badgeClass}`}>
+                              <CritIcon className="h-3 w-3" />
+                              {crit.label}
+                            </Badge>
+                            <span>
+                              {dt.toLocaleString("pt-BR", {
+                                day: "2-digit", month: "2-digit", year: "numeric",
+                                hour: "2-digit", minute: "2-digit",
+                              })}
+                            </span>
+                            {ev.responsavel && (
+                              <Badge variant="secondary" className="gap-1 text-xs">
+                                <UserIcon className="h-3 w-3" />
+                                {ev.responsavel}
+                              </Badge>
+                            )}
+                          </div>
+                          {ev.descricao && (
+                            <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/90">
+                              {ev.descricao}
+                            </p>
+                          )}
+                          {imgs.length > 0 && (
+                            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-5 md:grid-cols-6">
+                              {imgs.map((p) => {
+                                const url = signedQ.data?.[p];
+                                return (
+                                  <button
+                                    key={p}
+                                    type="button"
+                                    onClick={() => url && setLightbox(url)}
+                                    className="overflow-hidden rounded-md border bg-muted"
+                                  >
+                                    {url ? (
+                                      <img src={url} alt="" className="aspect-square w-full object-cover" />
+                                    ) : (
+                                      <div className="aspect-square w-full animate-pulse bg-muted" />
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                        {editable && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Desafixar"
+                            onClick={() => pinMut.mutate(ev)}
+                            disabled={pinMut.isPending}
+                          >
+                            <PinOff className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <h2 className="text-lg font-semibold">Linha do tempo</h2>
+
 
         {isLoading ? (
           <p className="text-sm text-muted-foreground">Carregando…</p>
@@ -538,13 +675,24 @@ function TurnosPage() {
                               )}
                             </div>
                             {editable && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => { if (confirm("Remover evento?")) deleteMut.mutate(ev); }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="flex flex-col gap-1">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  title="Fixar por 48h"
+                                  onClick={() => pinMut.mutate(ev)}
+                                  disabled={pinMut.isPending}
+                                >
+                                  <Pin className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => { if (confirm("Remover evento?")) deleteMut.mutate(ev); }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             )}
                           </div>
                         </CardContent>
