@@ -250,7 +250,21 @@ function PcpPage() {
         equipamentos={equipamentos.data ?? []}
         onClose={() => setSelected(null)}
         onEdit={(o) => { setSelected(null); setEditing(o); setProgramarOpen(true); }}
+        onEditNumero={(o) => { setSelected(null); setEditingNumero(o); }}
         onChanged={refresh}
+      />
+
+      <EditNumeroDialog
+        ordem={editingNumero}
+        onClose={() => setEditingNumero(null)}
+        onDone={() => { setEditingNumero(null); refresh(); }}
+      />
+
+      <RegistrarProducaoManualDialog
+        open={manualOpen}
+        onOpenChange={setManualOpen}
+        equipamentos={equipamentos.data ?? []}
+        onDone={refresh}
       />
     </div>
   );
