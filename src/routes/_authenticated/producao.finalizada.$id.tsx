@@ -24,6 +24,8 @@ import { formatDate, formatNumber, durationBetween } from "@/lib/format";
 import { gerarRelatorioProducaoPdf } from "@/lib/producao-pdf";
 import { gerarRelatorioProducaoXlsx } from "@/lib/producao-xlsx";
 import { toast } from "sonner";
+import { TrocasProdutoList } from "@/components/producao/TrocasProdutoList";
+import { Repeat } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/producao/finalizada/$id")({
   head: pageHead({
