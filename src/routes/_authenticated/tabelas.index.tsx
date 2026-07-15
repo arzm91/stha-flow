@@ -24,7 +24,14 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, Table as TableIcon, Pencil } from "lucide-react";
+import { Plus, Trash2, Table as TableIcon, Pencil, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { SheetColumn, ColumnType } from "@/lib/tabelas/types";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useResourcePermissions } from "@/hooks/useResourcePermissions";
@@ -127,26 +134,36 @@ function TabelasIndex() {
                     </CardTitle>
                   </Link>
                   {editable && (
-                    <div className="flex">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setEditing(s)}
-                        title="Editar tabela"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          if (confirm(`Excluir "${s.nome}" e todas as linhas?`))
-                            deleteMut.mutate(s.id);
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 -mt-1 -mr-1"
+                          title="Opções"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenuItem onSelect={() => setEditing(s)}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Editar tabela
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onSelect={() => {
+                            if (confirm(`Excluir "${s.nome}" e todas as linhas?`))
+                              deleteMut.mutate(s.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Excluir tabela
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   )}
                 </div>
               </CardHeader>
