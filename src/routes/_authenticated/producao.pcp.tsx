@@ -112,7 +112,9 @@ function colorForEquip(id: string) {
 function PcpPage() {
   const qc = useQueryClient();
   const [programarOpen, setProgramarOpen] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
   const [editing, setEditing] = useState<Ordem | null>(null);
+  const [editingNumero, setEditingNumero] = useState<Ordem | null>(null);
   const [selected, setSelected] = useState<Ordem | null>(null);
 
   const equipamentos = useQuery({
