@@ -135,7 +135,7 @@ function TurnosPage() {
     queryFn: async () => {
       let q = supabase
         .from("relatorio_turno_eventos")
-        .select("id, ocorrido_em, descricao, responsavel, imagens, categoria")
+        .select("id, ocorrido_em, descricao, responsavel, imagens, categoria, fixado_ate")
         .order("ocorrido_em", { ascending: false });
       if (dataInicio) q = q.gte("ocorrido_em", new Date(`${dataInicio}T00:00:00`).toISOString());
       if (dataFim) q = q.lte("ocorrido_em", new Date(`${dataFim}T23:59:59`).toISOString());
@@ -143,6 +143,20 @@ function TurnosPage() {
       if (error) throw error;
       return (data ?? []) as EventoRow[];
     },
+  });
+
+  const { data: fixados = [] } = useQuery({
+    queryKey: ["turnos_eventos_fixados"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("relatorio_turno_eventos")
+        .select("id, ocorrido_em, descricao, responsavel, imagens, categoria, fixado_ate")
+        .gt("fixado_ate", new Date().toISOString())
+        .order("fixado_ate", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as EventoRow[];
+    },
+    refetchInterval: 60_000,
   });
 
   const eventosFiltrados = useMemo(() => {
