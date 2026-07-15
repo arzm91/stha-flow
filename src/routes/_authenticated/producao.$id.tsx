@@ -113,6 +113,52 @@ function OPPage() {
     }
   };
 
+  // Visibilidade das seções (persistida em localStorage)
+  const VIS_KEY = "producao-acompanhar-visibility-v1";
+  type VisState = {
+    utilidadesStrip: boolean;
+    avanco: boolean;
+    capacidade: boolean;
+    tempo: boolean;
+    info: boolean;
+    scada: boolean;
+    utilidadesLive: boolean;
+    tagsMonitoramento: boolean;
+    observacoes: boolean;
+    tagsEquipamento: boolean;
+    abas: boolean;
+  };
+  const VIS_DEFAULT: VisState = {
+    utilidadesStrip: true, avanco: true, capacidade: true, tempo: true, info: true,
+    scada: true, utilidadesLive: true, tagsMonitoramento: true, observacoes: true,
+    tagsEquipamento: true, abas: true,
+  };
+  const [vis, setVis] = useState<VisState>(() => {
+    if (typeof window === "undefined") return VIS_DEFAULT;
+    try {
+      const raw = window.localStorage.getItem(VIS_KEY);
+      if (!raw) return VIS_DEFAULT;
+      return { ...VIS_DEFAULT, ...JSON.parse(raw) };
+    } catch { return VIS_DEFAULT; }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem(VIS_KEY, JSON.stringify(vis)); } catch { /* noop */ }
+  }, [vis]);
+  const toggleVis = (k: keyof VisState) => setVis((s) => ({ ...s, [k]: !s[k] }));
+  const VIS_LABELS: Record<keyof VisState, string> = {
+    utilidadesStrip: "Utilidades (barra)",
+    avanco: "Avanço de produção",
+    capacidade: "Capacidade nominal vs. real",
+    tempo: "Tempo de produção",
+    info: "Resumo (início, fim, operador...)",
+    scada: "Sinóptico SCADA",
+    utilidadesLive: "Utilidades ao vivo",
+    tagsMonitoramento: "Monitoramento de tags",
+    observacoes: "Observações iniciais/finais",
+    tagsEquipamento: "Tags do equipamento",
+    abas: "Abas (Processos, Parâmetros, etc.)",
+  };
+
   if (op.isLoading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
   if (!op.data) return <div className="text-sm text-muted-foreground">Ordem não encontrada.</div>;
 
