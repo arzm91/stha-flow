@@ -30,6 +30,65 @@ export const Route = createFileRoute("/_authenticated/turnos")({
 
 const BUCKET = "turno-eventos";
 
+type CriticidadeKey = "critica" | "atencao" | "cuidado" | "manutencao" | "informativa";
+
+const CRITICIDADES: Record<CriticidadeKey, {
+  label: string;
+  icon: typeof AlertOctagon;
+  dot: string;        // bg for timeline dot
+  ring: string;       // ring color around dot
+  badgeClass: string; // badge bg + text + border
+  border: string;     // card left border color
+}> = {
+  critica: {
+    label: "Crítica",
+    icon: AlertOctagon,
+    dot: "bg-red-500 text-white",
+    ring: "ring-red-500/20",
+    badgeClass: "bg-red-500/10 text-red-600 border-red-500/30 dark:text-red-400",
+    border: "border-l-4 border-l-red-500",
+  },
+  atencao: {
+    label: "Atenção",
+    icon: AlertTriangle,
+    dot: "bg-orange-500 text-white",
+    ring: "ring-orange-500/20",
+    badgeClass: "bg-orange-500/10 text-orange-600 border-orange-500/30 dark:text-orange-400",
+    border: "border-l-4 border-l-orange-500",
+  },
+  cuidado: {
+    label: "Cuidado",
+    icon: AlertCircle,
+    dot: "bg-yellow-500 text-white",
+    ring: "ring-yellow-500/20",
+    badgeClass: "bg-yellow-500/10 text-yellow-700 border-yellow-500/30 dark:text-yellow-400",
+    border: "border-l-4 border-l-yellow-500",
+  },
+  manutencao: {
+    label: "Manutenção",
+    icon: Wrench,
+    dot: "bg-blue-500 text-white",
+    ring: "ring-blue-500/20",
+    badgeClass: "bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400",
+    border: "border-l-4 border-l-blue-500",
+  },
+  informativa: {
+    label: "Informativa",
+    icon: Info,
+    dot: "bg-slate-500 text-white",
+    ring: "ring-slate-500/20",
+    badgeClass: "bg-slate-500/10 text-slate-600 border-slate-500/30 dark:text-slate-300",
+    border: "border-l-4 border-l-slate-400",
+  },
+};
+
+const CRITICIDADE_KEYS = Object.keys(CRITICIDADES) as CriticidadeKey[];
+
+function getCriticidade(cat: string | null | undefined) {
+  const key = (cat ?? "").toLowerCase() as CriticidadeKey;
+  return CRITICIDADES[key] ? { key, ...CRITICIDADES[key] } : { key: "informativa" as CriticidadeKey, ...CRITICIDADES.informativa };
+}
+
 function toLocalInput(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
@@ -45,6 +104,7 @@ type EventoRow = {
   descricao: string | null;
   responsavel: string | null;
   imagens: string[] | null;
+  categoria: string | null;
 };
 
 function TurnosPage() {
