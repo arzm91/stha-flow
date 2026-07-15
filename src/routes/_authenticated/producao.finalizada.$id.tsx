@@ -57,7 +57,7 @@ type OpRow = {
 
 type Evento = {
   when: string;
-  tipo: "inicio" | "fim" | "parametro" | "analise" | "observacao" | "parada" | "material" | "movimentacao";
+  tipo: "inicio" | "fim" | "parametro" | "analise" | "observacao" | "parada" | "material" | "movimentacao" | "troca";
   titulo: string;
   descricao?: string;
   meta?: string;
@@ -75,6 +75,7 @@ const TIPO_META: Record<
   parada: { label: "Parada", icon: AlertOctagon, color: "bg-destructive/15 text-destructive border-destructive/30" },
   material: { label: "Material", icon: Package, color: "bg-warning/15 text-warning border-warning/30" },
   movimentacao: { label: "Estoque", icon: ArrowDownToLine, color: "bg-success/15 text-success border-success/30" },
+  troca: { label: "Troca de produto", icon: Repeat, color: "bg-amber-500/15 text-amber-500 border-amber-500/30" },
 };
 
 function FinalizadaPage() {
