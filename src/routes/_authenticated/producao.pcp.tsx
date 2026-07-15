@@ -838,6 +838,20 @@ function OrdemDetalheSheet({
   const equip = equipamentos.find((e) => e.id === ordem?.equipamento_id);
   const equipOcupado = equip?.status === "ocupado";
   const equipManut = equip?.status === "manutencao";
+  const { isAdmin, isGerente } = usePagePermissions();
+  const podeExcluir = isAdmin || isGerente;
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const excluir = useMutation({
+    mutationFn: async () => {
+      if (!ordem) return;
+      await guardAdmin("excluir esta ordem e todos os seus registros");
+      const { error } = await supabase.rpc("delete_ordem_producao_cascade" as any, { _id: ordem.id });
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Ordem excluída"); setConfirmDelete(false); onClose(); onChanged(); },
+    onError: (e: Error) => { if (!isAdminCancelled(e)) toast.error(e.message); },
+  });
 
   const iniciar = useMutation({
     mutationFn: async () => {
