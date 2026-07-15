@@ -16,6 +16,7 @@ import { Route as McpRouteImport } from './routes/mcp'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as GuiasGestaoDaProducaoIndustrialRouteImport } from './routes/guias.gestao-da-producao-industrial'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as AuthenticatedTurnosRouteImport } from './routes/_authenticated/turnos'
 import { Route as AuthenticatedTagsRouteImport } from './routes/_authenticated/tags'
@@ -109,6 +110,12 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GuiasGestaoDaProducaoIndustrialRoute =
+  GuiasGestaoDaProducaoIndustrialRouteImport.update({
+    id: '/guias/gestao-da-producao-industrial',
+    path: '/guias/gestao-da-producao-industrial',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const EmailUnsubscribeRoute = EmailUnsubscribeRouteImport.update({
   id: '/email/unsubscribe',
   path: '/email/unsubscribe',
@@ -461,6 +468,7 @@ export interface FileRoutesByFullPath {
   '/tags': typeof AuthenticatedTagsRouteWithChildren
   '/turnos': typeof AuthenticatedTurnosRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/guias/gestao-da-producao-industrial': typeof GuiasGestaoDaProducaoIndustrialRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/automacoes/$id': typeof AuthenticatedAutomacoesIdRoute
@@ -520,6 +528,7 @@ export interface FileRoutesByTo {
   '/monitoramento': typeof AuthenticatedMonitoramentoRoute
   '/turnos': typeof AuthenticatedTurnosRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/guias/gestao-da-producao-industrial': typeof GuiasGestaoDaProducaoIndustrialRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/automacoes/$id': typeof AuthenticatedAutomacoesIdRoute
@@ -588,6 +597,7 @@ export interface FileRoutesById {
   '/_authenticated/tags': typeof AuthenticatedTagsRouteWithChildren
   '/_authenticated/turnos': typeof AuthenticatedTurnosRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
+  '/guias/gestao-da-producao-industrial': typeof GuiasGestaoDaProducaoIndustrialRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/_authenticated/automacoes/$id': typeof AuthenticatedAutomacoesIdRoute
@@ -656,6 +666,7 @@ export interface FileRouteTypes {
     | '/tags'
     | '/turnos'
     | '/email/unsubscribe'
+    | '/guias/gestao-da-producao-industrial'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/automacoes/$id'
@@ -715,6 +726,7 @@ export interface FileRouteTypes {
     | '/monitoramento'
     | '/turnos'
     | '/email/unsubscribe'
+    | '/guias/gestao-da-producao-industrial'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/automacoes/$id'
@@ -782,6 +794,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tags'
     | '/_authenticated/turnos'
     | '/email/unsubscribe'
+    | '/guias/gestao-da-producao-industrial'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/_authenticated/automacoes/$id'
@@ -837,6 +850,7 @@ export interface RootRouteChildren {
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
+  GuiasGestaoDaProducaoIndustrialRoute: typeof GuiasGestaoDaProducaoIndustrialRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
@@ -900,6 +914,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/guias/gestao-da-producao-industrial': {
+      id: '/guias/gestao-da-producao-industrial'
+      path: '/guias/gestao-da-producao-industrial'
+      fullPath: '/guias/gestao-da-producao-industrial'
+      preLoaderRoute: typeof GuiasGestaoDaProducaoIndustrialRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/email/unsubscribe': {
@@ -1521,6 +1542,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
+  GuiasGestaoDaProducaoIndustrialRoute: GuiasGestaoDaProducaoIndustrialRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
