@@ -170,6 +170,18 @@ export function TagsMonitoramento({
     refetchInterval: ativa ? 15_000 : false,
   });
 
+  const trocasQuery = useQuery({
+    queryKey: ["producao-trocas-eventos", ordemId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ordem_trocas_produto")
+        .select("id, ocorrido_em, qtd_produto_anterior, produto_anterior:produto_anterior_id(nome,unidade), produto_novo:produto_novo_id(nome)")
+        .eq("ordem_id", ordemId);
+      return (data ?? []) as any[];
+    },
+    refetchInterval: ativa ? 15_000 : false,
+  });
+
   const [evtAtivos, setEvtAtivos] = useState<Record<string, boolean>>({
     parametro: true, analise: true, observacao: true, tag_captura: true, processo: true, tabela: true,
   });
