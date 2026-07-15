@@ -117,6 +117,7 @@ function TurnosPage() {
   const [ocorridoEm, setOcorridoEm] = useState(() => toLocalInput(new Date()));
   const [imagens, setImagens] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [criticidade, setCriticidade] = useState<CriticidadeKey>("informativa");
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Filtros
