@@ -25,6 +25,8 @@ export function PushNotificationsCard() {
   const [supportReason, setSupportReason] = useState<string | null>(null);
   const [permission, setPermission] = useState<NotificationPermission | "unknown">("unknown");
   const [busy, setBusy] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const testFn = useServerFn(sendTestPushToSelf);
 
   useEffect(() => {
     getPushSupportStatus().then((status) => {
@@ -32,7 +34,11 @@ export function PushNotificationsCard() {
       setSupportReason(status.reason ?? null);
     });
     if (typeof Notification !== "undefined") setPermission(Notification.permission);
-  }, []);
+    // Silent token refresh — mantém o dispositivo ativo mesmo sem clicar em "Ativar"
+    refreshPushRegistration().then((r) => {
+      if (r.ok) qc.invalidateQueries({ queryKey: ["push_devices:self"] });
+    });
+  }, [qc]);
 
   const { data: devices = [] } = useQuery({
     queryKey: ["push_devices:self"],
