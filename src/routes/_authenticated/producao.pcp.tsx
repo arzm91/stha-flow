@@ -968,3 +968,244 @@ function Info({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
+
+// ============= Editar apenas o número da OP (para ordens finalizadas) =============
+
+function EditNumeroDialog({
+  ordem, onClose, onDone,
+}: { ordem: Ordem | null; onClose: () => void; onDone: () => void }) {
+  const [numero, setNumero] = useState("");
+  useEffect(() => {
+    if (ordem) setNumero(ordem.numero);
+  }, [ordem]);
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!ordem) return;
+      if (!numero.trim()) throw new Error("Informe o número da OP");
+      const { error } = await supabase.from("ordens_producao").update({ numero: numero.trim() }).eq("id", ordem.id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("OP atualizada"); onDone(); },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={!!ordem} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Editar OP {ordem?.numero}</DialogTitle>
+          <DialogDescription>
+            Somente o número da OP pode ser alterado em ordens finalizadas. Demais dados são preservados como registro histórico.
+          </DialogDescription>
+        </DialogHeader>
+        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); save.mutate(); }}>
+          <div className="space-y-1.5">
+            <Label>Número da OP</Label>
+            <Input value={numero} onChange={(e) => setNumero(e.target.value)} required />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={onClose}>Cancelar</Button>
+            <Button type="submit" disabled={save.isPending}>{save.isPending ? "Salvando..." : "Salvar"}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ============= Registrar produção manual (retroativa, já finalizada) =============
+
+function RegistrarProducaoManualDialog({
+  open, onOpenChange, equipamentos, onDone,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  equipamentos: Equip[];
+  onDone: () => void;
+}) {
+  const [numero, setNumero] = useState("");
+  const [produtoId, setProdutoId] = useState("");
+  const [equipamentoId, setEquipamentoId] = useState("");
+  const [qtdPlanejada, setQtdPlanejada] = useState<number | "">("");
+  const [qtdProduzida, setQtdProduzida] = useState<number | "">("");
+  const [inicio, setInicio] = useState("");
+  const [fim, setFim] = useState("");
+  const [tanqueId, setTanqueId] = useState("");
+  const [obsIniciais, setObsIniciais] = useState("");
+  const [obsFinais, setObsFinais] = useState("");
+  const [lancarEstoque, setLancarEstoque] = useState(true);
+
+  useEffect(() => {
+    if (!open) return;
+    setNumero(""); setProdutoId(""); setEquipamentoId("");
+    setQtdPlanejada(""); setQtdProduzida("");
+    const now = new Date();
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+    setInicio(toLocalDateTimeInput(oneHourAgo.toISOString()));
+    setFim(toLocalDateTimeInput(now.toISOString()));
+    setTanqueId(""); setObsIniciais(""); setObsFinais(""); setLancarEstoque(true);
+  }, [open]);
+
+  const produtos = useQuery({
+    queryKey: ["pcp-produtos"],
+    queryFn: async () => {
+      const { data } = await supabase.from("produtos").select("id,codigo,nome").eq("ativo", true).order("nome");
+      return (data ?? []) as Prod[];
+    },
+  });
+
+  const tanques = useQuery({
+    queryKey: ["pcp-tanques", produtoId],
+    enabled: !!produtoId,
+    queryFn: async () => {
+      const { data } = await supabase.from("tanques").select("id,codigo,nome,produto_id").order("codigo");
+      return (data ?? []).filter((t: any) => !t.produto_id || t.produto_id === produtoId);
+    },
+  });
+
+  const save = useMutation({
+    mutationFn: async () => {
+      if (!numero || !produtoId || !equipamentoId || qtdPlanejada === "" || qtdProduzida === "" || !inicio || !fim) {
+        throw new Error("Preencha todos os campos obrigatórios");
+      }
+      const inicioIso = new Date(inicio).toISOString();
+      const fimIso = new Date(fim).toISOString();
+      if (new Date(fimIso).getTime() <= new Date(inicioIso).getTime()) {
+        throw new Error("Fim deve ser posterior ao início");
+      }
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) throw new Error("Não autenticado");
+      const durMin = Math.round((new Date(fimIso).getTime() - new Date(inicioIso).getTime()) / 60000);
+      const { data: inserted, error } = await supabase.from("ordens_producao").insert({
+        owner_id: u.user.id,
+        numero,
+        produto_id: produtoId,
+        equipamento_id: equipamentoId,
+        qtd_planejada: Number(qtdPlanejada),
+        qtd_produzida: Number(qtdProduzida),
+        status: "finalizada",
+        inicio_em: inicioIso,
+        fim_em: fimIso,
+        inicio_previsto: inicioIso,
+        duracao_estimada_min: durMin,
+        prioridade: "media",
+        auto_iniciar: false,
+        fila_posicao: null,
+        obs_iniciais: obsIniciais || null,
+        obs_finais: obsFinais || null,
+        tanque_destino_id: tanqueId || null,
+      }).select("id").single();
+      if (error) throw error;
+      if (lancarEstoque && tanqueId) {
+        const { error: e2 } = await supabase.from("movimentacoes_estoque").insert({
+          owner_id: u.user.id,
+          produto_id: produtoId,
+          tanque_id: tanqueId,
+          tipo: "entrada",
+          quantidade: Number(qtdProduzida),
+          origem: `Produção OP ${numero} (manual)`,
+          ordem_id: inserted!.id,
+          ocorrido_em: fimIso,
+        });
+        if (e2) throw e2;
+      }
+      return inserted!.id as string;
+    },
+    onSuccess: () => {
+      toast.success("Produção registrada manualmente");
+      onOpenChange(false);
+      onDone();
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-2xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Registrar produção manual</DialogTitle>
+          <DialogDescription>
+            Crie uma ordem já finalizada, para lançar produções realizadas fora do sistema (manutenção, indisponibilidade, etc.).
+          </DialogDescription>
+        </DialogHeader>
+        <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); save.mutate(); }}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label>Número da OP</Label>
+              <Input value={numero} onChange={(e) => setNumero(e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Equipamento</Label>
+              <select value={equipamentoId} onChange={(e) => setEquipamentoId(e.target.value)} required
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm">
+                <option value="">— selecione —</option>
+                {equipamentos.map((eq) => <option key={eq.id} value={eq.id}>{eq.codigo} — {eq.nome}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Produto</Label>
+              <select value={produtoId} onChange={(e) => setProdutoId(e.target.value)} required
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm">
+                <option value="">— selecione —</option>
+                {(produtos.data ?? []).map((p) => <option key={p.id} value={p.id}>{p.codigo} — {p.nome}</option>)}
+              </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Quantidade planejada</Label>
+              <Input type="number" step="any" value={qtdPlanejada}
+                onChange={(e) => setQtdPlanejada(e.target.value === "" ? "" : Number(e.target.value))} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Quantidade produzida</Label>
+              <Input type="number" step="any" value={qtdProduzida}
+                onChange={(e) => setQtdProduzida(e.target.value === "" ? "" : Number(e.target.value))} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Início</Label>
+              <Input type="datetime-local" value={inicio} onChange={(e) => setInicio(e.target.value)} required />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Fim</Label>
+              <Input type="datetime-local" value={fim} onChange={(e) => setFim(e.target.value)} required />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Tanque de destino (opcional)</Label>
+              <select value={tanqueId} onChange={(e) => setTanqueId(e.target.value)}
+                disabled={!produtoId}
+                className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm">
+                <option value="">— sem tanque —</option>
+                {(tanques.data ?? []).map((t: any) => <option key={t.id} value={t.id}>{t.codigo} — {t.nome}</option>)}
+              </select>
+            </div>
+            {tanqueId ? (
+              <div className="sm:col-span-2 flex items-center justify-between rounded-md border p-2">
+                <div>
+                  <Label className="text-sm">Lançar entrada no estoque</Label>
+                  <div className="text-[11px] text-muted-foreground">Cria uma movimentação de entrada no tanque selecionado</div>
+                </div>
+                <Switch checked={lancarEstoque} onCheckedChange={setLancarEstoque} />
+              </div>
+            ) : null}
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Observações iniciais</Label>
+              <textarea value={obsIniciais} onChange={(e) => setObsIniciais(e.target.value)}
+                className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Observações finais</Label>
+              <textarea value={obsFinais} onChange={(e) => setObsFinais(e.target.value)}
+                className="flex min-h-[60px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button type="submit" disabled={save.isPending}>
+              {save.isPending ? "Salvando..." : "Registrar como finalizada"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
