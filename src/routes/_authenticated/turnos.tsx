@@ -175,8 +175,9 @@ function TurnosPage() {
   const allPaths = useMemo(() => {
     const s = new Set<string>();
     for (const e of eventos) for (const p of e.imagens ?? []) if (p) s.add(p);
+    for (const e of fixados) for (const p of e.imagens ?? []) if (p) s.add(p);
     return Array.from(s);
-  }, [eventos]);
+  }, [eventos, fixados]);
 
   const signedQ = useQuery({
     queryKey: ["turno_eventos_signed", allPaths.join("|")],
