@@ -187,3 +187,50 @@ export async function refreshPushRegistration(): Promise<{ ok: boolean; reason?:
   }
 }
 
+/**
+ * Auto-subscribe silently after login.
+ *
+ * - Se o navegador já autorizou push, registra o token silenciosamente
+ *   (sem mostrar nenhum prompt) para que o usuário receba notificações
+ *   sem precisar clicar em "Ativar".
+ * - Se a permissão ainda é "default" e o navegador suporta prompts fora
+ *   de user-gesture (desktop Chrome/Edge/Firefox e Android/Chrome), pede
+ *   uma única vez após o login e, se concedida, registra o token.
+ * - iOS/Safari exige interação explícita — nesse caso a função apenas
+ *   sai em silêncio; o usuário ativará pelo card em /configurações.
+ * - Marca em localStorage que já tentou, para não pedir toda hora.
+ */
+export async function autoSubscribeAfterLogin(): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    if (typeof window === "undefined") return { ok: false, reason: "unsupported" };
+    if (!("serviceWorker" in navigator) || !("Notification" in window) || !("PushManager" in window)) {
+      return { ok: false, reason: "unsupported" };
+    }
+    if (isLovablePreviewHost()) return { ok: false, reason: "preview_unavailable" };
+
+    // Já autorizado antes: apenas renova/registra o token deste dispositivo.
+    if (Notification.permission === "granted") {
+      return refreshPushRegistration();
+    }
+    if (Notification.permission === "denied") return { ok: false, reason: "permission_denied" };
+
+    // iOS Safari precisa de gesto do usuário — deixa para o botão da tela.
+    if (isIosDevice()) return { ok: false, reason: "ios_requires_gesture" };
+
+    // Só pede uma vez a cada 30 dias por usuário/dispositivo, para não incomodar.
+    const { data: u } = await supabase.auth.getUser();
+    const userKey = u.user?.id ?? "anon";
+    const flagKey = `sthapc:autoPushPrompt:${userKey}`;
+    const last = Number(window.localStorage.getItem(flagKey) ?? 0);
+    if (Date.now() - last < 30 * 24 * 60 * 60 * 1000) return { ok: false, reason: "recently_asked" };
+    window.localStorage.setItem(flagKey, String(Date.now()));
+
+    const perm = await Notification.requestPermission();
+    if (perm !== "granted") return { ok: false, reason: "permission_denied" };
+
+    return enablePushNotifications();
+  } catch (err) {
+    return { ok: false, reason: err instanceof Error ? err.message : String(err) };
+  }
+}
+
