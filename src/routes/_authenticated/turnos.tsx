@@ -134,7 +134,7 @@ function TurnosPage() {
     queryFn: async () => {
       let q = supabase
         .from("relatorio_turno_eventos")
-        .select("id, ocorrido_em, descricao, responsavel, imagens")
+        .select("id, ocorrido_em, descricao, responsavel, imagens, categoria")
         .order("ocorrido_em", { ascending: false });
       if (dataInicio) q = q.gte("ocorrido_em", new Date(`${dataInicio}T00:00:00`).toISOString());
       if (dataFim) q = q.lte("ocorrido_em", new Date(`${dataFim}T23:59:59`).toISOString());
