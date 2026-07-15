@@ -285,9 +285,12 @@ function TurnosPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const fixadosIds = useMemo(() => new Set(fixados.map((f) => f.id)), [fixados]);
+
   const grupos = useMemo(() => {
     const map = new Map<string, EventoRow[]>();
     for (const ev of eventosFiltrados) {
+      if (fixadosIds.has(ev.id)) continue;
       const d = new Date(ev.ocorrido_em);
       const key = d.toLocaleDateString("pt-BR", {
         weekday: "long", day: "2-digit", month: "long", year: "numeric",
@@ -297,7 +300,7 @@ function TurnosPage() {
       map.set(key, arr);
     }
     return Array.from(map.entries());
-  }, [eventosFiltrados]);
+  }, [eventosFiltrados, fixadosIds]);
 
   const setRangeShortcut = (days: number) => {
     const end = new Date();
