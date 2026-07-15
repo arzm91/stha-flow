@@ -210,7 +210,7 @@ function TurnosPage() {
         owner_id: u.user.id,
         created_by: u.user.id,
         ocorrido_em: ts.toISOString(),
-        categoria: "geral",
+        categoria: criticidade,
         titulo: descricao.trim().slice(0, 80),
         descricao: descricao.trim(),
         responsavel: responsavel.trim() || null,
