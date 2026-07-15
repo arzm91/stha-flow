@@ -305,7 +305,7 @@ function TurnosPage() {
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="ocorrido">Data e hora</Label>
                   <Input
@@ -323,6 +323,30 @@ function TurnosPage() {
                     value={responsavel}
                     onChange={(e) => setResponsavel(e.target.value)}
                   />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="criticidade">Criticidade</Label>
+                  <Select value={criticidade} onValueChange={(v) => setCriticidade(v as CriticidadeKey)}>
+                    <SelectTrigger id="criticidade">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CRITICIDADE_KEYS.map((k) => {
+                        const c = CRITICIDADES[k];
+                        const Icon = c.icon;
+                        return (
+                          <SelectItem key={k} value={k}>
+                            <span className="flex items-center gap-2">
+                              <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full ${c.dot}`}>
+                                <Icon className="h-3 w-3" />
+                              </span>
+                              {c.label}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
