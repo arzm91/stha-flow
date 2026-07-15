@@ -251,6 +251,14 @@ function FinalizadaPage() {
         meta: mv.origem || mv.destino || undefined,
       });
     }
+    for (const t of trocas.data ?? []) {
+      evs.push({
+        when: t.ocorrido_em,
+        tipo: "troca",
+        titulo: `Troca: ${t.produto_anterior?.nome ?? "—"} → ${t.produto_novo?.nome ?? "—"}`,
+        descricao: `${formatNumber(Number(t.qtd_produto_anterior))} ${t.produto_anterior?.unidade ?? ""} produzidos do anterior`.trim(),
+      });
+    }
     if (op.data.fim_em) {
       evs.push({
         when: op.data.fim_em,
@@ -261,7 +269,7 @@ function FinalizadaPage() {
     }
     evs.sort((a, b) => new Date(a.when).getTime() - new Date(b.when).getTime());
     return evs;
-  }, [op.data, parametros.data, analises.data, observacoes.data, paradas.data, materiais.data, movimentacoes.data]);
+  }, [op.data, parametros.data, analises.data, observacoes.data, paradas.data, materiais.data, movimentacoes.data, trocas.data]);
 
   if (op.isLoading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
   if (!op.data) return <div className="text-sm text-muted-foreground">Ordem não encontrada.</div>;
