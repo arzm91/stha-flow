@@ -324,6 +324,14 @@ function OPPage() {
 
       {vis.tagsEquipamento ? <TagsDoEquipamento tagNomes={tagNomes} ordemId={id} disabled={isFinal} /> : null}
 
+      <TrocasProdutoList
+        ordemId={id}
+        produtoAtualId={(op.data.produto_id as string | null) ?? null}
+        produtoAtualNome={produtoNome}
+        allowAdd={!isFinal && !!op.data.produto_id}
+        allowEdit={!isFinal}
+      />
+
       {vis.abas ? (
       <Tabs defaultValue="processos">
         <TabsList>
