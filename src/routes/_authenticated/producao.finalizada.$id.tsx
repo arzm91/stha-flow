@@ -24,6 +24,8 @@ import { formatDate, formatNumber, durationBetween } from "@/lib/format";
 import { gerarRelatorioProducaoPdf } from "@/lib/producao-pdf";
 import { gerarRelatorioProducaoXlsx } from "@/lib/producao-xlsx";
 import { toast } from "sonner";
+import { TrocasProdutoList } from "@/components/producao/TrocasProdutoList";
+import { Repeat } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/producao/finalizada/$id")({
   head: pageHead({
@@ -55,7 +57,7 @@ type OpRow = {
 
 type Evento = {
   when: string;
-  tipo: "inicio" | "fim" | "parametro" | "analise" | "observacao" | "parada" | "material" | "movimentacao";
+  tipo: "inicio" | "fim" | "parametro" | "analise" | "observacao" | "parada" | "material" | "movimentacao" | "troca";
   titulo: string;
   descricao?: string;
   meta?: string;
@@ -73,6 +75,7 @@ const TIPO_META: Record<
   parada: { label: "Parada", icon: AlertOctagon, color: "bg-destructive/15 text-destructive border-destructive/30" },
   material: { label: "Material", icon: Package, color: "bg-warning/15 text-warning border-warning/30" },
   movimentacao: { label: "Estoque", icon: ArrowDownToLine, color: "bg-success/15 text-success border-success/30" },
+  troca: { label: "Troca de produto", icon: Repeat, color: "bg-amber-500/15 text-amber-500 border-amber-500/30" },
 };
 
 function FinalizadaPage() {
@@ -168,6 +171,17 @@ function FinalizadaPage() {
     },
   });
 
+  const trocas = useQuery({
+    queryKey: ["trocas-final", id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ordem_trocas_produto")
+        .select("id, ocorrido_em, qtd_produto_anterior, produto_anterior:produto_anterior_id(nome,unidade), produto_novo:produto_novo_id(nome)")
+        .eq("ordem_id", id);
+      return (data ?? []) as any[];
+    },
+  });
+
   const eventos = useMemo<Evento[]>(() => {
     if (!op.data) return [];
     const evs: Evento[] = [];
@@ -237,6 +251,14 @@ function FinalizadaPage() {
         meta: mv.origem || mv.destino || undefined,
       });
     }
+    for (const t of trocas.data ?? []) {
+      evs.push({
+        when: t.ocorrido_em,
+        tipo: "troca",
+        titulo: `Troca: ${t.produto_anterior?.nome ?? "—"} → ${t.produto_novo?.nome ?? "—"}`,
+        descricao: `${formatNumber(Number(t.qtd_produto_anterior))} ${t.produto_anterior?.unidade ?? ""} produzidos do anterior`.trim(),
+      });
+    }
     if (op.data.fim_em) {
       evs.push({
         when: op.data.fim_em,
@@ -247,7 +269,7 @@ function FinalizadaPage() {
     }
     evs.sort((a, b) => new Date(a.when).getTime() - new Date(b.when).getTime());
     return evs;
-  }, [op.data, parametros.data, analises.data, observacoes.data, paradas.data, materiais.data, movimentacoes.data]);
+  }, [op.data, parametros.data, analises.data, observacoes.data, paradas.data, materiais.data, movimentacoes.data, trocas.data]);
 
   if (op.isLoading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
   if (!op.data) return <div className="text-sm text-muted-foreground">Ordem não encontrada.</div>;
@@ -322,6 +344,14 @@ function FinalizadaPage() {
           </CardContent>
         </Card>
       ) : null}
+
+      <TrocasProdutoList
+        ordemId={id}
+        produtoAtualId={o.produto_id}
+        produtoAtualNome={o.produto?.nome ?? null}
+        allowAdd={true}
+        allowEdit={true}
+      />
 
       <Card>
         <CardContent className="p-4">

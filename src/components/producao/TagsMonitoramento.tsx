@@ -5,13 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, CartesianGrid, Brush, ReferenceLine, ReferenceArea } from "recharts";
-import { LineChart as LineChartIcon, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon, Search, X, Table as TableIcon } from "lucide-react";
+import { LineChart as LineChartIcon, Activity, FlaskConical, MessageSquare, Workflow, Tag as TagIcon, Search, X, Table as TableIcon, Repeat } from "lucide-react";
 import { formatNumber, formatDuration } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
 type EventoPonto = {
   key: string;
-  tipo: "parametro" | "analise" | "observacao" | "tag_captura" | "tabela";
+  tipo: "parametro" | "analise" | "observacao" | "tag_captura" | "tabela" | "troca";
   when: number; // epoch ms
   titulo: string;
   detalhe?: string;
@@ -36,6 +36,7 @@ const EVT_CORES = {
   tag_captura: "#14b8a6",
   processo: "#f59e0b",
   tabela: "#06b6d4",
+  troca: "#f43f5e",
 } as const;
 
 type Row = {
@@ -169,8 +170,20 @@ export function TagsMonitoramento({
     refetchInterval: ativa ? 15_000 : false,
   });
 
+  const trocasQuery = useQuery({
+    queryKey: ["producao-trocas-eventos", ordemId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("ordem_trocas_produto")
+        .select("id, ocorrido_em, qtd_produto_anterior, produto_anterior:produto_anterior_id(nome,unidade), produto_novo:produto_novo_id(nome)")
+        .eq("ordem_id", ordemId);
+      return (data ?? []) as any[];
+    },
+    refetchInterval: ativa ? 15_000 : false,
+  });
+
   const [evtAtivos, setEvtAtivos] = useState<Record<string, boolean>>({
-    parametro: true, analise: true, observacao: true, tag_captura: true, processo: true, tabela: true,
+    parametro: true, analise: true, observacao: true, tag_captura: true, processo: true, tabela: true, troca: true,
   });
 
   // Dados em ordem cronológica (do mais antigo para o mais recente) para o gráfico.
@@ -351,8 +364,19 @@ export function TagsMonitoramento({
         cor: EVT_CORES.tabela,
       });
     }
+    for (const tr of trocasQuery.data ?? []) {
+      const unidade = tr.produto_anterior?.unidade ?? "";
+      pontos.push({
+        key: `troca-${tr.id}`,
+        tipo: "troca",
+        when: new Date(tr.ocorrido_em).getTime(),
+        titulo: `Troca → ${tr.produto_novo?.nome ?? "—"}`,
+        detalhe: `${Number(tr.qtd_produto_anterior)} ${unidade} do anterior`.trim(),
+        cor: EVT_CORES.troca,
+      });
+    }
     return { eventosPontos: pontos, eventosFaixas: faixas };
-  }, [eventosQuery.data, tabelasQuery.data]);
+  }, [eventosQuery.data, tabelasQuery.data, trocasQuery.data]);
 
   // Janela visível = período exato selecionado (mesmo sem dados)
   const janela = useMemo(
@@ -520,6 +544,7 @@ export function TagsMonitoramento({
             { k: "tag_captura", label: "Capturas", icon: TagIcon },
             { k: "observacao", label: "Observações", icon: MessageSquare },
             { k: "tabela", label: "Tabelas", icon: TableIcon },
+            { k: "troca", label: "Trocas", icon: Repeat },
           ] as const).map(({ k, label, icon: Icon }) => {
             const on = evtAtivos[k];
             const cor = EVT_CORES[k];

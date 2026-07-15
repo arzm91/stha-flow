@@ -122,7 +122,7 @@ function renderTagChartPng(
 }
 
 export async function gerarRelatorioProducaoXlsx(ordemId: string) {
-  const [opRes, paramsRes, anlRes, obsRes, etapasRes, movsRes, tagHistRes] = await Promise.all([
+  const [opRes, paramsRes, anlRes, obsRes, etapasRes, movsRes, tagHistRes, trocasRes] = await Promise.all([
     supabase.from("ordens_producao")
       .select("*, produto:produto_id(nome,codigo,unidade), equipamento:equipamento_id(nome,codigo)")
       .eq("id", ordemId).maybeSingle(),
@@ -141,6 +141,9 @@ export async function gerarRelatorioProducaoXlsx(ordemId: string) {
     supabase.from("producao_tag_historico")
       .select("tag_nome,valor_num,unidade,registrado_em")
       .eq("ordem_id", ordemId).order("registrado_em", { ascending: true }),
+    supabase.from("ordem_trocas_produto")
+      .select("id, ocorrido_em, qtd_produto_anterior, observacao, produto_anterior:produto_anterior_id(nome,unidade), produto_novo:produto_novo_id(nome)")
+      .eq("ordem_id", ordemId).order("ocorrido_em", { ascending: true }),
   ]);
 
   const op: any = opRes.data;
@@ -151,6 +154,7 @@ export async function gerarRelatorioProducaoXlsx(ordemId: string) {
   const etapas = (etapasRes.data ?? []) as any[];
   const movs = (movsRes.data ?? []) as any[];
   const tagHist = (tagHistRes.data ?? []) as TagPoint[];
+  const trocas = (trocasRes.data ?? []) as any[];
 
   const wb = new ExcelJS.Workbook();
   wb.creator = "STHA Flow";
@@ -240,6 +244,15 @@ export async function gerarRelatorioProducaoXlsx(ordemId: string) {
       titulo: `${(m.produto as any)?.nome ?? "Produto"}${m.tanque ? ` · ${(m.tanque as any).nome ?? ""}` : ""}`,
       detalhe: m.origem ?? "",
       valor: Number(m.quantidade),
+    });
+  }
+  for (const t of trocas) {
+    rows.push({
+      when: t.ocorrido_em, tipo: "Troca de produto",
+      titulo: `${t.produto_anterior?.nome ?? "—"} → ${t.produto_novo?.nome ?? "—"}`,
+      detalhe: t.observacao ?? "",
+      valor: Number(t.qtd_produto_anterior),
+      unidade: t.produto_anterior?.unidade ?? "",
     });
   }
   rows.sort((a, b) => new Date(a.when).getTime() - new Date(b.when).getTime());
