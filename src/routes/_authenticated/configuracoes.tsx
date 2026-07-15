@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { LogOut } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { UserManagementCard } from "@/components/configuracoes/UserManagementCard";
+import { ModulesAccessCard } from "@/components/configuracoes/ModulesAccessCard";
 import { EmailTemplatesCard } from "@/components/configuracoes/EmailTemplatesCard";
 import { PushNotificationsCard } from "@/components/configuracoes/PushNotificationsCard";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -83,8 +84,9 @@ function ConfiguracoesPage() {
         <EmailTemplatesCard />
       </div>
       {(isAdmin || isGerente) && (
-        <div className="mt-4">
+        <div className="mt-4 space-y-4">
           <UserManagementCard />
+          <ModulesAccessCard />
         </div>
       )}
     </div>
