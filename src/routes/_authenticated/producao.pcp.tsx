@@ -976,9 +976,41 @@ function OrdemDetalheSheet({
                   <Button variant="outline" onClick={() => onEditNumero(ordem)}>
                     <Pencil className="mr-2 h-4 w-4" />Editar OP
                   </Button>
+                  {podeExcluir && (
+                    <Button
+                      variant="ghost"
+                      className="text-destructive"
+                      onClick={() => setConfirmDelete(true)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />Excluir ordem
+                    </Button>
+                  )}
                 </>
               )}
             </div>
+
+            <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir ordem finalizada?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação remove permanentemente a OP {ordem.numero} e todos os seus registros
+                    (parâmetros, análises, observações, paradas, materiais, etapas, movimentações
+                    de estoque e histórico de tags). Será exigida a senha do administrador.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={excluir.isPending}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={(e) => { e.preventDefault(); excluir.mutate(); }}
+                    disabled={excluir.isPending}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {excluir.isPending ? "Excluindo..." : "Excluir definitivamente"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </>
         )}
       </SheetContent>
