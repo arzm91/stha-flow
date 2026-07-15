@@ -526,7 +526,7 @@ async function runGraph(
   return { ok: okAll, results };
 }
 
-async function executeRunInternal(
+export async function executeRunInternal(
   supabase: any,
   userId: string,
   runId: string,
