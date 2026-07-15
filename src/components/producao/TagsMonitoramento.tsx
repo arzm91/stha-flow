@@ -26,6 +26,7 @@ type EventoFaixa = {
   detalhe?: string;
   emCurso: boolean;
   cor: string;
+  qtdLabel?: string;
 };
 
 const EVT_CORES = {
