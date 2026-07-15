@@ -249,13 +249,13 @@ function OPPage() {
         <VincularProdutoBanner ordemId={id} onDone={() => qc.invalidateQueries({ queryKey: ["op", id] })} />
       ) : null}
 
-      {op.data.equipamento_id ? <UtilidadesStrip equipamentoId={op.data.equipamento_id as string} /> : null}
+      {vis.utilidadesStrip && op.data.equipamento_id ? <UtilidadesStrip equipamentoId={op.data.equipamento_id as string} /> : null}
 
-      {(tagVel || tagTotal) ? (
+      {vis.avanco && (tagVel || tagTotal) ? (
         <AvancoProducaoHeader ordemId={id} tagVel={tagVel} tagTotal={tagTotal} qtdPlanejada={qtdPlanejada} />
       ) : null}
 
-      {equip && (equip.capacidade_hora || equip.capacidade_dia || equip.capacidade_mes) && op.data.inicio_em ? (
+      {vis.capacidade && equip && (equip.capacidade_hora || equip.capacidade_dia || equip.capacidade_mes) && op.data.inicio_em ? (
         <CapacidadeNominalCard
           equipamentoId={op.data.equipamento_id as string}
           inicioEm={op.data.inicio_em as string}
@@ -269,36 +269,40 @@ function OPPage() {
         />
       ) : null}
 
-      {op.data.inicio_em && !isFinal ? (
+      {vis.tempo && op.data.inicio_em && !isFinal ? (
         <TempoProducaoHeader
           inicioEm={op.data.inicio_em as string}
           duracaoEstimadaMin={(op.data as any).duracao_estimada_min ?? null}
         />
       ) : null}
 
-      <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
-        <Info label="Início" value={op.data.inicio_em ? formatDate(op.data.inicio_em) : "—"} />
-        <Info label="Fim" value={op.data.fim_em ? formatDate(op.data.fim_em) : "—"} />
-        <Info label="Duração total" value={op.data.inicio_em ? (op.data.fim_em ? durationBetween(op.data.inicio_em, op.data.fim_em) : durationFromNow(op.data.inicio_em)) : "—"} />
-        <Info label="Qtd. planejada / produzida" value={`${formatNumber(Number(op.data.qtd_planejada))} / ${op.data.qtd_produzida != null ? formatNumber(Number(op.data.qtd_produzida)) : "—"}`} />
-        <Info label="Operador" value={operador.data?.nome ?? "—"} />
-        <Info label="Equipamento" value={equip?.nome ?? "—"} />
-      </div>
+      {vis.info ? (
+        <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
+          <Info label="Início" value={op.data.inicio_em ? formatDate(op.data.inicio_em) : "—"} />
+          <Info label="Fim" value={op.data.fim_em ? formatDate(op.data.fim_em) : "—"} />
+          <Info label="Duração total" value={op.data.inicio_em ? (op.data.fim_em ? durationBetween(op.data.inicio_em, op.data.fim_em) : durationFromNow(op.data.inicio_em)) : "—"} />
+          <Info label="Qtd. planejada / produzida" value={`${formatNumber(Number(op.data.qtd_planejada))} / ${op.data.qtd_produzida != null ? formatNumber(Number(op.data.qtd_produzida)) : "—"}`} />
+          <Info label="Operador" value={operador.data?.nome ?? "—"} />
+          <Info label="Equipamento" value={equip?.nome ?? "—"} />
+        </div>
+      ) : null}
 
-      {op.data.equipamento_id ? <ScadaViewer equipamentoId={op.data.equipamento_id as string} /> : null}
+      {vis.scada && op.data.equipamento_id ? <ScadaViewer equipamentoId={op.data.equipamento_id as string} /> : null}
 
-      {op.data.equipamento_id ? <UtilidadesLive equipamentoId={op.data.equipamento_id as string} /> : null}
+      {vis.utilidadesLive && op.data.equipamento_id ? <UtilidadesLive equipamentoId={op.data.equipamento_id as string} /> : null}
 
-      <TagsMonitoramento
-        ordemId={id}
-        tagNomes={tagNomes}
-        ativa={!isFinal}
-        equipamentoId={(op.data as any).equipamento_id ?? null}
-        inicioEm={(op.data as any).inicio_em ?? null}
-        fimEm={(op.data as any).fim_em ?? null}
-      />
+      {vis.tagsMonitoramento ? (
+        <TagsMonitoramento
+          ordemId={id}
+          tagNomes={tagNomes}
+          ativa={!isFinal}
+          equipamentoId={(op.data as any).equipamento_id ?? null}
+          inicioEm={(op.data as any).inicio_em ?? null}
+          fimEm={(op.data as any).fim_em ?? null}
+        />
+      ) : null}
 
-      {(op.data.obs_iniciais || op.data.obs_finais) ? (
+      {vis.observacoes && (op.data.obs_iniciais || op.data.obs_finais) ? (
         <Card className="mb-4">
           <CardContent className="grid gap-3 p-4 md:grid-cols-2">
             {op.data.obs_iniciais ? (
@@ -317,8 +321,9 @@ function OPPage() {
         </Card>
       ) : null}
 
-      <TagsDoEquipamento tagNomes={tagNomes} ordemId={id} disabled={isFinal} />
+      {vis.tagsEquipamento ? <TagsDoEquipamento tagNomes={tagNomes} ordemId={id} disabled={isFinal} /> : null}
 
+      {vis.abas ? (
       <Tabs defaultValue="processos">
         <TabsList>
           <TabsTrigger value="processos"><ListChecks className="mr-1 h-4 w-4" />Processos</TabsTrigger>
