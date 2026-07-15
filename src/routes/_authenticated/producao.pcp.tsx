@@ -811,12 +811,14 @@ function OrdemDetalheSheet({
   equipamentos,
   onClose,
   onEdit,
+  onEditNumero,
   onChanged,
 }: {
   ordem: Ordem | null;
   equipamentos: Equip[];
   onClose: () => void;
   onEdit: (o: Ordem) => void;
+  onEditNumero: (o: Ordem) => void;
   onChanged: () => void;
 }) {
   const navigate = useNavigate();
