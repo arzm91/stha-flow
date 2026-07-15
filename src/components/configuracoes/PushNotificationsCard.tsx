@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, BellOff, Smartphone, Trash2 } from "lucide-react";
+import { Bell, BellOff, Smartphone, Trash2, Send, Info } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { enablePushNotifications, getPushSupportStatus } from "@/lib/push/client";
+import { enablePushNotifications, getPushSupportStatus, refreshPushRegistration } from "@/lib/push/client";
+import { sendTestPushToSelf } from "@/lib/push/notifications.functions";
+import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 type Device = {
