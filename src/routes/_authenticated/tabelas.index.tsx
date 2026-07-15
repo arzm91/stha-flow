@@ -24,7 +24,14 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, Table as TableIcon, Pencil } from "lucide-react";
+import { Plus, Trash2, Table as TableIcon, Pencil, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { SheetColumn, ColumnType } from "@/lib/tabelas/types";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useResourcePermissions } from "@/hooks/useResourcePermissions";
