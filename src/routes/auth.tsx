@@ -11,7 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { toast } from "sonner";
 import sthaLogo from "@/assets/stha_logo.png.asset.json";
 
-const SIGNUP_ACCESS_CODE = "bra@131";
+import { signUpWithAccessCode } from "@/lib/signup.functions";
 
 export const Route = createFileRoute("/auth")({
   head: pageHead({ title: "Acessar STHApc", description: "Entre na sua conta ou cadastre-se no STHApc — sistema de gestão industrial.", path: "/auth" }),
