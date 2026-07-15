@@ -345,6 +345,14 @@ function FinalizadaPage() {
         </Card>
       ) : null}
 
+      <TrocasProdutoList
+        ordemId={id}
+        produtoAtualId={o.produto_id}
+        produtoAtualNome={o.produto?.nome ?? null}
+        allowAdd={true}
+        allowEdit={true}
+      />
+
       <Card>
         <CardContent className="p-4">
           <div className="mb-3 flex items-center justify-between">
