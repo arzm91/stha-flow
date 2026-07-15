@@ -15,7 +15,11 @@ import {
   Dialog, DialogContent,
 } from "@/components/ui/dialog";
 import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
   Clock, Trash2, Filter, ImagePlus, X, User as UserIcon,
+  AlertOctagon, AlertTriangle, AlertCircle, Info, Wrench,
 } from "lucide-react";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 
@@ -25,6 +29,65 @@ export const Route = createFileRoute("/_authenticated/turnos")({
 });
 
 const BUCKET = "turno-eventos";
+
+type CriticidadeKey = "critica" | "atencao" | "cuidado" | "manutencao" | "informativa";
+
+const CRITICIDADES: Record<CriticidadeKey, {
+  label: string;
+  icon: typeof AlertOctagon;
+  dot: string;        // bg for timeline dot
+  ring: string;       // ring color around dot
+  badgeClass: string; // badge bg + text + border
+  border: string;     // card left border color
+}> = {
+  critica: {
+    label: "Crítica",
+    icon: AlertOctagon,
+    dot: "bg-red-500 text-white",
+    ring: "ring-red-500/20",
+    badgeClass: "bg-red-500/10 text-red-600 border-red-500/30 dark:text-red-400",
+    border: "border-l-4 border-l-red-500",
+  },
+  atencao: {
+    label: "Atenção",
+    icon: AlertTriangle,
+    dot: "bg-orange-500 text-white",
+    ring: "ring-orange-500/20",
+    badgeClass: "bg-orange-500/10 text-orange-600 border-orange-500/30 dark:text-orange-400",
+    border: "border-l-4 border-l-orange-500",
+  },
+  cuidado: {
+    label: "Cuidado",
+    icon: AlertCircle,
+    dot: "bg-yellow-500 text-white",
+    ring: "ring-yellow-500/20",
+    badgeClass: "bg-yellow-500/10 text-yellow-700 border-yellow-500/30 dark:text-yellow-400",
+    border: "border-l-4 border-l-yellow-500",
+  },
+  manutencao: {
+    label: "Manutenção",
+    icon: Wrench,
+    dot: "bg-blue-500 text-white",
+    ring: "ring-blue-500/20",
+    badgeClass: "bg-blue-500/10 text-blue-600 border-blue-500/30 dark:text-blue-400",
+    border: "border-l-4 border-l-blue-500",
+  },
+  informativa: {
+    label: "Informativa",
+    icon: Info,
+    dot: "bg-slate-500 text-white",
+    ring: "ring-slate-500/20",
+    badgeClass: "bg-slate-500/10 text-slate-600 border-slate-500/30 dark:text-slate-300",
+    border: "border-l-4 border-l-slate-400",
+  },
+};
+
+const CRITICIDADE_KEYS = Object.keys(CRITICIDADES) as CriticidadeKey[];
+
+function getCriticidade(cat: string | null | undefined) {
+  const key = (cat ?? "").toLowerCase() as CriticidadeKey;
+  return CRITICIDADES[key] ? { key, ...CRITICIDADES[key] } : { key: "informativa" as CriticidadeKey, ...CRITICIDADES.informativa };
+}
 
 function toLocalInput(d: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -41,6 +104,7 @@ type EventoRow = {
   descricao: string | null;
   responsavel: string | null;
   imagens: string[] | null;
+  categoria: string | null;
 };
 
 function TurnosPage() {
@@ -53,6 +117,7 @@ function TurnosPage() {
   const [ocorridoEm, setOcorridoEm] = useState(() => toLocalInput(new Date()));
   const [imagens, setImagens] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [criticidade, setCriticidade] = useState<CriticidadeKey>("informativa");
   const fileRef = useRef<HTMLInputElement>(null);
 
   // Filtros
@@ -62,13 +127,14 @@ function TurnosPage() {
   const [dataInicio, setDataInicio] = useState(toDateInput(sevenAgo));
   const [dataFim, setDataFim] = useState(toDateInput(today));
   const [busca, setBusca] = useState("");
+  const [filtroCrit, setFiltroCrit] = useState<CriticidadeKey | "todas">("todas");
 
   const { data: eventos = [], isLoading } = useQuery({
     queryKey: ["turnos_eventos", dataInicio, dataFim],
     queryFn: async () => {
       let q = supabase
         .from("relatorio_turno_eventos")
-        .select("id, ocorrido_em, descricao, responsavel, imagens")
+        .select("id, ocorrido_em, descricao, responsavel, imagens, categoria")
         .order("ocorrido_em", { ascending: false });
       if (dataInicio) q = q.gte("ocorrido_em", new Date(`${dataInicio}T00:00:00`).toISOString());
       if (dataFim) q = q.lte("ocorrido_em", new Date(`${dataFim}T23:59:59`).toISOString());
@@ -80,12 +146,15 @@ function TurnosPage() {
 
   const eventosFiltrados = useMemo(() => {
     const term = busca.trim().toLowerCase();
-    if (!term) return eventos;
-    return eventos.filter((e) =>
-      (e.descricao ?? "").toLowerCase().includes(term) ||
-      (e.responsavel ?? "").toLowerCase().includes(term),
-    );
-  }, [eventos, busca]);
+    return eventos.filter((e) => {
+      if (filtroCrit !== "todas" && getCriticidade(e.categoria).key !== filtroCrit) return false;
+      if (!term) return true;
+      return (
+        (e.descricao ?? "").toLowerCase().includes(term) ||
+        (e.responsavel ?? "").toLowerCase().includes(term)
+      );
+    });
+  }, [eventos, busca, filtroCrit]);
 
   // Signed URLs for image previews
   const allPaths = useMemo(() => {
@@ -141,7 +210,7 @@ function TurnosPage() {
         owner_id: u.user.id,
         created_by: u.user.id,
         ocorrido_em: ts.toISOString(),
-        categoria: "geral",
+        categoria: criticidade,
         titulo: descricao.trim().slice(0, 80),
         descricao: descricao.trim(),
         responsavel: responsavel.trim() || null,
@@ -155,6 +224,7 @@ function TurnosPage() {
       setResponsavel("");
       setOcorridoEm(toLocalInput(new Date()));
       setImagens([]);
+      setCriticidade("informativa");
       if (fileRef.current) fileRef.current.value = "";
       qc.invalidateQueries({ queryKey: ["turnos_eventos"] });
     },
@@ -235,7 +305,7 @@ function TurnosPage() {
                 />
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4 sm:grid-cols-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="ocorrido">Data e hora</Label>
                   <Input
@@ -253,6 +323,30 @@ function TurnosPage() {
                     value={responsavel}
                     onChange={(e) => setResponsavel(e.target.value)}
                   />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="criticidade">Criticidade</Label>
+                  <Select value={criticidade} onValueChange={(v) => setCriticidade(v as CriticidadeKey)}>
+                    <SelectTrigger id="criticidade">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CRITICIDADE_KEYS.map((k) => {
+                        const c = CRITICIDADES[k];
+                        const Icon = c.icon;
+                        return (
+                          <SelectItem key={k} value={k}>
+                            <span className="flex items-center gap-2">
+                              <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full ${c.dot}`}>
+                                <Icon className="h-3 w-3" />
+                              </span>
+                              {c.label}
+                            </span>
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -331,6 +425,31 @@ function TurnosPage() {
               <Label htmlFor="busca" className="text-xs">Buscar</Label>
               <Input id="busca" placeholder="Descrição ou responsável" value={busca} onChange={(e) => setBusca(e.target.value)} className="w-[240px]" />
             </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Criticidade</Label>
+              <Select value={filtroCrit} onValueChange={(v) => setFiltroCrit(v as CriticidadeKey | "todas")}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todas">Todas</SelectItem>
+                  {CRITICIDADE_KEYS.map((k) => {
+                    const c = CRITICIDADES[k];
+                    const Icon = c.icon;
+                    return (
+                      <SelectItem key={k} value={k}>
+                        <span className="flex items-center gap-2">
+                          <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full ${c.dot}`}>
+                            <Icon className="h-3 w-3" />
+                          </span>
+                          {c.label}
+                        </span>
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="ml-auto flex gap-2">
               <Button type="button" variant="outline" size="sm" onClick={() => setRangeShortcut(0)}>Hoje</Button>
               <Button type="button" variant="outline" size="sm" onClick={() => setRangeShortcut(7)}>7 dias</Button>
@@ -362,16 +481,22 @@ function TurnosPage() {
                 {items.map((ev) => {
                   const dt = new Date(ev.ocorrido_em);
                   const imgs = ev.imagens ?? [];
+                  const crit = getCriticidade(ev.categoria);
+                  const CritIcon = crit.icon;
                   return (
                     <li key={ev.id} className="relative">
-                      <span className="absolute -left-[34px] flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary ring-4 ring-background">
-                        <Clock className="h-3.5 w-3.5" />
+                      <span className={`absolute -left-[34px] flex h-7 w-7 items-center justify-center rounded-full ring-4 ring-background ${crit.dot}`}>
+                        <CritIcon className="h-3.5 w-3.5" />
                       </span>
-                      <Card>
+                      <Card className={crit.border}>
                         <CardContent className="p-4">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0 flex-1">
                               <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                <Badge variant="outline" className={`gap-1 text-xs ${crit.badgeClass}`}>
+                                  <CritIcon className="h-3 w-3" />
+                                  {crit.label}
+                                </Badge>
                                 <span>
                                   {dt.toLocaleString("pt-BR", {
                                     day: "2-digit", month: "2-digit", year: "numeric",
