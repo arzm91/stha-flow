@@ -243,6 +243,7 @@ function TurnosPage() {
       setCriticidade("informativa");
       if (fileRef.current) fileRef.current.value = "";
       qc.invalidateQueries({ queryKey: ["turnos_eventos"] });
+      qc.invalidateQueries({ queryKey: ["turnos_eventos_fixados"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -258,10 +259,30 @@ function TurnosPage() {
     onSuccess: () => {
       toast.success("Evento removido");
       qc.invalidateQueries({ queryKey: ["turnos_eventos"] });
+      qc.invalidateQueries({ queryKey: ["turnos_eventos_fixados"] });
     },
     onError: async (e: Error) => {
       toast.error(e.message);
     },
+  });
+
+  const pinMut = useMutation({
+    mutationFn: async (ev: EventoRow) => {
+      const isPinned = ev.fixado_ate && new Date(ev.fixado_ate) > new Date();
+      const newValue = isPinned ? null : new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+      const { error } = await supabase
+        .from("relatorio_turno_eventos")
+        .update({ fixado_ate: newValue })
+        .eq("id", ev.id);
+      if (error) throw error;
+      return !isPinned;
+    },
+    onSuccess: (pinned) => {
+      toast.success(pinned ? "Mensagem fixada por 48h" : "Mensagem desafixada");
+      qc.invalidateQueries({ queryKey: ["turnos_eventos"] });
+      qc.invalidateQueries({ queryKey: ["turnos_eventos_fixados"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
   });
 
   const grupos = useMemo(() => {
