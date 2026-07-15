@@ -71,6 +71,7 @@ import { Route as ApiPublicTagsPollRouteImport } from './routes/api/public/tags.
 import { Route as ApiPublicAutomationDispatchRunsRouteImport } from './routes/api/public/automation.dispatch-runs'
 import { Route as ApiPublicAlertasDispatchEmailRouteImport } from './routes/api/public/alertas.dispatch-email'
 import { Route as AuthenticatedProducaoHistoricoEquipIdRouteImport } from './routes/_authenticated/producao.historico.$equipId'
+import { Route as AuthenticatedProducaoFinalizadaIdRouteImport } from './routes/_authenticated/producao.finalizada.$id'
 import { Route as AuthenticatedEstoqueTanquesIdRouteImport } from './routes/_authenticated/estoque.tanques.$id'
 import { Route as AuthenticatedCadastrosEquipamentosIdRouteImport } from './routes/_authenticated/cadastros.equipamentos.$id'
 import { Route as AuthenticatedCadastrosEquipamentosPfdIdRouteImport } from './routes/_authenticated/cadastros.equipamentos-pfd.$id'
@@ -420,6 +421,12 @@ const AuthenticatedProducaoHistoricoEquipIdRoute =
     path: '/historico/$equipId',
     getParentRoute: () => AuthenticatedProducaoRoute,
   } as any)
+const AuthenticatedProducaoFinalizadaIdRoute =
+  AuthenticatedProducaoFinalizadaIdRouteImport.update({
+    id: '/finalizada/$id',
+    path: '/finalizada/$id',
+    getParentRoute: () => AuthenticatedProducaoRoute,
+  } as any)
 const AuthenticatedEstoqueTanquesIdRoute =
   AuthenticatedEstoqueTanquesIdRouteImport.update({
     id: '/tanques/$id',
@@ -501,6 +508,7 @@ export interface FileRoutesByFullPath {
   '/cadastros/equipamentos-pfd/$id': typeof AuthenticatedCadastrosEquipamentosPfdIdRoute
   '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
   '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
+  '/producao/finalizada/$id': typeof AuthenticatedProducaoFinalizadaIdRoute
   '/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/alertas/dispatch-email': typeof ApiPublicAlertasDispatchEmailRoute
   '/api/public/automation/dispatch-runs': typeof ApiPublicAutomationDispatchRunsRoute
@@ -561,6 +569,7 @@ export interface FileRoutesByTo {
   '/cadastros/equipamentos-pfd/$id': typeof AuthenticatedCadastrosEquipamentosPfdIdRoute
   '/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
   '/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
+  '/producao/finalizada/$id': typeof AuthenticatedProducaoFinalizadaIdRoute
   '/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/alertas/dispatch-email': typeof ApiPublicAlertasDispatchEmailRoute
   '/api/public/automation/dispatch-runs': typeof ApiPublicAutomationDispatchRunsRoute
@@ -630,6 +639,7 @@ export interface FileRoutesById {
   '/_authenticated/cadastros/equipamentos-pfd/$id': typeof AuthenticatedCadastrosEquipamentosPfdIdRoute
   '/_authenticated/cadastros/equipamentos/$id': typeof AuthenticatedCadastrosEquipamentosIdRoute
   '/_authenticated/estoque/tanques/$id': typeof AuthenticatedEstoqueTanquesIdRoute
+  '/_authenticated/producao/finalizada/$id': typeof AuthenticatedProducaoFinalizadaIdRoute
   '/_authenticated/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/alertas/dispatch-email': typeof ApiPublicAlertasDispatchEmailRoute
   '/api/public/automation/dispatch-runs': typeof ApiPublicAutomationDispatchRunsRoute
@@ -699,6 +709,7 @@ export interface FileRouteTypes {
     | '/cadastros/equipamentos-pfd/$id'
     | '/cadastros/equipamentos/$id'
     | '/estoque/tanques/$id'
+    | '/producao/finalizada/$id'
     | '/producao/historico/$equipId'
     | '/api/public/alertas/dispatch-email'
     | '/api/public/automation/dispatch-runs'
@@ -759,6 +770,7 @@ export interface FileRouteTypes {
     | '/cadastros/equipamentos-pfd/$id'
     | '/cadastros/equipamentos/$id'
     | '/estoque/tanques/$id'
+    | '/producao/finalizada/$id'
     | '/producao/historico/$equipId'
     | '/api/public/alertas/dispatch-email'
     | '/api/public/automation/dispatch-runs'
@@ -827,6 +839,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cadastros/equipamentos-pfd/$id'
     | '/_authenticated/cadastros/equipamentos/$id'
     | '/_authenticated/estoque/tanques/$id'
+    | '/_authenticated/producao/finalizada/$id'
     | '/_authenticated/producao/historico/$equipId'
     | '/api/public/alertas/dispatch-email'
     | '/api/public/automation/dispatch-runs'
@@ -1301,6 +1314,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProducaoHistoricoEquipIdRouteImport
       parentRoute: typeof AuthenticatedProducaoRoute
     }
+    '/_authenticated/producao/finalizada/$id': {
+      id: '/_authenticated/producao/finalizada/$id'
+      path: '/finalizada/$id'
+      fullPath: '/producao/finalizada/$id'
+      preLoaderRoute: typeof AuthenticatedProducaoFinalizadaIdRouteImport
+      parentRoute: typeof AuthenticatedProducaoRoute
+    }
     '/_authenticated/estoque/tanques/$id': {
       id: '/_authenticated/estoque/tanques/$id'
       path: '/tanques/$id'
@@ -1447,6 +1467,7 @@ interface AuthenticatedProducaoRouteChildren {
   AuthenticatedProducaoNovaRoute: typeof AuthenticatedProducaoNovaRoute
   AuthenticatedProducaoPcpRoute: typeof AuthenticatedProducaoPcpRoute
   AuthenticatedProducaoIndexRoute: typeof AuthenticatedProducaoIndexRoute
+  AuthenticatedProducaoFinalizadaIdRoute: typeof AuthenticatedProducaoFinalizadaIdRoute
   AuthenticatedProducaoHistoricoEquipIdRoute: typeof AuthenticatedProducaoHistoricoEquipIdRoute
 }
 
@@ -1456,6 +1477,8 @@ const AuthenticatedProducaoRouteChildren: AuthenticatedProducaoRouteChildren = {
   AuthenticatedProducaoNovaRoute: AuthenticatedProducaoNovaRoute,
   AuthenticatedProducaoPcpRoute: AuthenticatedProducaoPcpRoute,
   AuthenticatedProducaoIndexRoute: AuthenticatedProducaoIndexRoute,
+  AuthenticatedProducaoFinalizadaIdRoute:
+    AuthenticatedProducaoFinalizadaIdRoute,
   AuthenticatedProducaoHistoricoEquipIdRoute:
     AuthenticatedProducaoHistoricoEquipIdRoute,
 }
