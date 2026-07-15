@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { ArrowLeft, Factory, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { AuthShell } from "@/components/landing/AuthShell";
 
 export const Route = createFileRoute("/login")({
@@ -145,6 +145,3 @@ function LoginPage() {
     </AuthShell>
   );
 }
-
-// re-export helper icons so unused-import lint is happy in AuthShell area
-export { ArrowLeft, Factory };
