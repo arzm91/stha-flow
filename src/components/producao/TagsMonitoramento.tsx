@@ -36,6 +36,7 @@ const EVT_CORES = {
   tag_captura: "#14b8a6",
   processo: "#f59e0b",
   tabela: "#06b6d4",
+  troca: "#f43f5e",
 } as const;
 
 type Row = {
