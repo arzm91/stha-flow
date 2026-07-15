@@ -2964,6 +2964,10 @@ export type Database = {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
       }
+      delete_ordem_producao_cascade: {
+        Args: { _id: string }
+        Returns: undefined
+      }
       dispatch_automation_trigger: {
         Args: { p_context: Json; p_owner_id: string; p_trigger_type: string }
         Returns: number

@@ -42,6 +42,18 @@ import {
   ZoomOut,
 } from "lucide-react";
 import { toast } from "sonner";
+import { guardAdmin, isAdminCancelled } from "@/lib/security/guard-admin";
+import { usePagePermissions } from "@/hooks/usePagePermissions";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_authenticated/producao/pcp")({
   head: pageHead({ title: "Produção · PCP / Ordens — STHApc", description: "Acesse e gerencie Produção · PCP / Ordens no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/producao/pcp" }),
@@ -826,6 +838,20 @@ function OrdemDetalheSheet({
   const equip = equipamentos.find((e) => e.id === ordem?.equipamento_id);
   const equipOcupado = equip?.status === "ocupado";
   const equipManut = equip?.status === "manutencao";
+  const { isAdmin, isGerente } = usePagePermissions();
+  const podeExcluir = isAdmin || isGerente;
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const excluir = useMutation({
+    mutationFn: async () => {
+      if (!ordem) return;
+      await guardAdmin("excluir esta ordem e todos os seus registros");
+      const { error } = await supabase.rpc("delete_ordem_producao_cascade" as any, { _id: ordem.id });
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Ordem excluída"); setConfirmDelete(false); onClose(); onChanged(); },
+    onError: (e: Error) => { if (!isAdminCancelled(e)) toast.error(e.message); },
+  });
 
   const iniciar = useMutation({
     mutationFn: async () => {
@@ -950,9 +976,41 @@ function OrdemDetalheSheet({
                   <Button variant="outline" onClick={() => onEditNumero(ordem)}>
                     <Pencil className="mr-2 h-4 w-4" />Editar OP
                   </Button>
+                  {podeExcluir && (
+                    <Button
+                      variant="ghost"
+                      className="text-destructive"
+                      onClick={() => setConfirmDelete(true)}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />Excluir ordem
+                    </Button>
+                  )}
                 </>
               )}
             </div>
+
+            <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Excluir ordem finalizada?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação remove permanentemente a OP {ordem.numero} e todos os seus registros
+                    (parâmetros, análises, observações, paradas, materiais, etapas, movimentações
+                    de estoque e histórico de tags). Será exigida a senha do administrador.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={excluir.isPending}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={(e) => { e.preventDefault(); excluir.mutate(); }}
+                    disabled={excluir.isPending}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {excluir.isPending ? "Excluindo..." : "Excluir definitivamente"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </>
         )}
       </SheetContent>
