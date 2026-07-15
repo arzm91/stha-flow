@@ -122,7 +122,7 @@ function renderTagChartPng(
 }
 
 export async function gerarRelatorioProducaoXlsx(ordemId: string) {
-  const [opRes, paramsRes, anlRes, obsRes, etapasRes, movsRes, tagHistRes] = await Promise.all([
+  const [opRes, paramsRes, anlRes, obsRes, etapasRes, movsRes, tagHistRes, trocasRes] = await Promise.all([
     supabase.from("ordens_producao")
       .select("*, produto:produto_id(nome,codigo,unidade), equipamento:equipamento_id(nome,codigo)")
       .eq("id", ordemId).maybeSingle(),
