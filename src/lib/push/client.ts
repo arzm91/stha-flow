@@ -175,7 +175,7 @@ export async function refreshPushRegistration(): Promise<{ ok: boolean; reason?:
         owner_id: u.user.id,
         fcm_token: token,
         plataforma: detectPlatform(),
-        ativo: true,
+        rotulo: `${detectPlatform()} • ${new Date().toLocaleDateString("pt-BR")}`,
         user_agent: navigator.userAgent.slice(0, 300),
       },
       { onConflict: "fcm_token" },
