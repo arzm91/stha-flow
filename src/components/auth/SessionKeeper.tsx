@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { autoSubscribeAfterLogin } from "@/lib/push/client";
 
 /**
  * Mantém a sessão viva enquanto o usuário está usando o app.
