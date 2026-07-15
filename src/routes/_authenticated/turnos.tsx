@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import {
   Clock, Trash2, Filter, ImagePlus, X, User as UserIcon,
-  AlertOctagon, AlertTriangle, AlertCircle, Info, Wrench,
+  AlertOctagon, AlertTriangle, AlertCircle, Info, Wrench, Pin, PinOff,
 } from "lucide-react";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 
