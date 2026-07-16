@@ -24,14 +24,13 @@ import { Plus, Pencil, Trash2, LayoutGrid, MoreHorizontal, GripVertical } from "
 import { toast } from "sonner";
 import { WIDGET_SOURCES, getSource, type WidgetSource } from "@/lib/dashboard/widget-catalog";
 import { DashboardWidget } from "@/components/dashboard/DashboardWidget";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-import RGL from "react-grid-layout";
+import { Responsive, WidthProvider } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
 type LayoutItem = { i: string; x: number; y: number; w: number; h: number; minW?: number; minH?: number };
-// @ts-expect-error runtime exports
-const ResponsiveGrid = RGL.WidthProvider(RGL.Responsive);
+const ResponsiveGrid = WidthProvider(Responsive);
+
 
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
