@@ -28,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
 });
 
-type Equip = { id: string; codigo: string; nome: string; status: string; localizacao: string | null; tipo: string | null; ativo: boolean; tag_producao_total: string | null; tag_velocidade_producao: string | null };
+type Equip = { id: string; codigo: string; nome: string; status: string; localizacao: string | null; tipo: string | null; ativo: boolean; tag_producao_total: string | null; tag_velocidade_producao: string | null; tag_indices: string[] | null };
 
 function ProducaoPage() {
   const [novaOpen, setNovaOpen] = useState(false);
