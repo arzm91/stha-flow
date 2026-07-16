@@ -20,7 +20,7 @@ import {
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Pencil, Trash2, LayoutGrid, MoreHorizontal, GripVertical, Maximize2, Minimize2 } from "lucide-react";
+import { Plus, Pencil, Trash2, LayoutGrid, MoreHorizontal, GripVertical, Maximize2, Minimize2, Lock, Unlock } from "lucide-react";
 import { toast } from "sonner";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { WIDGET_SOURCES, getSource, type WidgetSource } from "@/lib/dashboard/widget-catalog";
@@ -53,11 +53,29 @@ type TankRow = { id: string; codigo: string; nome: string };
 type EquipRow = { id: string; codigo: string; nome: string };
 type SheetRow = { id: string; nome: string };
 
+const FROZEN_STORAGE_KEY = "dashboard:frozen";
+
 function DashboardPage() {
   const qc = useQueryClient();
   const { ref: fsRef, isFullscreen, toggle } = useFullscreen<HTMLDivElement>();
   const [editing, setEditing] = useState<Widget | null>(null);
   const [newOpen, setNewOpen] = useState(false);
+  const [frozen, setFrozen] = useState(false);
+
+  useEffect(() => {
+    try {
+      setFrozen(localStorage.getItem(FROZEN_STORAGE_KEY) === "1");
+    } catch { /* ignore */ }
+  }, []);
+
+  const toggleFrozen = useCallback(() => {
+    setFrozen((prev) => {
+      const next = !prev;
+      try { localStorage.setItem(FROZEN_STORAGE_KEY, next ? "1" : "0"); } catch { /* ignore */ }
+      toast.success(next ? "Dashboard congelado" : "Dashboard descongelado");
+      return next;
+    });
+  }, []);
 
   const widgets = useQuery({
     queryKey: ["dashboard_widgets"],
@@ -140,7 +158,7 @@ function DashboardPage() {
             </Badge>
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="text-muted-foreground border-dashed">
+                <Button variant="outline" size="sm" className="text-muted-foreground border-dashed" disabled={frozen}>
                   <Plus className="mr-2 h-4 w-4" />Adicionar widget
                 </Button>
               </DialogTrigger>
@@ -151,6 +169,15 @@ function DashboardPage() {
                 loading={save.isPending}
               />
             </Dialog>
+            <Button
+              variant={frozen ? "default" : "outline"}
+              size="sm"
+              onClick={toggleFrozen}
+              aria-label={frozen ? "Descongelar dashboard" : "Congelar dashboard"}
+              title={frozen ? "Descongelar (permitir edição do layout)" : "Congelar (bloquear edição do layout)"}
+            >
+              {frozen ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -171,11 +198,12 @@ function DashboardPage() {
           icon={<LayoutGrid className="h-6 w-6" />}
           title="Seu dashboard está vazio"
           description="Adicione widgets para acompanhar produção, estoque, alertas, manutenção, qualidade e mais. Você pode arrastar e redimensionar cada card."
-          action={<Button onClick={() => setNewOpen(true)}><Plus className="mr-2 h-4 w-4" />Adicionar primeiro widget</Button>}
+          action={<Button onClick={() => setNewOpen(true)} disabled={frozen}><Plus className="mr-2 h-4 w-4" />Adicionar primeiro widget</Button>}
         />
       ) : (
         <DashboardGrid
           widgets={widgets.data!}
+          frozen={frozen}
           onEdit={setEditing}
           onDelete={(id) => remove.mutate(id)}
         />
@@ -197,9 +225,10 @@ function DashboardPage() {
 }
 
 function DashboardGrid({
-  widgets, onEdit, onDelete,
+  widgets, frozen, onEdit, onDelete,
 }: {
   widgets: Widget[];
+  frozen: boolean;
   onEdit: (w: Widget) => void;
   onDelete: (id: string) => void;
 }) {
@@ -260,9 +289,11 @@ function DashboardGrid({
           rowHeight={90}
           margin={[16, 16]}
           containerPadding={[0, 0]}
-          dragConfig={{ handle: ".drag-handle" }}
+          dragConfig={{ enabled: !frozen, handle: ".drag-handle" }}
+          resizeConfig={{ enabled: !frozen }}
           compactor={verticalCompactor}
           onLayoutChange={(current) => {
+            if (frozen) return;
             const next = current as LayoutItem[];
             setLocalLayout(next);
             scheduleSave(next);
