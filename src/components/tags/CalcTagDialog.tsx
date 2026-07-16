@@ -33,6 +33,53 @@ export function CalcTagDialog({
   const [decimais, setDecimais] = useState("2");
   const [vMin, setVMin] = useState("");
   const [vMax, setVMax] = useState("");
+  const [tagFiltro, setTagFiltro] = useState("");
+  const formulaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Lista de tags disponíveis para compor a fórmula (endpoint + outras calculadas)
+  const tagsDisponiveis = useQuery({
+    queryKey: ["tags-live", "picker"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tags_live" as never)
+        .select("nome,nome_amigavel,unidade,grupo,valor_num")
+        .order("grupo", { ascending: true })
+        .order("nome", { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as Array<{
+        nome: string;
+        nome_amigavel: string | null;
+        unidade: string | null;
+        grupo: string | null;
+        valor_num: number | null;
+      }>;
+    },
+    enabled: open,
+    refetchInterval: open ? 3000 : false,
+  });
+
+  const insertNaFormula = (texto: string) => {
+    const el = formulaRef.current;
+    if (!el) {
+      setFormula((f) => (f ? `${f} ${texto}` : texto));
+      return;
+    }
+    const start = el.selectionStart ?? formula.length;
+    const end = el.selectionEnd ?? formula.length;
+    const before = formula.slice(0, start);
+    const after = formula.slice(end);
+    const needSpaceBefore = before && !/[\s(]$/.test(before);
+    const needSpaceAfter = after && !/^[\s)]/.test(after);
+    const chunk = `${needSpaceBefore ? " " : ""}${texto}${needSpaceAfter ? " " : ""}`;
+    const next = before + chunk + after;
+    setFormula(next);
+    requestAnimationFrame(() => {
+      el.focus();
+      const pos = (before + chunk).length;
+      el.setSelectionRange(pos, pos);
+    });
+  };
+
 
   useEffect(() => {
     if (open) {
