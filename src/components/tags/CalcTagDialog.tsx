@@ -174,7 +174,7 @@ export function CalcTagDialog({
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-lg overflow-y-auto">
+      <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{editing ? "Editar tag calculada" : "Nova tag calculada"}</DialogTitle>
           <DialogDescription>
