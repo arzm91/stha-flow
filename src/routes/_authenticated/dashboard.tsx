@@ -291,7 +291,10 @@ function DashboardGrid({
           containerPadding={[0, 0]}
           dragConfig={{ handle: ".drag-handle" }}
           compactor={verticalCompactor}
+          isDraggable={!frozen}
+          isResizable={!frozen}
           onLayoutChange={(current) => {
+            if (frozen) return;
             const next = current as LayoutItem[];
             setLocalLayout(next);
             scheduleSave(next);
