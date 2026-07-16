@@ -163,7 +163,7 @@ function EquipamentosPage() {
       description="Cadastro e gestão dos equipamentos de produção da planta."
       searchKeys={["nome", "codigo", "tipo", "localizacao"]}
       filter={{ categoria: "producao" }}
-      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [], utilidade_ids: [], tag_velocidade_producao: "", tag_producao_total: "", capacidade_hora: "", capacidade_dia: "", capacidade_mes: "", capacidade_unidade: "", parada_tag_nome: "", parada_modo: "", parada_operador: "", parada_valor: "", parada_valor_min: "", parada_valor_max: "", parada_tempo_min_seg: 15, parada_alerta_apos_min: "", parada_motivos: ["Falta de energia","Parada programada","Parada não programada","Manutenção","Setup / Troca de produto","Falta de matéria-prima","Falha operacional","Outro"] }}
+      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [], utilidade_ids: [], tag_velocidade_producao: "", tag_producao_total: "", tag_indices: [], capacidade_hora: "", capacidade_dia: "", capacidade_mes: "", capacidade_unidade: "", parada_tag_nome: "", parada_modo: "", parada_operador: "", parada_valor: "", parada_valor_min: "", parada_valor_max: "", parada_tempo_min_seg: 15, parada_alerta_apos_min: "", parada_motivos: ["Falta de energia","Parada programada","Parada não programada","Manutenção","Setup / Troca de produto","Falta de matéria-prima","Falha operacional","Outro"] }}
       fields={fields}
 
 
