@@ -252,10 +252,10 @@ function DashboardGrid({
           containerPadding={[0, 0]}
           dragConfig={{ handle: ".drag-handle" }}
           compactor={verticalCompactor}
-          onLayoutChange={(_layout, layouts) => {
-            const current = layouts.lg as LayoutItem[];
-            setLocalLayout(current);
-            scheduleSave(current);
+          onLayoutChange={(current) => {
+            const next = current as LayoutItem[];
+            setLocalLayout(next);
+            scheduleSave(next);
           }}
         >
           {widgets.map((w) => (
