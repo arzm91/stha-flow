@@ -58,19 +58,22 @@ function ProducaoPage() {
 
   const opByEquip = new Map((opsAtivas.data ?? []).map((o) => [o.equipamento_id, o]));
 
-  // Tags de produção total ativas
+  // Tags de produção total ativas + tags de índice/rendimento
   const tagsAvanco = Array.from(new Set(
     (equipamentos.data ?? [])
-      .filter((e) => e.tag_producao_total && opByEquip.has(e.id))
-      .map((e) => e.tag_producao_total as string)
+      .filter((e) => opByEquip.has(e.id))
+      .flatMap((e) => [
+        e.tag_producao_total,
+        ...((e.tag_indices ?? []) as string[]),
+      ].filter(Boolean) as string[])
   ));
   const tagsQuery = useQuery({
     queryKey: ["equip-cards-tags", tagsAvanco.join(",")],
     enabled: tagsAvanco.length > 0,
     queryFn: async () => {
       const { data } = await supabase.from("tags_live")
-        .select("nome,valor_num,unidade").in("nome", tagsAvanco);
-      return (data ?? []) as Array<{ nome: string; valor_num: number | null; unidade: string | null }>;
+        .select("nome,nome_amigavel,valor_num,unidade").in("nome", tagsAvanco);
+      return (data ?? []) as Array<{ nome: string; nome_amigavel: string | null; valor_num: number | null; unidade: string | null }>;
     },
     refetchInterval: 5000,
   });
