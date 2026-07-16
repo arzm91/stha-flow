@@ -194,7 +194,7 @@ function DashboardGrid({
   const qc = useQueryClient();
 
   // Layout local (para arrastar/redimensionar sem esperar re-fetch)
-  const [localLayout, setLocalLayout] = useState<Layout[]>(() => buildLayout(widgets));
+  const [localLayout, setLocalLayout] = useState<LayoutItem[]>(() => buildLayout(widgets));
   const widgetIdsKey = widgets.map((w) => w.id).sort().join(",");
   useEffect(() => {
     setLocalLayout(buildLayout(widgets));
@@ -202,9 +202,9 @@ function DashboardGrid({
   }, [widgetIdsKey]);
 
   // Persistência (debounced)
-  const pendingRef = useRef<Layout[] | null>(null);
+  const pendingRef = useRef<LayoutItem[] | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const persist = useCallback(async (layouts: Layout[]) => {
+  const persist = useCallback(async (layouts: LayoutItem[]) => {
     // Só atualiza os que mudaram vs registro atual
     const byId = new Map(widgets.map((w) => [w.id, w.layout]));
     const changed = layouts.filter((l) => {
@@ -224,7 +224,7 @@ function DashboardGrid({
     qc.invalidateQueries({ queryKey: ["dashboard_widgets"] });
   }, [widgets, qc]);
 
-  const scheduleSave = useCallback((layouts: Layout[]) => {
+  const scheduleSave = useCallback((layouts: LayoutItem[]) => {
     pendingRef.current = layouts;
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
@@ -291,7 +291,7 @@ function DashboardGrid({
   );
 }
 
-function buildLayout(widgets: Widget[]): Layout[] {
+function buildLayout(widgets: Widget[]): LayoutItem[] {
   return widgets.map((w) => {
     const src = getSource(w.fonte);
     const defW = src?.colSpan ?? 3;
