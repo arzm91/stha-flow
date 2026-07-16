@@ -1827,31 +1827,35 @@ function CapacidadeNominalCard({
   };
 
   const hoje = useQuery({
-    queryKey: ["cap-eq-dia-v2", equipamentoId, tagTotal, totalLive],
+    queryKey: ["cap-eq-dia-v2", equipamentoId, tagTotal],
     queryFn: async () => {
       const start = new Date(); start.setHours(0, 0, 0, 0);
       return acumuladoPeriodo(start.toISOString());
     },
     refetchInterval: 60_000,
+    placeholderData: (prev) => prev,
   });
   const mes = useQuery({
-    queryKey: ["cap-eq-mes-v2", equipamentoId, tagTotal, totalLive],
+    queryKey: ["cap-eq-mes-v2", equipamentoId, tagTotal],
     queryFn: async () => {
       const start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0);
       return acumuladoPeriodo(start.toISOString());
     },
     refetchInterval: 60_000,
+    placeholderData: (prev) => prev,
   });
 
-  const efHora = capacidadeHora && capacidadeHora > 0 ? (taxaPorHora / capacidadeHora) * 100 : null;
-  const pctDia = capacidadeDia && capacidadeDia > 0 ? ((hoje.data ?? 0) / capacidadeDia) * 100 : null;
-  const pctMes = capacidadeMes && capacidadeMes > 0 ? ((mes.data ?? 0) / capacidadeMes) * 100 : null;
 
-  const Item = ({ label, real, nominal, pct, suffix, hint }: { label: string; real: number; nominal: number | null; pct: number | null; suffix?: string; hint?: string }) => (
+  const efHora = capacidadeHora && capacidadeHora > 0 ? (taxaPorHora / capacidadeHora) * 100 : null;
+  const pctDia = capacidadeDia && capacidadeDia > 0 && hoje.data != null ? (hoje.data / capacidadeDia) * 100 : null;
+  const pctMes = capacidadeMes && capacidadeMes > 0 && mes.data != null ? (mes.data / capacidadeMes) * 100 : null;
+
+
+  const Item = ({ label, real, nominal, pct, suffix, hint, loading }: { label: string; real: number | null; nominal: number | null; pct: number | null; suffix?: string; hint?: string; loading?: boolean }) => (
     <div className="min-w-0">
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className="mt-0.5 flex items-baseline gap-1">
-        <span className="font-mono text-lg font-semibold">{formatNumber(real)}</span>
+        <span className="font-mono text-lg font-semibold">{real == null ? (loading ? "…" : "—") : formatNumber(real)}</span>
         <span className="text-xs text-muted-foreground">{unidade}{suffix ?? ""}</span>
       </div>
       <div className="text-[11px] text-muted-foreground">
@@ -1866,6 +1870,7 @@ function CapacidadeNominalCard({
       {hint ? <div className="mt-1 text-[10px] text-muted-foreground">{hint}</div> : null}
     </div>
   );
+
 
   const fonteHora = taxaFonte === "instantanea"
     ? `via ${tagVelocidade}${velUnidade ? ` (${velUnidade})` : ""}`
@@ -1887,8 +1892,9 @@ function CapacidadeNominalCard({
         ) : null}
         <div className="grid gap-4 sm:grid-cols-3">
           {capacidadeHora ? <Item label="Por hora (nesta OP)" real={taxaPorHora} nominal={capacidadeHora} pct={efHora} suffix="/h" hint={fonteHora} /> : null}
-          {capacidadeDia ? <Item label="Hoje (equipamento)" real={hoje.data ?? 0} nominal={capacidadeDia} pct={pctDia} hint={fontePeriodo} /> : null}
-          {capacidadeMes ? <Item label="Este mês (equipamento)" real={mes.data ?? 0} nominal={capacidadeMes} pct={pctMes} hint={fontePeriodo} /> : null}
+          {capacidadeDia ? <Item label="Hoje (equipamento)" real={hoje.data ?? null} nominal={capacidadeDia} pct={pctDia} hint={fontePeriodo} loading={hoje.data === undefined} /> : null}
+          {capacidadeMes ? <Item label="Este mês (equipamento)" real={mes.data ?? null} nominal={capacidadeMes} pct={pctMes} hint={fontePeriodo} loading={mes.data === undefined} /> : null}
+
         </div>
       </CardContent>
     </Card>
