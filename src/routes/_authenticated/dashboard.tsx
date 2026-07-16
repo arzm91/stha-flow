@@ -24,14 +24,13 @@ import { Plus, Pencil, Trash2, LayoutGrid, MoreHorizontal, GripVertical } from "
 import { toast } from "sonner";
 import { WIDGET_SOURCES, getSource, type WidgetSource } from "@/lib/dashboard/widget-catalog";
 import { DashboardWidget } from "@/components/dashboard/DashboardWidget";
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-import RGL from "react-grid-layout";
+import { Responsive, useContainerWidth, verticalCompactor } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
 type LayoutItem = { i: string; x: number; y: number; w: number; h: number; minW?: number; minH?: number };
-// @ts-expect-error runtime exports
-const ResponsiveGrid = RGL.WidthProvider(RGL.Responsive);
+
+
 
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
@@ -130,7 +129,7 @@ function DashboardPage() {
     <div className="space-y-5">
       <PageHeader
         title="Dashboard"
-        description="Central de controle — arraste e redimensione os cards. Suas preferências ficam salvas."
+        titleClassName="text-xs font-semibold tracking-tight text-muted-foreground"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary" className="gap-1">
@@ -139,7 +138,9 @@ function DashboardPage() {
             </Badge>
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
               <DialogTrigger asChild>
-                <Button size="sm"><Plus className="mr-2 h-4 w-4" />Adicionar widget</Button>
+                <Button variant="outline" size="sm" className="text-muted-foreground border-dashed">
+                  <Plus className="mr-2 h-4 w-4" />Adicionar widget
+                </Button>
               </DialogTrigger>
               <WidgetDialog
                 key={newOpen ? "new" : "closed"}
@@ -151,6 +152,7 @@ function DashboardPage() {
           </div>
         }
       />
+
 
       {widgets.isLoading ? (
         <div className="text-sm text-muted-foreground">Carregando widgets...</div>
@@ -234,63 +236,71 @@ function DashboardGrid({
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
-  return (
-    <ResponsiveGrid
-      className="dash-grid"
-      layouts={{ lg: localLayout, md: localLayout, sm: localLayout, xs: localLayout }}
-      breakpoints={{ lg: 1200, md: 900, sm: 600, xs: 0 }}
-      cols={{ lg: 12, md: 12, sm: 6, xs: 2 }}
-      rowHeight={90}
-      margin={[16, 16]}
-      containerPadding={[0, 0]}
-      draggableHandle=".drag-handle"
-      onLayoutChange={(current: LayoutItem[]) => {
-        setLocalLayout(current);
-        scheduleSave(current);
-      }}
+  const { width, containerRef, mounted } = useContainerWidth({ measureBeforeMount: true });
 
-      compactType="vertical"
-    >
-      {widgets.map((w) => (
-        <div key={w.id} className="group">
-          <Card className="h-full overflow-hidden flex flex-col">
-            <CardHeader className="drag-handle flex-row items-center justify-between space-y-0 py-2 px-3 border-b cursor-move select-none">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <GripVertical className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                <CardTitle className="truncate text-sm font-semibold">{w.titulo}</CardTitle>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild onPointerDown={(e) => e.stopPropagation()}>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
-                    aria-label="Opções"
-                    onMouseDown={(e) => e.stopPropagation()}
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onEdit(w)}>
-                    <Pencil className="mr-2 h-3.5 w-3.5" /> Editar
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="text-destructive" onClick={() => onDelete(w.id)}>
-                    <Trash2 className="mr-2 h-3.5 w-3.5" /> Remover
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </CardHeader>
-            <CardContent className="min-h-0 flex-1 p-3">
-              <DashboardWidget widget={w} />
-            </CardContent>
-          </Card>
-        </div>
-      ))}
-    </ResponsiveGrid>
+  return (
+    <div ref={containerRef} className="w-full">
+      {mounted && (
+        <Responsive
+          width={width}
+          className="dash-grid"
+          layouts={{ lg: localLayout, md: localLayout, sm: localLayout, xs: localLayout }}
+          breakpoints={{ lg: 1200, md: 900, sm: 600, xs: 0 }}
+          cols={{ lg: 12, md: 12, sm: 6, xs: 2 }}
+          rowHeight={90}
+          margin={[16, 16]}
+          containerPadding={[0, 0]}
+          dragConfig={{ handle: ".drag-handle" }}
+          compactor={verticalCompactor}
+          onLayoutChange={(_layout, layouts) => {
+            const current = layouts.lg as LayoutItem[];
+            setLocalLayout(current);
+            scheduleSave(current);
+          }}
+        >
+          {widgets.map((w) => (
+            <div key={w.id} className="group">
+              <Card className="h-full overflow-hidden flex flex-col">
+                <CardHeader className="drag-handle flex-row items-center justify-between space-y-0 py-2 px-3 border-b cursor-move select-none">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <GripVertical className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <CardTitle className="truncate text-sm font-semibold">{w.titulo}</CardTitle>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild onPointerDown={(e) => e.stopPropagation()}>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
+                        aria-label="Opções"
+                        onMouseDown={(e) => e.stopPropagation()}
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => onEdit(w)}>
+                        <Pencil className="mr-2 h-3.5 w-3.5" /> Editar
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-destructive" onClick={() => onDelete(w.id)}>
+                        <Trash2 className="mr-2 h-3.5 w-3.5" /> Remover
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </CardHeader>
+                <CardContent className="min-h-0 flex-1 p-3">
+                  <DashboardWidget widget={w} />
+                </CardContent>
+              </Card>
+            </div>
+          ))}
+        </Responsive>
+      )}
+    </div>
   );
 }
+
 
 function buildLayout(widgets: Widget[]): LayoutItem[] {
   return widgets.map((w) => {
