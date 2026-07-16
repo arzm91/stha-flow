@@ -605,24 +605,25 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
       const equipId = String(config.equipamento_id ?? "");
       if (!equipId) return { kind: "kpi", value: "—", hint: "Configure o equipamento" };
       const [{ data: eq }, { data: o }] = await Promise.all([
-        supabase.from("equipamentos").select("nome,tag_producao_total,tag_velocidade_producao").eq("id", equipId).maybeSingle(),
+        supabase.from("equipamentos").select("nome,tag_producao_total,tag_velocidade_producao,tag_indices").eq("id", equipId).maybeSingle(),
         supabase.from("ordens_producao")
           .select("id,numero,status,qtd_planejada,qtd_produzida,inicio_em,produto_id")
           .eq("equipamento_id", equipId).in("status", ["em_andamento", "pausada"])
           .order("inicio_em", { ascending: false }).limit(1).maybeSingle(),
       ]);
       const equipamento_nome = eq?.nome ?? "Equipamento";
-      if (!o) return { kind: "producao-prev", equipamento_nome, ordem: null };
-      const nomes = [eq?.tag_producao_total, eq?.tag_velocidade_producao].filter(Boolean) as string[];
+      const tagIndices = ((eq?.tag_indices ?? []) as string[]);
+      if (!o) return { kind: "producao-prev", equipamento_nome, ordem: null, tag_indices: [] };
+      const nomes = Array.from(new Set([eq?.tag_producao_total, eq?.tag_velocidade_producao, ...tagIndices].filter(Boolean) as string[]));
       const [{ data: prod }, tagsRes] = await Promise.all([
         o.produto_id
           ? supabase.from("produtos").select("nome").eq("id", o.produto_id).maybeSingle()
           : Promise.resolve({ data: null as { nome: string } | null }),
         nomes.length
-          ? supabase.from("tags_live").select("nome,valor_num,unidade").in("nome", nomes)
-          : Promise.resolve({ data: [] as Array<{ nome: string; valor_num: number | null; unidade: string | null }> }),
+          ? supabase.from("tags_live").select("nome,nome_amigavel,valor_num,unidade").in("nome", nomes)
+          : Promise.resolve({ data: [] as Array<{ nome: string; nome_amigavel: string | null; valor_num: number | null; unidade: string | null }> }),
       ]);
-      const tMap = new Map(((tagsRes.data ?? []) as Array<{ nome: string; valor_num: number | null; unidade: string | null }>).map((t) => [t.nome, t]));
+      const tMap = new Map(((tagsRes.data ?? []) as Array<{ nome: string; nome_amigavel: string | null; valor_num: number | null; unidade: string | null }>).map((t) => [t.nome, t]));
       return {
         kind: "producao-prev",
         equipamento_nome,
@@ -635,6 +636,7 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
         },
         tag_total: eq?.tag_producao_total ? (tMap.get(eq.tag_producao_total) ?? null) : null,
         tag_vel: eq?.tag_velocidade_producao ? (tMap.get(eq.tag_velocidade_producao) ?? null) : null,
+        tag_indices: tagIndices.map((n) => ({ nome: n, ...(tMap.get(n) ?? { nome_amigavel: null, valor_num: null, unidade: null }) })),
       };
     }
 
