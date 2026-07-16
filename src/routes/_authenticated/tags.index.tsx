@@ -204,6 +204,13 @@ function TagsPage() {
               </span>
               Ao vivo
             </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { setCalcEditing(null); setCalcDialogOpen(true); }}
+            >
+              <Calculator className="mr-1 h-4 w-4" /> Nova tag calculada
+            </Button>
             <Button size="sm" variant="outline" asChild>
               <Link to="/tags/endpoints">
                 <Settings className="mr-1 h-4 w-4" /> Endpoints HTTP
