@@ -65,7 +65,7 @@ export function CalculatedTagsSync() {
         if (upserts.length && !cancelled) {
           await supabase
             .from("tags_live" as never)
-            .upsert(upserts as never, { onConflict: "nome" });
+            .upsert(upserts as never, { onConflict: "owner_id,nome" });
         }
       } catch {
         // silencioso — próximo tick tenta de novo
