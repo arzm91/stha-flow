@@ -146,7 +146,7 @@ function DashboardPage() {
   });
 
   return (
-    <div ref={fsRef} className="space-y-5 bg-background min-h-full">
+    <div ref={fsRef} className={`space-y-5 bg-background ${isFullscreen ? "h-screen overflow-y-auto p-4" : "min-h-full"}`}>
       <PageHeader
         title="Dashboard"
         titleClassName="text-xs font-semibold tracking-tight text-muted-foreground"
