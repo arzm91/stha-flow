@@ -20,8 +20,9 @@ import {
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Pencil, Trash2, LayoutGrid, MoreHorizontal, GripVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, LayoutGrid, MoreHorizontal, GripVertical, Maximize2, Minimize2 } from "lucide-react";
 import { toast } from "sonner";
+import { useFullscreen } from "@/hooks/useFullscreen";
 import { WIDGET_SOURCES, getSource, type WidgetSource } from "@/lib/dashboard/widget-catalog";
 import { DashboardWidget } from "@/components/dashboard/DashboardWidget";
 import { Responsive, useContainerWidth, verticalCompactor } from "react-grid-layout";
@@ -54,6 +55,7 @@ type SheetRow = { id: string; nome: string };
 
 function DashboardPage() {
   const qc = useQueryClient();
+  const { ref: fsRef, isFullscreen, toggle } = useFullscreen<HTMLDivElement>();
   const [editing, setEditing] = useState<Widget | null>(null);
   const [newOpen, setNewOpen] = useState(false);
 
@@ -126,7 +128,7 @@ function DashboardPage() {
   });
 
   return (
-    <div className="space-y-5">
+    <div ref={fsRef} className="space-y-5 bg-background min-h-full">
       <PageHeader
         title="Dashboard"
         titleClassName="text-xs font-semibold tracking-tight text-muted-foreground"
@@ -149,6 +151,14 @@ function DashboardPage() {
                 loading={save.isPending}
               />
             </Dialog>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggle}
+              aria-label={isFullscreen ? "Sair da tela cheia" : "Tela cheia"}
+            >
+              {isFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
           </div>
         }
       />
