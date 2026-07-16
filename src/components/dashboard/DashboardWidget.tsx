@@ -637,6 +637,55 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
       return { kind: "gauge", value: v - min, max: max - min, unit: data?.unidade ?? "", tag: nome };
     }
 
+    case "tag.multi": {
+      const nomes = Array.isArray(config.tag_nomes) ? (config.tag_nomes as string[]).filter(Boolean) : [];
+      if (nomes.length === 0) return { kind: "tag-multi", items: [] };
+      const { data } = await supabase
+        .from("tags_live")
+        .select("nome,nome_amigavel,valor,valor_num,unidade")
+        .in("nome", nomes);
+      const map = new Map((data ?? []).map((r) => [r.nome, r]));
+      const items = nomes.map((n) => {
+        const r = map.get(n);
+        return {
+          nome: n,
+          nome_amigavel: (r?.nome_amigavel ?? null) as string | null,
+          valor_num: r?.valor_num != null ? Number(r.valor_num) : null,
+          valor: (r?.valor ?? null) as string | null,
+          unidade: (r?.unidade ?? null) as string | null,
+        };
+      });
+      return { kind: "tag-multi", items };
+    }
+
+    case "tag.stats": {
+      const nome = String(config.tag_nome ?? "");
+      if (!nome) return { kind: "tag-stats", tag: "—", unidade: null, atual: null, min: null, max: null, avg: null };
+      const since = new Date(Date.now() - 24 * 3600_000).toISOString();
+      const [{ data: live }, { data: hist }] = await Promise.all([
+        supabase.from("tags_live").select("valor_num,unidade").eq("nome", nome).maybeSingle(),
+        supabase.from("producao_tag_historico")
+          .select("valor_num")
+          .eq("tag_nome", nome)
+          .gte("registrado_em", since)
+          .not("valor_num", "is", null)
+          .limit(1000),
+      ]);
+      const vals = (hist ?? []).map((r) => Number(r.valor_num)).filter((v) => Number.isFinite(v));
+      const min = vals.length ? Math.min(...vals) : null;
+      const max = vals.length ? Math.max(...vals) : null;
+      const avg = vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+      return {
+        kind: "tag-stats",
+        tag: nome,
+        unidade: (live?.unidade ?? null) as string | null,
+        atual: live?.valor_num != null ? Number(live.valor_num) : null,
+        min, max, avg,
+      };
+    }
+
+
+
 
     // ---- Tanque ----
     case "tank.preview": {
