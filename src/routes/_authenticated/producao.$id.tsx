@@ -253,8 +253,8 @@ function OPPage() {
 
       {vis.utilidadesStrip && op.data.equipamento_id ? <UtilidadesStrip equipamentoId={op.data.equipamento_id as string} /> : null}
 
-      {vis.avanco && (tagVel || tagTotal) ? (
-        <AvancoProducaoHeader ordemId={id} tagVel={tagVel} tagTotal={tagTotal} qtdPlanejada={qtdPlanejada} />
+      {vis.avanco && (tagVel || tagTotal || tagIndices.length > 0) ? (
+        <AvancoProducaoHeader ordemId={id} tagVel={tagVel} tagTotal={tagTotal} tagIndices={tagIndices} qtdPlanejada={qtdPlanejada} />
       ) : null}
 
       {vis.capacidade && equip && (equip.capacidade_hora || equip.capacidade_dia || equip.capacidade_mes) && op.data.inicio_em ? (
