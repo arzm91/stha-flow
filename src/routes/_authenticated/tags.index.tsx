@@ -83,11 +83,15 @@ function outOfRange(t: TagRow): "low" | "high" | false {
 }
 
 function TagsPage() {
+  const qc = useQueryClient();
   const [filtro, setFiltro] = useState("");
   const [grupoSel, setGrupoSel] = useState<string>("todos");
   const [soAlertas, setSoAlertas] = useState(false);
   const [editando, setEditando] = useState<TagRow | null>(null);
   const [excluindo, setExcluindo] = useState<TagRow | null>(null);
+  const [calcDialogOpen, setCalcDialogOpen] = useState(false);
+  const [calcEditing, setCalcEditing] = useState<CalcTag | null>(null);
+  const [calcExcluindo, setCalcExcluindo] = useState<CalcTag | null>(null);
   const [, setTick] = useState(0);
 
   // re-render a cada 1s para atualizar os "há Xs"
