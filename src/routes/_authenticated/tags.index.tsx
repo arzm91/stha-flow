@@ -287,8 +287,17 @@ function TagsPage() {
               key={grupo}
               grupo={grupo}
               tags={lista}
-              onEdit={setEditando}
-              onDelete={setExcluindo}
+              onEdit={(t) => {
+                const c = calcByNome.get(t.nome);
+                if (c) { setCalcEditing(c); setCalcDialogOpen(true); }
+                else setEditando(t);
+              }}
+              onDelete={(t) => {
+                const c = calcByNome.get(t.nome);
+                if (c) setCalcExcluindo(c);
+                else setExcluindo(t);
+              }}
+              calcByNome={calcByNome}
             />
           ))}
         </div>
@@ -296,6 +305,22 @@ function TagsPage() {
 
       <EditTagDialog tag={editando} onClose={() => setEditando(null)} />
       <DeleteTagDialog tag={excluindo} onClose={() => setExcluindo(null)} />
+      <CalcTagDialog
+        open={calcDialogOpen}
+        onClose={() => { setCalcDialogOpen(false); setCalcEditing(null); }}
+        editing={calcEditing}
+        liveValues={liveValues}
+        existingCalcTags={calcTags.data ?? []}
+        existingNames={nomesEndpoint}
+      />
+      <DeleteCalcTagDialog
+        tag={calcExcluindo}
+        onClose={() => setCalcExcluindo(null)}
+        onDeleted={() => {
+          qc.invalidateQueries({ queryKey: ["tags-calculadas"] });
+          qc.invalidateQueries({ queryKey: ["tags-live"] });
+        }}
+      />
     </div>
   );
 }
