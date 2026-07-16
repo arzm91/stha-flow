@@ -264,6 +264,7 @@ function OPPage() {
           fimEm={(op.data.fim_em as string | null) ?? null}
           qtdProduzida={Number(op.data.qtd_produzida ?? 0)}
           tagTotal={tagTotal}
+          tagVelocidade={tagVel}
           capacidadeHora={equip.capacidade_hora ?? null}
           capacidadeDia={equip.capacidade_dia ?? null}
           capacidadeMes={equip.capacidade_mes ?? null}
