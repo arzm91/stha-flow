@@ -100,6 +100,17 @@ function EquipamentosPage() {
     { key: "capacidade_mes", label: "Capacidade nominal por mês", type: "number", help: "Produção máxima esperada em 30 dias." },
     { key: "capacidade_unidade", label: "Unidade da capacidade", placeholder: "kg, L, un, ..." },
 
+    // ===== Rendimento / Eficiência / Índice =====
+    {
+      key: "tag_indices",
+      label: "Tags de rendimento / eficiência / índice",
+      type: "multiselect",
+      options: tagOptions,
+      placeholder: "Pesquise por nome, grupo ou unidade...",
+      section: "Rendimento / Eficiência / Índice",
+      help: "Selecione tags (inclui tags calculadas) para exibir como indicadores de rendimento/eficiência/índice nos cards do dashboard, da página de produção e no acompanhamento da produção. Opcional.",
+    },
+
     // ===== Gestão de paradas =====
     { key: "parada_tag_nome", label: "Tag de parada (opcional)", type: "select", section: "Gestão de paradas",
       options: [{ value: "", label: "— nenhuma (não monitorar paradas) —" }, ...tagOptions],
