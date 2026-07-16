@@ -244,10 +244,11 @@ function DashboardGrid({
       margin={[16, 16]}
       containerPadding={[0, 0]}
       draggableHandle=".drag-handle"
-      onLayoutChange={(current) => {
+      onLayoutChange={(current: LayoutItem[]) => {
         setLocalLayout(current);
         scheduleSave(current);
       }}
+
       compactType="vertical"
     >
       {widgets.map((w) => (
