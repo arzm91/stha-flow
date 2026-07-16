@@ -289,10 +289,9 @@ function DashboardGrid({
           rowHeight={90}
           margin={[16, 16]}
           containerPadding={[0, 0]}
-          dragConfig={{ handle: ".drag-handle" }}
+          dragConfig={{ enabled: !frozen, handle: ".drag-handle" }}
+          resizeConfig={{ enabled: !frozen }}
           compactor={verticalCompactor}
-          isDraggable={!frozen}
-          isResizable={!frozen}
           onLayoutChange={(current) => {
             if (frozen) return;
             const next = current as LayoutItem[];
