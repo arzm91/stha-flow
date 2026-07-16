@@ -16,8 +16,11 @@ export type WidgetSource = {
   needsTank?: boolean;
   needsEquipamento?: boolean;
   needsSheet?: boolean;
+  /** aceita várias tags no mesmo widget */
+  needsMultiTag?: boolean;
   defaultSize?: { w: number; h: number };
 };
+
 
 export const WIDGET_SOURCES: WidgetSource[] = [
   // ===== Produção =====
