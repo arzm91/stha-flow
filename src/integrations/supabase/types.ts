@@ -960,6 +960,7 @@ export type Database = {
           parada_valor_min: number | null
           pfd_graph: Json
           status: string
+          tag_indices: string[]
           tag_nomes: string[]
           tag_producao_total: string | null
           tag_velocidade_producao: string | null
@@ -994,6 +995,7 @@ export type Database = {
           parada_valor_min?: number | null
           pfd_graph?: Json
           status?: string
+          tag_indices?: string[]
           tag_nomes?: string[]
           tag_producao_total?: string | null
           tag_velocidade_producao?: string | null
@@ -1028,6 +1030,7 @@ export type Database = {
           parada_valor_min?: number | null
           pfd_graph?: Json
           status?: string
+          tag_indices?: string[]
           tag_nomes?: string[]
           tag_producao_total?: string | null
           tag_velocidade_producao?: string | null
