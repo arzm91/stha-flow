@@ -402,10 +402,12 @@ function TagItem({
   tag: t,
   onEdit,
   onDelete,
+  isCalc,
 }: {
   tag: TagRow;
   onEdit: (t: TagRow) => void;
   onDelete: (t: TagRow) => void;
+  isCalc?: boolean;
 }) {
   const fora = outOfRange(t);
   return (
@@ -415,7 +417,11 @@ function TagItem({
       }`}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <TagIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+        {isCalc ? (
+          <Calculator className="h-3 w-3 shrink-0 text-primary" />
+        ) : (
+          <TagIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+        )}
         <div className="min-w-0 flex-1">
           {t.nome_amigavel ? (
             <>
