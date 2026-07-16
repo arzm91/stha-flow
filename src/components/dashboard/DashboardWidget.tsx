@@ -400,7 +400,10 @@ type WidgetData =
   | { kind: "tank"; loc: StorageLocation; saldo: number; tag: { nome: string; valor_num: number | null; valor: string | null; unidade: string | null } | null; latestAnalise: import("@/components/StorageLocationCard").LatestAnalise | null }
   | { kind: "producao-prev"; equipamento_nome: string; ordem: { id: string; numero: string; status: string; produto_nome: string; qtd_planejada: number; qtd_produzida: number; inicio_em: string | null } | null; tag_total?: { nome: string; valor_num: number | null; unidade: string | null } | null; tag_vel?: { nome: string; valor_num: number | null; unidade: string | null } | null; tag_indices?: Array<{ nome: string; nome_amigavel: string | null; valor_num: number | null; unidade: string | null }> }
   | { kind: "xray-manut"; abertas: number; em_andamento: number; atrasadas: number; concluidas_30d: number; proximas: { numero: string; prioridade: string; data: string }[] }
-  | { kind: "xray-qual"; conformes: number; naoconformes: number; ultimas_nc: { titulo: string; valor: string }[] };
+  | { kind: "xray-qual"; conformes: number; naoconformes: number; ultimas_nc: { titulo: string; valor: string }[] }
+  | { kind: "tag-multi"; items: Array<{ nome: string; nome_amigavel: string | null; valor_num: number | null; valor: string | null; unidade: string | null }> }
+  | { kind: "tag-stats"; tag: string; unidade: string | null; atual: number | null; min: number | null; max: number | null; avg: number | null };
+
 
 async function fetchData(fonte: string, config: Record<string, unknown>): Promise<WidgetData> {
   switch (fonte) {
