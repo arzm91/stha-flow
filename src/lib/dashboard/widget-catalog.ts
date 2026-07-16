@@ -16,8 +16,11 @@ export type WidgetSource = {
   needsTank?: boolean;
   needsEquipamento?: boolean;
   needsSheet?: boolean;
+  /** aceita várias tags no mesmo widget */
+  needsMultiTag?: boolean;
   defaultSize?: { w: number; h: number };
 };
+
 
 export const WIDGET_SOURCES: WidgetSource[] = [
   // ===== Produção =====
@@ -66,7 +69,10 @@ export const WIDGET_SOURCES: WidgetSource[] = [
   // ===== Tags =====
   { key: "tag.valor", tipo: "tag", grupo: "Tags", label: "Tag ao vivo (valor)", colSpan: 3, rowSpan: 1, priority: 20, needsTag: true },
   { key: "tag.gauge", tipo: "tag", grupo: "Tags", label: "Tag ao vivo (gauge)", colSpan: 3, rowSpan: 2, priority: 25, needsTag: true },
+  { key: "tag.multi", tipo: "tag", grupo: "Tags", label: "Várias tags (lista)", colSpan: 4, rowSpan: 3, priority: 22, needsMultiTag: true },
+  { key: "tag.stats", tipo: "tag", grupo: "Tags", label: "Tag — estatísticas (atual/mín/máx/média)", colSpan: 4, rowSpan: 2, priority: 24, needsTag: true },
 ];
+
 
 export function getSource(key: string): WidgetSource | undefined {
   return WIDGET_SOURCES.find((s) => s.key === key);

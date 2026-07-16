@@ -9,6 +9,9 @@ import { getSource } from "@/lib/dashboard/widget-catalog";
 import { formatInt, formatNumber } from "@/lib/format";
 import { AlertTriangle, Wrench, FlaskConical, Factory, CheckCircle2, Clock, AlertOctagon } from "lucide-react";
 import { StorageLocationCard, type StorageLocation } from "@/components/StorageLocationCard";
+import { TagSparkline } from "@/components/dashboard/TagSparkline";
+
+
 
 type WidgetRow = {
   id: string;
@@ -44,8 +47,29 @@ export function DashboardWidget({ widget }: { widget: WidgetRow }) {
       </div>
     );
   }
-  return <WidgetBody widget={widget} />;
+  // Sparkline overlays em widgets de tag(s)
+  const tagNomes = tagNomesFromWidget(widget);
+  return (
+    <div className="relative h-full w-full">
+      <WidgetBody widget={widget} />
+      {tagNomes.length === 1 ? <TagSparkline tagNome={tagNomes[0]} /> : null}
+    </div>
+  );
 }
+
+function tagNomesFromWidget(w: WidgetRow): string[] {
+  const cfg = w.config ?? {};
+  if (w.fonte === "tag.valor" || w.fonte === "tag.gauge" || w.fonte === "tag.stats") {
+    const n = String(cfg.tag_nome ?? "");
+    return n ? [n] : [];
+  }
+  if (w.fonte === "tag.multi") {
+    const arr = (cfg.tag_nomes as unknown);
+    return Array.isArray(arr) ? (arr as string[]).filter(Boolean) : [];
+  }
+  return [];
+}
+
 
 function WidgetBody({ widget }: { widget: WidgetRow }) {
   const q = useQuery({
@@ -309,8 +333,49 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
     );
   }
 
+  if (data.kind === "tag-multi") {
+    if (data.items.length === 0) {
+      return <div className="grid h-full place-items-center text-xs text-muted-foreground">Nenhuma tag selecionada</div>;
+    }
+    return (
+      <div className="h-full overflow-auto pr-16">
+        <ul className="divide-y text-sm">
+          {data.items.map((it) => (
+            <li key={it.nome} className="flex items-baseline justify-between gap-2 py-1.5">
+              <span className="min-w-0 truncate text-xs text-muted-foreground" title={it.nome}>
+                {it.nome_amigavel?.trim() || it.nome}
+              </span>
+              <span className="shrink-0 font-mono text-sm font-semibold">
+                {it.valor_num != null ? formatNumber(it.valor_num, 2) : (it.valor ?? "—")}
+                {it.unidade ? <span className="ml-1 text-[10px] text-muted-foreground">{it.unidade}</span> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  if (data.kind === "tag-stats") {
+    return (
+      <div className="flex h-full flex-col gap-2 pr-16">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground truncate" title={data.tag}>{data.tag}</div>
+        <div className="font-mono text-2xl font-semibold">
+          {data.atual != null ? formatNumber(data.atual, 2) : "—"}
+          {data.unidade ? <span className="ml-1 text-xs text-muted-foreground">{data.unidade}</span> : null}
+        </div>
+        <div className="mt-auto grid grid-cols-3 gap-2 text-xs">
+          <MiniStat label="Mín (24h)" value={data.min != null ? formatNumber(data.min, 2) : "—"} />
+          <MiniStat label="Média" value={data.avg != null ? formatNumber(data.avg, 2) : "—"} />
+          <MiniStat label="Máx" value={data.max != null ? formatNumber(data.max, 2) : "—"} tone="text-primary" />
+        </div>
+      </div>
+    );
+  }
+
   return null;
 }
+
 
 function MiniStat({ icon, label, value, tone }: { icon?: React.ReactNode; label: string; value: number | string; tone?: string }) {
   return (
@@ -335,7 +400,10 @@ type WidgetData =
   | { kind: "tank"; loc: StorageLocation; saldo: number; tag: { nome: string; valor_num: number | null; valor: string | null; unidade: string | null } | null; latestAnalise: import("@/components/StorageLocationCard").LatestAnalise | null }
   | { kind: "producao-prev"; equipamento_nome: string; ordem: { id: string; numero: string; status: string; produto_nome: string; qtd_planejada: number; qtd_produzida: number; inicio_em: string | null } | null; tag_total?: { nome: string; valor_num: number | null; unidade: string | null } | null; tag_vel?: { nome: string; valor_num: number | null; unidade: string | null } | null; tag_indices?: Array<{ nome: string; nome_amigavel: string | null; valor_num: number | null; unidade: string | null }> }
   | { kind: "xray-manut"; abertas: number; em_andamento: number; atrasadas: number; concluidas_30d: number; proximas: { numero: string; prioridade: string; data: string }[] }
-  | { kind: "xray-qual"; conformes: number; naoconformes: number; ultimas_nc: { titulo: string; valor: string }[] };
+  | { kind: "xray-qual"; conformes: number; naoconformes: number; ultimas_nc: { titulo: string; valor: string }[] }
+  | { kind: "tag-multi"; items: Array<{ nome: string; nome_amigavel: string | null; valor_num: number | null; valor: string | null; unidade: string | null }> }
+  | { kind: "tag-stats"; tag: string; unidade: string | null; atual: number | null; min: number | null; max: number | null; avg: number | null };
+
 
 async function fetchData(fonte: string, config: Record<string, unknown>): Promise<WidgetData> {
   switch (fonte) {
@@ -568,6 +636,55 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
       const v = data?.valor_num != null ? Number(data.valor_num) : 0;
       return { kind: "gauge", value: v - min, max: max - min, unit: data?.unidade ?? "", tag: nome };
     }
+
+    case "tag.multi": {
+      const nomes = Array.isArray(config.tag_nomes) ? (config.tag_nomes as string[]).filter(Boolean) : [];
+      if (nomes.length === 0) return { kind: "tag-multi", items: [] };
+      const { data } = await supabase
+        .from("tags_live")
+        .select("nome,nome_amigavel,valor,valor_num,unidade")
+        .in("nome", nomes);
+      const map = new Map((data ?? []).map((r) => [r.nome, r]));
+      const items = nomes.map((n) => {
+        const r = map.get(n);
+        return {
+          nome: n,
+          nome_amigavel: (r?.nome_amigavel ?? null) as string | null,
+          valor_num: r?.valor_num != null ? Number(r.valor_num) : null,
+          valor: (r?.valor ?? null) as string | null,
+          unidade: (r?.unidade ?? null) as string | null,
+        };
+      });
+      return { kind: "tag-multi", items };
+    }
+
+    case "tag.stats": {
+      const nome = String(config.tag_nome ?? "");
+      if (!nome) return { kind: "tag-stats", tag: "—", unidade: null, atual: null, min: null, max: null, avg: null };
+      const since = new Date(Date.now() - 24 * 3600_000).toISOString();
+      const [{ data: live }, { data: hist }] = await Promise.all([
+        supabase.from("tags_live").select("valor_num,unidade").eq("nome", nome).maybeSingle(),
+        supabase.from("producao_tag_historico")
+          .select("valor_num")
+          .eq("tag_nome", nome)
+          .gte("registrado_em", since)
+          .not("valor_num", "is", null)
+          .limit(1000),
+      ]);
+      const vals = (hist ?? []).map((r) => Number(r.valor_num)).filter((v) => Number.isFinite(v));
+      const min = vals.length ? Math.min(...vals) : null;
+      const max = vals.length ? Math.max(...vals) : null;
+      const avg = vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null;
+      return {
+        kind: "tag-stats",
+        tag: nome,
+        unidade: (live?.unidade ?? null) as string | null,
+        atual: live?.valor_num != null ? Number(live.valor_num) : null,
+        min, max, avg,
+      };
+    }
+
+
 
 
     // ---- Tanque ----

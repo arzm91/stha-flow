@@ -1,6 +1,6 @@
 import { pageHead } from "@/lib/seo";
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger, DialogDescription,
 } from "@/components/ui/dialog";
@@ -19,10 +20,19 @@ import {
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Pencil, Trash2, LayoutGrid, MoreHorizontal } from "lucide-react";
+import { Plus, Pencil, Trash2, LayoutGrid, MoreHorizontal, GripVertical } from "lucide-react";
 import { toast } from "sonner";
 import { WIDGET_SOURCES, getSource, type WidgetSource } from "@/lib/dashboard/widget-catalog";
 import { DashboardWidget } from "@/components/dashboard/DashboardWidget";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+import RGL from "react-grid-layout";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
+
+type LayoutItem = { i: string; x: number; y: number; w: number; h: number; minW?: number; minH?: number };
+// @ts-expect-error runtime exports
+const ResponsiveGrid = RGL.WidthProvider(RGL.Responsive);
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: pageHead({ title: "Dashboard — STHApc", description: "Acesse e gerencie Dashboard no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/dashboard" }),
@@ -116,22 +126,11 @@ function DashboardPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
-  // Auto-organize: sort by priority defined in catalog (KPIs first, charts/tanks/produção, lists/x-rays last).
-  const organized = useMemo(() => {
-    if (!widgets.data) return [];
-    return [...widgets.data].sort((a, b) => {
-      const sa = getSource(a.fonte)?.priority ?? 99;
-      const sb = getSource(b.fonte)?.priority ?? 99;
-      if (sa !== sb) return sa - sb;
-      return a.titulo.localeCompare(b.titulo);
-    });
-  }, [widgets.data]);
-
   return (
     <div className="space-y-5">
       <PageHeader
         title="Dashboard"
-        description="Central de controle — visão geral de produção, estoque, manutenção, qualidade e tags."
+        description="Central de controle — arraste e redimensione os cards. Suas preferências ficam salvas."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary" className="gap-1">
@@ -155,16 +154,16 @@ function DashboardPage() {
 
       {widgets.isLoading ? (
         <div className="text-sm text-muted-foreground">Carregando widgets...</div>
-      ) : organized.length === 0 ? (
+      ) : (widgets.data ?? []).length === 0 ? (
         <EmptyState
           icon={<LayoutGrid className="h-6 w-6" />}
           title="Seu dashboard está vazio"
-          description="Adicione widgets para acompanhar produção, estoque, alertas, manutenção, qualidade e mais. O sistema organiza tudo automaticamente."
+          description="Adicione widgets para acompanhar produção, estoque, alertas, manutenção, qualidade e mais. Você pode arrastar e redimensionar cada card."
           action={<Button onClick={() => setNewOpen(true)}><Plus className="mr-2 h-4 w-4" />Adicionar primeiro widget</Button>}
         />
       ) : (
         <DashboardGrid
-          widgets={organized}
+          widgets={widgets.data!}
           onEdit={setEditing}
           onDelete={(id) => remove.mutate(id)}
         />
@@ -185,20 +184,6 @@ function DashboardPage() {
   );
 }
 
-const COL_SPAN: Record<number, string> = {
-  3: "md:col-span-6 lg:col-span-3",
-  4: "md:col-span-6 lg:col-span-4",
-  6: "md:col-span-12 lg:col-span-6",
-  12: "col-span-12",
-};
-const ROW_MIN: Record<number, string> = {
-  1: "min-h-[130px]",
-  2: "min-h-[200px]",
-  3: "min-h-[280px]",
-  4: "min-h-[360px]",
-  5: "min-h-[420px]",
-};
-
 function DashboardGrid({
   widgets, onEdit, onDelete,
 }: {
@@ -206,48 +191,123 @@ function DashboardGrid({
   onEdit: (w: Widget) => void;
   onDelete: (id: string) => void;
 }) {
+  const qc = useQueryClient();
+
+  // Layout local (para arrastar/redimensionar sem esperar re-fetch)
+  const [localLayout, setLocalLayout] = useState<LayoutItem[]>(() => buildLayout(widgets));
+  const widgetIdsKey = widgets.map((w) => w.id).sort().join(",");
+  useEffect(() => {
+    setLocalLayout(buildLayout(widgets));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [widgetIdsKey]);
+
+  // Persistência (debounced)
+  const pendingRef = useRef<LayoutItem[] | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const persist = useCallback(async (layouts: LayoutItem[]) => {
+    // Só atualiza os que mudaram vs registro atual
+    const byId = new Map(widgets.map((w) => [w.id, w.layout]));
+    const changed = layouts.filter((l) => {
+      const prev = byId.get(l.i);
+      if (!prev) return false;
+      return prev.x !== l.x || prev.y !== l.y || prev.w !== l.w || prev.h !== l.h;
+    });
+    if (changed.length === 0) return;
+    await Promise.all(
+      changed.map((l) =>
+        supabase
+          .from("dashboard_widgets")
+          .update({ layout: { x: l.x, y: l.y, w: l.w, h: l.h } as never })
+          .eq("id", l.i),
+      ),
+    );
+    qc.invalidateQueries({ queryKey: ["dashboard_widgets"] });
+  }, [widgets, qc]);
+
+  const scheduleSave = useCallback((layouts: LayoutItem[]) => {
+    pendingRef.current = layouts;
+    if (timerRef.current) clearTimeout(timerRef.current);
+    timerRef.current = setTimeout(() => {
+      if (pendingRef.current) void persist(pendingRef.current);
+    }, 600);
+  }, [persist]);
+
+  useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
+
   return (
-    <div className="grid auto-rows-min grid-cols-12 gap-4">
-      {widgets.map((w) => {
-        const src = getSource(w.fonte);
-        const cs = COL_SPAN[src?.colSpan ?? 3] ?? COL_SPAN[3];
-        const rs = ROW_MIN[src?.rowSpan ?? 2] ?? ROW_MIN[2];
-        return (
-          <div key={w.id} className={`group relative col-span-12 ${cs} ${rs}`}>
-            <Card className="h-full overflow-hidden flex flex-col">
-              <CardHeader className="flex-row items-center justify-between space-y-0 py-2 px-3 border-b">
+    <ResponsiveGrid
+      className="dash-grid"
+      layouts={{ lg: localLayout, md: localLayout, sm: localLayout, xs: localLayout }}
+      breakpoints={{ lg: 1200, md: 900, sm: 600, xs: 0 }}
+      cols={{ lg: 12, md: 12, sm: 6, xs: 2 }}
+      rowHeight={90}
+      margin={[16, 16]}
+      containerPadding={[0, 0]}
+      draggableHandle=".drag-handle"
+      onLayoutChange={(current: LayoutItem[]) => {
+        setLocalLayout(current);
+        scheduleSave(current);
+      }}
+
+      compactType="vertical"
+    >
+      {widgets.map((w) => (
+        <div key={w.id} className="group">
+          <Card className="h-full overflow-hidden flex flex-col">
+            <CardHeader className="drag-handle flex-row items-center justify-between space-y-0 py-2 px-3 border-b cursor-move select-none">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <GripVertical className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
                 <CardTitle className="truncate text-sm font-semibold">{w.titulo}</CardTitle>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
-                      aria-label="Opções"
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onEdit(w)}>
-                      <Pencil className="mr-2 h-3.5 w-3.5" /> Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem className="text-destructive" onClick={() => onDelete(w.id)}>
-                      <Trash2 className="mr-2 h-3.5 w-3.5" /> Remover
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </CardHeader>
-              <CardContent className="min-h-0 flex-1 p-3">
-                <DashboardWidget widget={w} />
-              </CardContent>
-            </Card>
-          </div>
-        );
-      })}
-    </div>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild onPointerDown={(e) => e.stopPropagation()}>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7 opacity-0 transition-opacity group-hover:opacity-100 data-[state=open]:opacity-100"
+                    aria-label="Opções"
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => onEdit(w)}>
+                    <Pencil className="mr-2 h-3.5 w-3.5" /> Editar
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-destructive" onClick={() => onDelete(w.id)}>
+                    <Trash2 className="mr-2 h-3.5 w-3.5" /> Remover
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </CardHeader>
+            <CardContent className="min-h-0 flex-1 p-3">
+              <DashboardWidget widget={w} />
+            </CardContent>
+          </Card>
+        </div>
+      ))}
+    </ResponsiveGrid>
   );
+}
+
+function buildLayout(widgets: Widget[]): LayoutItem[] {
+  return widgets.map((w) => {
+    const src = getSource(w.fonte);
+    const defW = src?.colSpan ?? 3;
+    const defH = src?.rowSpan ?? 2;
+    const l = w.layout ?? { x: 0, y: 0, w: defW, h: defH };
+    return {
+      i: w.id,
+      x: Math.max(0, Math.min(11, l.x ?? 0)),
+      y: l.y ?? 0,
+      w: Math.max(2, Math.min(12, l.w || defW)),
+      h: Math.max(1, l.h || defH),
+      minW: 2,
+      minH: 1,
+    };
+  });
 }
 
 // ---------- Widget Dialog ----------
@@ -262,6 +322,10 @@ function WidgetDialog({
   const [titulo, setTitulo] = useState(initial?.titulo ?? "");
   const [fonte, setFonte] = useState(initial?.fonte ?? "");
   const [tagNome, setTagNome] = useState<string>(String(initial?.config?.tag_nome ?? ""));
+  const [tagNomes, setTagNomes] = useState<string[]>(
+    Array.isArray(initial?.config?.tag_nomes) ? (initial!.config!.tag_nomes as string[]) : []
+  );
+  const [tagSearch, setTagSearch] = useState("");
   const [tankId, setTankId] = useState<string>(String(initial?.config?.tank_id ?? ""));
   const [equipId, setEquipId] = useState<string>(String(initial?.config?.equipamento_id ?? ""));
   const [sheetId, setSheetId] = useState<string>(String(initial?.config?.sheet_id ?? ""));
@@ -280,14 +344,23 @@ function WidgetDialog({
     return g;
   }, []);
 
+  const filteredTags = useMemo(() => {
+    const list = lookups?.tags ?? [];
+    if (!tagSearch.trim()) return list;
+    const q = tagSearch.toLowerCase();
+    return list.filter((t) => t.nome.toLowerCase().includes(q));
+  }, [lookups?.tags, tagSearch]);
+
   const submit = () => {
     if (!fonte || !src) { toast.error("Escolha uma fonte de dados"); return; }
     if (src.needsTag && !tagNome) { toast.error("Escolha uma tag"); return; }
+    if (src.needsMultiTag && tagNomes.length === 0) { toast.error("Escolha ao menos uma tag"); return; }
     if (src.needsTank && !tankId) { toast.error("Escolha um tanque"); return; }
     if (src.needsEquipamento && !equipId) { toast.error("Escolha um equipamento"); return; }
     if (src.needsSheet && !sheetId) { toast.error("Escolha uma tabela"); return; }
     const config: Record<string, unknown> = {};
     if (src.needsTag) config.tag_nome = tagNome;
+    if (src.needsMultiTag) config.tag_nomes = tagNomes;
     if (src.needsTank) config.tank_id = tankId;
     if (src.needsEquipamento) config.equipamento_id = equipId;
     if (src.needsSheet) config.sheet_id = sheetId;
@@ -303,9 +376,9 @@ function WidgetDialog({
     <DialogContent className="max-w-lg">
       <DialogHeader>
         <DialogTitle>{initial ? "Editar widget" : "Novo widget"}</DialogTitle>
-        <DialogDescription>Escolha a fonte de dados — o sistema organiza o layout automaticamente.</DialogDescription>
+        <DialogDescription>Escolha a fonte de dados. Arraste e redimensione depois no dashboard.</DialogDescription>
       </DialogHeader>
-      <div className="space-y-4">
+      <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
         <div>
           <Label>Fonte de dados</Label>
           <Select value={fonte} onValueChange={setFonte}>
@@ -344,6 +417,43 @@ function WidgetDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        )}
+        {src?.needsMultiTag && (
+          <div>
+            <div className="flex items-center justify-between">
+              <Label>Tags ({tagNomes.length} selecionadas)</Label>
+              {tagNomes.length > 0 ? (
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => setTagNomes([])}>Limpar</Button>
+              ) : null}
+            </div>
+            <Input
+              placeholder="Filtrar tags..."
+              value={tagSearch}
+              onChange={(e) => setTagSearch(e.target.value)}
+              className="mt-1"
+            />
+            <div className="mt-2 max-h-64 overflow-y-auto rounded-md border p-2 space-y-1">
+              {filteredTags.length === 0 ? (
+                <div className="px-2 py-1 text-xs text-muted-foreground">Nenhuma tag encontrada</div>
+              ) : filteredTags.map((t) => {
+                const checked = tagNomes.includes(t.nome);
+                return (
+                  <label key={t.nome} className="flex items-center gap-2 rounded px-1.5 py-1 hover:bg-muted cursor-pointer">
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={(v) => {
+                        setTagNomes((prev) =>
+                          v ? Array.from(new Set([...prev, t.nome])) : prev.filter((n) => n !== t.nome),
+                        );
+                      }}
+                    />
+                    <span className="text-sm truncate">{t.nome}</span>
+                    {t.unidade ? <span className="text-[10px] text-muted-foreground">({t.unidade})</span> : null}
+                  </label>
+                );
+              })}
+            </div>
           </div>
         )}
         {src?.needsTank && (
