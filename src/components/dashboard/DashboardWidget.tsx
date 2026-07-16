@@ -356,6 +356,36 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
     );
   }
 
+  if (data.kind === "tag-tiles") {
+    if (data.items.length === 0) {
+      return <div className="grid h-full place-items-center text-xs text-muted-foreground">Nenhuma tag selecionada</div>;
+    }
+    // Grade responsiva de tiles — ajusta o número de colunas ao total de tags.
+    const n = data.items.length;
+    const cols = n <= 2 ? "grid-cols-2" : n <= 4 ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4" : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5";
+    return (
+      <div className="h-full overflow-auto">
+        <div className={`grid ${cols} gap-2`}>
+          {data.items.map((it) => (
+            <div
+              key={it.nome}
+              className="flex min-w-0 flex-col justify-between rounded-md border bg-card/50 p-2 hover:border-primary/40 transition-colors"
+              title={it.nome}
+            >
+              <div className="truncate text-[10px] uppercase tracking-wider text-muted-foreground">
+                {it.nome_amigavel?.trim() || it.nome}
+              </div>
+              <div className="mt-1 font-mono text-lg font-semibold leading-tight">
+                {it.valor_num != null ? formatNumber(it.valor_num, 2) : (it.valor ?? "—")}
+                {it.unidade ? <span className="ml-1 text-[10px] font-normal text-muted-foreground">{it.unidade}</span> : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (data.kind === "tag-stats") {
     return (
       <div className="flex h-full flex-col gap-2 pr-16">
