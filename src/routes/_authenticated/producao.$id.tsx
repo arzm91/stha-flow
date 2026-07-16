@@ -264,6 +264,7 @@ function OPPage() {
           fimEm={(op.data.fim_em as string | null) ?? null}
           qtdProduzida={Number(op.data.qtd_produzida ?? 0)}
           tagTotal={tagTotal}
+          tagVelocidade={tagVel}
           capacidadeHora={equip.capacidade_hora ?? null}
           capacidadeDia={equip.capacidade_dia ?? null}
           capacidadeMes={equip.capacidade_mes ?? null}
@@ -1708,7 +1709,7 @@ function VincularProdutoBanner({ ordemId, onDone }: { ordemId: string; onDone: (
 }
 
 function CapacidadeNominalCard({
-  equipamentoId, inicioEm, fimEm, qtdProduzida, tagTotal,
+  equipamentoId, inicioEm, fimEm, qtdProduzida, tagTotal, tagVelocidade,
   capacidadeHora, capacidadeDia, capacidadeMes, unidade,
 }: {
   equipamentoId: string;
@@ -1716,6 +1717,7 @@ function CapacidadeNominalCard({
   fimEm: string | null;
   qtdProduzida: number;
   tagTotal: string | null;
+  tagVelocidade: string | null;
   capacidadeHora: number | null;
   capacidadeDia: number | null;
   capacidadeMes: number | null;
@@ -1726,76 +1728,117 @@ function CapacidadeNominalCard({
     const t = setInterval(() => setNow(Date.now()), 30_000);
     return () => clearInterval(t);
   }, []);
-  const tagLive = useQuery({
-    queryKey: ["cap-tag-total", tagTotal],
-    enabled: !!tagTotal,
+
+  // Tags ao vivo (total + velocidade instantânea)
+  const nomes = [tagTotal, tagVelocidade].filter(Boolean) as string[];
+  const tagsLive = useQuery({
+    queryKey: ["cap-tags-live", nomes.join(",")],
+    enabled: nomes.length > 0,
     queryFn: async () => {
-      const { data } = await supabase.from("tags_live").select("valor_num").eq("nome", tagTotal as string).maybeSingle();
-      return data?.valor_num as number | null;
+      const { data } = await supabase
+        .from("tags_live")
+        .select("nome,valor_num,unidade")
+        .in("nome", nomes);
+      return (data ?? []) as Array<{ nome: string; valor_num: number | null; unidade: string | null }>;
     },
     refetchInterval: 5_000,
   });
+  const tagMap = new Map((tagsLive.data ?? []).map((t) => [t.nome, t]));
+  const totalLive = tagTotal ? (tagMap.get(tagTotal)?.valor_num ?? null) : null;
+  const velLive = tagVelocidade ? (tagMap.get(tagVelocidade)?.valor_num ?? null) : null;
+  const velUnidade = tagVelocidade ? (tagMap.get(tagVelocidade)?.unidade ?? "") : "";
 
   const inicioMs = new Date(inicioEm).getTime();
   const fimMs = fimEm ? new Date(fimEm).getTime() : now;
-  const horas = Math.max((fimMs - inicioMs) / 3_600_000, 1 / 60);
-  const totalAtual = tagLive.data ?? qtdProduzida ?? 0;
-  const taxaPorHora = totalAtual / horas;
+  const horasDecorridas = Math.max((fimMs - inicioMs) / 3_600_000, 1 / 60);
 
-  // Produção acumulada hoje/mês no equipamento.
-  // Preferimos a tag totalizadora (tag_producao_total) — diferença entre o valor
-  // atual e o primeiro valor registrado no período (via producao_tag_historico).
-  // Fallback: soma de qtd_produzida das ordens do período.
-  const liveNum = tagLive.data ?? null;
-  const hoje = useQuery({
-    queryKey: ["cap-eq-dia", equipamentoId, tagTotal, liveNum],
+  // ---------- Produção da OP atual ----------
+  // Preferimos: (totalLive - baselineNoInicioDaOP) via producao_tag_historico.
+  // Fallback: qtdProduzida gravada na ordem.
+  const opBaseline = useQuery({
+    queryKey: ["cap-op-baseline", equipamentoId, tagTotal, inicioEm],
+    enabled: !!tagTotal,
     queryFn: async () => {
-      const start = new Date(); start.setHours(0, 0, 0, 0);
-      if (tagTotal && liveNum != null) {
-        const { data: hist } = await supabase.from("producao_tag_historico")
-          .select("valor_num")
-          .eq("equipamento_id", equipamentoId)
-          .eq("tag_nome", tagTotal)
-          .gte("registrado_em", start.toISOString())
-          .order("registrado_em", { ascending: true })
-          .limit(1);
-        const base = hist?.[0]?.valor_num;
-        if (base != null) {
-          const diff = Number(liveNum) - Number(base);
+      const { data } = await supabase.from("producao_tag_historico")
+        .select("valor_num")
+        .eq("equipamento_id", equipamentoId)
+        .eq("tag_nome", tagTotal as string)
+        .gte("registrado_em", inicioEm)
+        .order("registrado_em", { ascending: true })
+        .limit(1);
+      return data?.[0]?.valor_num != null ? Number(data[0].valor_num) : null;
+    },
+    staleTime: 30_000,
+  });
+  const producaoOP = (() => {
+    if (tagTotal && totalLive != null && opBaseline.data != null) {
+      const d = Number(totalLive) - Number(opBaseline.data);
+      if (d >= 0) return d;
+    }
+    return Number(qtdProduzida ?? 0);
+  })();
+
+  // ---------- Taxa por hora ----------
+  // Prioridade: velocidade instantânea (tag_velocidade_producao) → média da OP.
+  const taxaPorHora = velLive != null ? Number(velLive) : (producaoOP / horasDecorridas);
+  const taxaFonte: "instantanea" | "media_op" = velLive != null ? "instantanea" : "media_op";
+
+  // ---------- Produção acumulada no período (hoje / mês) ----------
+  // Estratégia robusta a resets do totalizador:
+  //  1) Se houver histórico da tag totalizadora no período, somamos os deltas
+  //     POSITIVOS entre pontos consecutivos + delta do último ponto até o valor ao vivo.
+  //     Isso lida com reset do contador (delta negativo é ignorado).
+  //  2) Se o histórico só tiver 1 ponto e liveNum >= base, usamos (live - base).
+  //  3) Fallback: soma de qtd_produzida das ordens do equipamento no período
+  //     (usando fim_em quando finalizada, ou inicio_em quando ainda em curso).
+  const acumuladoPeriodo = async (startIso: string): Promise<number> => {
+    if (tagTotal) {
+      const { data: hist } = await supabase.from("producao_tag_historico")
+        .select("valor_num, registrado_em")
+        .eq("equipamento_id", equipamentoId)
+        .eq("tag_nome", tagTotal)
+        .gte("registrado_em", startIso)
+        .order("registrado_em", { ascending: true });
+      if (hist && hist.length > 0) {
+        let total = 0;
+        for (let i = 1; i < hist.length; i++) {
+          const d = Number(hist[i].valor_num ?? 0) - Number(hist[i - 1].valor_num ?? 0);
+          if (d > 0) total += d;
+        }
+        if (totalLive != null) {
+          const last = Number(hist[hist.length - 1].valor_num ?? 0);
+          const dLive = Number(totalLive) - last;
+          if (dLive > 0) total += dLive;
+        }
+        if (total > 0) return total;
+        // 1 ponto só e sem delta: tenta (live - primeiro)
+        if (hist.length === 1 && totalLive != null) {
+          const diff = Number(totalLive) - Number(hist[0].valor_num ?? 0);
           if (diff >= 0) return diff;
         }
       }
-      const { data } = await supabase.from("ordens_producao")
-        .select("qtd_produzida")
-        .eq("equipamento_id", equipamentoId)
-        .gte("inicio_em", start.toISOString());
-      return (data ?? []).reduce((s, r) => s + Number(r.qtd_produzida ?? 0), 0);
+    }
+    // Fallback: ordens do equipamento no período
+    const { data } = await supabase.from("ordens_producao")
+      .select("qtd_produzida, inicio_em, fim_em, status")
+      .eq("equipamento_id", equipamentoId)
+      .or(`fim_em.gte.${startIso},and(fim_em.is.null,inicio_em.gte.${startIso})`);
+    return (data ?? []).reduce((s, r) => s + Number(r.qtd_produzida ?? 0), 0);
+  };
+
+  const hoje = useQuery({
+    queryKey: ["cap-eq-dia-v2", equipamentoId, tagTotal, totalLive],
+    queryFn: async () => {
+      const start = new Date(); start.setHours(0, 0, 0, 0);
+      return acumuladoPeriodo(start.toISOString());
     },
     refetchInterval: 60_000,
   });
   const mes = useQuery({
-    queryKey: ["cap-eq-mes", equipamentoId, tagTotal, liveNum],
+    queryKey: ["cap-eq-mes-v2", equipamentoId, tagTotal, totalLive],
     queryFn: async () => {
       const start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0);
-      if (tagTotal && liveNum != null) {
-        const { data: hist } = await supabase.from("producao_tag_historico")
-          .select("valor_num")
-          .eq("equipamento_id", equipamentoId)
-          .eq("tag_nome", tagTotal)
-          .gte("registrado_em", start.toISOString())
-          .order("registrado_em", { ascending: true })
-          .limit(1);
-        const base = hist?.[0]?.valor_num;
-        if (base != null) {
-          const diff = Number(liveNum) - Number(base);
-          if (diff >= 0) return diff;
-        }
-      }
-      const { data } = await supabase.from("ordens_producao")
-        .select("qtd_produzida")
-        .eq("equipamento_id", equipamentoId)
-        .gte("inicio_em", start.toISOString());
-      return (data ?? []).reduce((s, r) => s + Number(r.qtd_produzida ?? 0), 0);
+      return acumuladoPeriodo(start.toISOString());
     },
     refetchInterval: 60_000,
   });
@@ -1804,7 +1847,7 @@ function CapacidadeNominalCard({
   const pctDia = capacidadeDia && capacidadeDia > 0 ? ((hoje.data ?? 0) / capacidadeDia) * 100 : null;
   const pctMes = capacidadeMes && capacidadeMes > 0 ? ((mes.data ?? 0) / capacidadeMes) * 100 : null;
 
-  const Item = ({ label, real, nominal, pct, suffix }: { label: string; real: number; nominal: number | null; pct: number | null; suffix?: string }) => (
+  const Item = ({ label, real, nominal, pct, suffix, hint }: { label: string; real: number; nominal: number | null; pct: number | null; suffix?: string; hint?: string }) => (
     <div className="min-w-0">
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className="mt-0.5 flex items-baseline gap-1">
@@ -1820,8 +1863,16 @@ function CapacidadeNominalCard({
           <div className={`h-full rounded-full ${pct >= 100 ? "bg-success" : pct >= 70 ? "bg-primary" : "bg-warning"}`} style={{ width: `${Math.min(100, pct)}%` }} />
         </div>
       ) : null}
+      {hint ? <div className="mt-1 text-[10px] text-muted-foreground">{hint}</div> : null}
     </div>
   );
+
+  const fonteHora = taxaFonte === "instantanea"
+    ? `via ${tagVelocidade}${velUnidade ? ` (${velUnidade})` : ""}`
+    : (tagTotal ? "média da OP (tag totalizadora)" : "média da OP");
+  const fontePeriodo = tagTotal
+    ? `via ${tagTotal} (deltas positivos)`
+    : "soma de ordens do equipamento";
 
   return (
     <Card className="mb-4 border-primary/20">
@@ -1829,13 +1880,19 @@ function CapacidadeNominalCard({
         <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wider text-muted-foreground">
           <Gauge className="h-3.5 w-3.5" /> Capacidade nominal vs. real
         </div>
+        {!tagTotal && !tagVelocidade ? (
+          <div className="mb-2 rounded border border-warning/40 bg-warning/5 px-2 py-1.5 text-[11px] text-warning-foreground">
+            Nenhuma tag de produção total ou velocidade cadastrada neste equipamento — usando apenas os totais gravados nas ordens.
+          </div>
+        ) : null}
         <div className="grid gap-4 sm:grid-cols-3">
-          {capacidadeHora ? <Item label="Por hora (nesta OP)" real={taxaPorHora} nominal={capacidadeHora} pct={efHora} suffix="/h" /> : null}
-          {capacidadeDia ? <Item label="Hoje (equipamento)" real={hoje.data ?? 0} nominal={capacidadeDia} pct={pctDia} /> : null}
-          {capacidadeMes ? <Item label="Este mês (equipamento)" real={mes.data ?? 0} nominal={capacidadeMes} pct={pctMes} /> : null}
+          {capacidadeHora ? <Item label="Por hora (nesta OP)" real={taxaPorHora} nominal={capacidadeHora} pct={efHora} suffix="/h" hint={fonteHora} /> : null}
+          {capacidadeDia ? <Item label="Hoje (equipamento)" real={hoje.data ?? 0} nominal={capacidadeDia} pct={pctDia} hint={fontePeriodo} /> : null}
+          {capacidadeMes ? <Item label="Este mês (equipamento)" real={mes.data ?? 0} nominal={capacidadeMes} pct={pctMes} hint={fontePeriodo} /> : null}
         </div>
       </CardContent>
     </Card>
   );
 }
+
 
