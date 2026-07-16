@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS idx_pth_owner_tag_ts ON public.producao_tag_historico (owner_id, tag_nome, registrado_em DESC);
+CREATE INDEX IF NOT EXISTS idx_pth_tag_ts ON public.producao_tag_historico (tag_nome, registrado_em DESC);
