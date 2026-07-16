@@ -24,11 +24,15 @@ import { Plus, Pencil, Trash2, LayoutGrid, MoreHorizontal, GripVertical, Move } 
 import { toast } from "sonner";
 import { WIDGET_SOURCES, getSource, type WidgetSource } from "@/lib/dashboard/widget-catalog";
 import { DashboardWidget } from "@/components/dashboard/DashboardWidget";
-import { Responsive, WidthProvider, type Layout } from "react-grid-layout";
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+import RGL from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
-const ResponsiveGrid = WidthProvider(Responsive);
+type LayoutItem = { i: string; x: number; y: number; w: number; h: number; minW?: number; minH?: number };
+// @ts-expect-error runtime exports
+const ResponsiveGrid = RGL.WidthProvider(RGL.Responsive);
+
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   head: pageHead({ title: "Dashboard — STHApc", description: "Acesse e gerencie Dashboard no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/dashboard" }),
