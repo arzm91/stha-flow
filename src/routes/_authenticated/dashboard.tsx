@@ -53,11 +53,29 @@ type TankRow = { id: string; codigo: string; nome: string };
 type EquipRow = { id: string; codigo: string; nome: string };
 type SheetRow = { id: string; nome: string };
 
+const FROZEN_STORAGE_KEY = "dashboard:frozen";
+
 function DashboardPage() {
   const qc = useQueryClient();
   const { ref: fsRef, isFullscreen, toggle } = useFullscreen<HTMLDivElement>();
   const [editing, setEditing] = useState<Widget | null>(null);
   const [newOpen, setNewOpen] = useState(false);
+  const [frozen, setFrozen] = useState(false);
+
+  useEffect(() => {
+    try {
+      setFrozen(localStorage.getItem(FROZEN_STORAGE_KEY) === "1");
+    } catch { /* ignore */ }
+  }, []);
+
+  const toggleFrozen = useCallback(() => {
+    setFrozen((prev) => {
+      const next = !prev;
+      try { localStorage.setItem(FROZEN_STORAGE_KEY, next ? "1" : "0"); } catch { /* ignore */ }
+      toast.success(next ? "Dashboard congelado" : "Dashboard descongelado");
+      return next;
+    });
+  }, []);
 
   const widgets = useQuery({
     queryKey: ["dashboard_widgets"],
