@@ -129,7 +129,7 @@ function DashboardPage() {
     <div className="space-y-5">
       <PageHeader
         title="Dashboard"
-        description="Central de controle — arraste e redimensione os cards. Suas preferências ficam salvas."
+        titleClassName="text-xs font-semibold tracking-tight text-muted-foreground"
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary" className="gap-1">
@@ -138,7 +138,9 @@ function DashboardPage() {
             </Badge>
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
               <DialogTrigger asChild>
-                <Button size="sm"><Plus className="mr-2 h-4 w-4" />Adicionar widget</Button>
+                <Button variant="outline" size="sm" className="text-muted-foreground border-dashed">
+                  <Plus className="mr-2 h-4 w-4" />Adicionar widget
+                </Button>
               </DialogTrigger>
               <WidgetDialog
                 key={newOpen ? "new" : "closed"}
@@ -150,6 +152,7 @@ function DashboardPage() {
           </div>
         }
       />
+
 
       {widgets.isLoading ? (
         <div className="text-sm text-muted-foreground">Carregando widgets...</div>
