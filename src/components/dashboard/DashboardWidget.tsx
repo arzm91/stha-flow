@@ -63,7 +63,7 @@ function tagNomesFromWidget(w: WidgetRow): string[] {
     const n = String(cfg.tag_nome ?? "");
     return n ? [n] : [];
   }
-  if (w.fonte === "tag.multi") {
+  if (w.fonte === "tag.multi" || w.fonte === "tag.tiles") {
     const arr = (cfg.tag_nomes as unknown);
     return Array.isArray(arr) ? (arr as string[]).filter(Boolean) : [];
   }
