@@ -12,10 +12,13 @@ export function TagSparkline({ tagNome, points = 20 }: { tagNome: string; points
   const q = useQuery({
     queryKey: ["tag-sparkline", tagNome, points],
     queryFn: async () => {
+      // Janela de 6h para manter a leitura seletiva mesmo em tabelas grandes.
+      const since = new Date(Date.now() - 6 * 3600_000).toISOString();
       const { data, error } = await supabase
         .from("producao_tag_historico")
         .select("valor_num,registrado_em")
         .eq("tag_nome", tagNome)
+        .gte("registrado_em", since)
         .not("valor_num", "is", null)
         .order("registrado_em", { ascending: false })
         .limit(points);
