@@ -47,8 +47,29 @@ export function DashboardWidget({ widget }: { widget: WidgetRow }) {
       </div>
     );
   }
-  return <WidgetBody widget={widget} />;
+  // Sparkline overlays em widgets de tag(s)
+  const tagNomes = tagNomesFromWidget(widget);
+  return (
+    <div className="relative h-full w-full">
+      <WidgetBody widget={widget} />
+      {tagNomes.length === 1 ? <TagSparkline tagNome={tagNomes[0]} /> : null}
+    </div>
+  );
 }
+
+function tagNomesFromWidget(w: WidgetRow): string[] {
+  const cfg = w.config ?? {};
+  if (w.fonte === "tag.valor" || w.fonte === "tag.gauge" || w.fonte === "tag.stats") {
+    const n = String(cfg.tag_nome ?? "");
+    return n ? [n] : [];
+  }
+  if (w.fonte === "tag.multi") {
+    const arr = (cfg.tag_nomes as unknown);
+    return Array.isArray(arr) ? (arr as string[]).filter(Boolean) : [];
+  }
+  return [];
+}
+
 
 function WidgetBody({ widget }: { widget: WidgetRow }) {
   const q = useQuery({
