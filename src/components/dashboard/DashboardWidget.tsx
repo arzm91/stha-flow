@@ -9,6 +9,10 @@ import { getSource } from "@/lib/dashboard/widget-catalog";
 import { formatInt, formatNumber } from "@/lib/format";
 import { AlertTriangle, Wrench, FlaskConical, Factory, CheckCircle2, Clock, AlertOctagon } from "lucide-react";
 import { StorageLocationCard, type StorageLocation } from "@/components/StorageLocationCard";
+import { TagSparkline } from "@/components/dashboard/TagSparkline";
+import { formatDistanceToNow } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
 
 type WidgetRow = {
   id: string;
