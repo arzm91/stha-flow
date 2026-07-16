@@ -402,6 +402,7 @@ type WidgetData =
   | { kind: "xray-manut"; abertas: number; em_andamento: number; atrasadas: number; concluidas_30d: number; proximas: { numero: string; prioridade: string; data: string }[] }
   | { kind: "xray-qual"; conformes: number; naoconformes: number; ultimas_nc: { titulo: string; valor: string }[] }
   | { kind: "tag-multi"; items: Array<{ nome: string; nome_amigavel: string | null; valor_num: number | null; valor: string | null; unidade: string | null }> }
+  | { kind: "tag-tiles"; items: Array<{ nome: string; nome_amigavel: string | null; valor_num: number | null; valor: string | null; unidade: string | null }> }
   | { kind: "tag-stats"; tag: string; unidade: string | null; atual: number | null; min: number | null; max: number | null; avg: number | null };
 
 
