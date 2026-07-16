@@ -69,7 +69,8 @@ export const WIDGET_SOURCES: WidgetSource[] = [
   // ===== Tags =====
   { key: "tag.valor", tipo: "tag", grupo: "Tags", label: "Tag ao vivo (valor)", colSpan: 3, rowSpan: 1, priority: 20, needsTag: true },
   { key: "tag.gauge", tipo: "tag", grupo: "Tags", label: "Tag ao vivo (gauge)", colSpan: 3, rowSpan: 2, priority: 25, needsTag: true },
-  { key: "tag.multi", tipo: "tag", grupo: "Tags", label: "Várias tags (lista)", colSpan: 4, rowSpan: 3, priority: 22, needsMultiTag: true },
+  { key: "tag.multi", tipo: "tag", grupo: "Tags", label: "Várias tags (lista)", description: "Várias tags empilhadas em lista no mesmo card", colSpan: 4, rowSpan: 3, priority: 22, needsMultiTag: true },
+  { key: "tag.tiles", tipo: "tag", grupo: "Tags", label: "Várias tags (grade)", description: "Várias tags exibidas como tiles grandes no mesmo card", colSpan: 6, rowSpan: 2, priority: 21, needsMultiTag: true },
   { key: "tag.stats", tipo: "tag", grupo: "Tags", label: "Tag — estatísticas (atual/mín/máx/média)", colSpan: 4, rowSpan: 2, priority: 24, needsTag: true },
 ];
 

@@ -63,7 +63,7 @@ function tagNomesFromWidget(w: WidgetRow): string[] {
     const n = String(cfg.tag_nome ?? "");
     return n ? [n] : [];
   }
-  if (w.fonte === "tag.multi") {
+  if (w.fonte === "tag.multi" || w.fonte === "tag.tiles") {
     const arr = (cfg.tag_nomes as unknown);
     return Array.isArray(arr) ? (arr as string[]).filter(Boolean) : [];
   }
@@ -356,6 +356,36 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
     );
   }
 
+  if (data.kind === "tag-tiles") {
+    if (data.items.length === 0) {
+      return <div className="grid h-full place-items-center text-xs text-muted-foreground">Nenhuma tag selecionada</div>;
+    }
+    // Grade responsiva de tiles — ajusta o número de colunas ao total de tags.
+    const n = data.items.length;
+    const cols = n <= 2 ? "grid-cols-2" : n <= 4 ? "grid-cols-2 sm:grid-cols-3 md:grid-cols-4" : "grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5";
+    return (
+      <div className="h-full overflow-auto">
+        <div className={`grid ${cols} gap-2`}>
+          {data.items.map((it) => (
+            <div
+              key={it.nome}
+              className="flex min-w-0 flex-col justify-between rounded-md border bg-card/50 p-2 hover:border-primary/40 transition-colors"
+              title={it.nome}
+            >
+              <div className="truncate text-[10px] uppercase tracking-wider text-muted-foreground">
+                {it.nome_amigavel?.trim() || it.nome}
+              </div>
+              <div className="mt-1 font-mono text-lg font-semibold leading-tight">
+                {it.valor_num != null ? formatNumber(it.valor_num, 2) : (it.valor ?? "—")}
+                {it.unidade ? <span className="ml-1 text-[10px] font-normal text-muted-foreground">{it.unidade}</span> : null}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   if (data.kind === "tag-stats") {
     return (
       <div className="flex h-full flex-col gap-2 pr-16">
@@ -402,6 +432,7 @@ type WidgetData =
   | { kind: "xray-manut"; abertas: number; em_andamento: number; atrasadas: number; concluidas_30d: number; proximas: { numero: string; prioridade: string; data: string }[] }
   | { kind: "xray-qual"; conformes: number; naoconformes: number; ultimas_nc: { titulo: string; valor: string }[] }
   | { kind: "tag-multi"; items: Array<{ nome: string; nome_amigavel: string | null; valor_num: number | null; valor: string | null; unidade: string | null }> }
+  | { kind: "tag-tiles"; items: Array<{ nome: string; nome_amigavel: string | null; valor_num: number | null; valor: string | null; unidade: string | null }> }
   | { kind: "tag-stats"; tag: string; unidade: string | null; atual: number | null; min: number | null; max: number | null; avg: number | null };
 
 
@@ -637,9 +668,11 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
       return { kind: "gauge", value: v - min, max: max - min, unit: data?.unidade ?? "", tag: nome };
     }
 
-    case "tag.multi": {
+    case "tag.multi":
+    case "tag.tiles": {
       const nomes = Array.isArray(config.tag_nomes) ? (config.tag_nomes as string[]).filter(Boolean) : [];
-      if (nomes.length === 0) return { kind: "tag-multi", items: [] };
+      const kind = fonte === "tag.tiles" ? "tag-tiles" : "tag-multi";
+      if (nomes.length === 0) return { kind, items: [] } as WidgetData;
       const { data } = await supabase
         .from("tags_live")
         .select("nome,nome_amigavel,valor,valor_num,unidade")
@@ -655,7 +688,7 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
           unidade: (r?.unidade ?? null) as string | null,
         };
       });
-      return { kind: "tag-multi", items };
+      return { kind, items } as WidgetData;
     }
 
     case "tag.stats": {
