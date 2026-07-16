@@ -637,9 +637,11 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
       return { kind: "gauge", value: v - min, max: max - min, unit: data?.unidade ?? "", tag: nome };
     }
 
-    case "tag.multi": {
+    case "tag.multi":
+    case "tag.tiles": {
       const nomes = Array.isArray(config.tag_nomes) ? (config.tag_nomes as string[]).filter(Boolean) : [];
-      if (nomes.length === 0) return { kind: "tag-multi", items: [] };
+      const kind = fonte === "tag.tiles" ? "tag-tiles" : "tag-multi";
+      if (nomes.length === 0) return { kind, items: [] } as WidgetData;
       const { data } = await supabase
         .from("tags_live")
         .select("nome,nome_amigavel,valor,valor_num,unidade")
@@ -655,7 +657,7 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
           unidade: (r?.unidade ?? null) as string | null,
         };
       });
-      return { kind: "tag-multi", items };
+      return { kind, items } as WidgetData;
     }
 
     case "tag.stats": {
