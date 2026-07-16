@@ -201,15 +201,47 @@ export function CalcTagDialog({
           <div>
             <Label>Fórmula *</Label>
             <Textarea
+              ref={formulaRef}
               value={formula}
               onChange={(e) => setFormula(e.target.value)}
-              placeholder="(vazao_a / vazao_b) * 1000"
+              placeholder="Clique nas tags abaixo ou digite. Ex.: (vazao_a / vazao_b) * 1000"
               rows={2}
               className="font-mono text-sm"
             />
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
-              <span>Operadores: <code>+ − × ÷ %  ^ ( )</code></span>
-              <span>Funções: <code>sqrt, abs, min, max, round, floor, ceil, log, exp, if(cond, a, b)</code></span>
+            <div className="mt-2 flex flex-wrap gap-1">
+              {["+", "-", "*", "/", "(", ")", "^", "%"].map((op) => (
+                <Button
+                  key={op}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 w-8 p-0 font-mono"
+                  onClick={() => insertNaFormula(op)}
+                >
+                  {op}
+                </Button>
+              ))}
+              {["sqrt(", "abs(", "min(", "max(", "round(", "if("].map((fn) => (
+                <Button
+                  key={fn}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 px-2 font-mono text-xs"
+                  onClick={() => insertNaFormula(fn)}
+                >
+                  {fn}
+                </Button>
+              ))}
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-muted-foreground"
+                onClick={() => setFormula("")}
+              >
+                Limpar
+              </Button>
             </div>
             {!validation.ok && formula.trim() && (
               <p className="mt-1 text-xs text-destructive">{validation.error}</p>
@@ -220,6 +252,81 @@ export function CalcTagDialog({
               </p>
             )}
           </div>
+
+          <div className="rounded-md border p-2">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <Label className="text-xs">Escolha as tags para a fórmula</Label>
+              <Input
+                value={tagFiltro}
+                onChange={(e) => setTagFiltro(e.target.value)}
+                placeholder="Filtrar tags…"
+                className="h-7 max-w-[220px] text-xs"
+              />
+            </div>
+            <div className="max-h-52 overflow-y-auto">
+              {(() => {
+                const q = tagFiltro.trim().toLowerCase();
+                const list = (tagsDisponiveis.data ?? []).filter((t) => {
+                  if (editing && t.nome === editing.nome) return false; // evita auto-ref
+                  if (!q) return true;
+                  return (
+                    t.nome.toLowerCase().includes(q) ||
+                    (t.nome_amigavel ?? "").toLowerCase().includes(q) ||
+                    (t.grupo ?? "").toLowerCase().includes(q)
+                  );
+                });
+                if (list.length === 0) {
+                  return (
+                    <div className="px-2 py-3 text-center text-xs text-muted-foreground">
+                      Nenhuma tag disponível.
+                    </div>
+                  );
+                }
+                // Agrupa por grupo
+                const grupos = new Map<string, typeof list>();
+                for (const t of list) {
+                  const g = t.grupo ?? "Sem grupo";
+                  if (!grupos.has(g)) grupos.set(g, [] as typeof list);
+                  grupos.get(g)!.push(t);
+                }
+                return Array.from(grupos.entries()).map(([g, items]) => (
+                  <div key={g} className="mb-2">
+                    <div className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                      {g}
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {items.map((t) => (
+                        <Button
+                          key={t.nome}
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-auto max-w-full py-1 text-left"
+                          onClick={() => insertNaFormula(t.nome)}
+                          title={`${t.nome} = ${t.valor_num ?? "—"}${t.unidade ? " " + t.unidade : ""}`}
+                        >
+                          <span className="flex flex-col items-start leading-tight">
+                            <span className="max-w-[180px] truncate text-xs">
+                              {t.nome_amigavel?.trim() || t.nome}
+                            </span>
+                            <span className="max-w-[180px] truncate font-mono text-[9px] text-muted-foreground">
+                              {t.nome}
+                              {t.valor_num != null ? ` · ${t.valor_num}${t.unidade ? " " + t.unidade : ""}` : ""}
+                            </span>
+                          </span>
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Clique em uma tag para inseri-la na posição do cursor. Tags calculadas também podem
+              ser usadas (com detecção de ciclo).
+            </p>
+          </div>
+
 
           <div className="grid grid-cols-3 gap-3">
             <div>
