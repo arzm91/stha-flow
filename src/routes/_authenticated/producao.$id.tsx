@@ -1891,8 +1891,9 @@ function CapacidadeNominalCard({
         ) : null}
         <div className="grid gap-4 sm:grid-cols-3">
           {capacidadeHora ? <Item label="Por hora (nesta OP)" real={taxaPorHora} nominal={capacidadeHora} pct={efHora} suffix="/h" hint={fonteHora} /> : null}
-          {capacidadeDia ? <Item label="Hoje (equipamento)" real={hoje.data ?? 0} nominal={capacidadeDia} pct={pctDia} hint={fontePeriodo} /> : null}
-          {capacidadeMes ? <Item label="Este mês (equipamento)" real={mes.data ?? 0} nominal={capacidadeMes} pct={pctMes} hint={fontePeriodo} /> : null}
+          {capacidadeDia ? <Item label="Hoje (equipamento)" real={hoje.data ?? null} nominal={capacidadeDia} pct={pctDia} hint={fontePeriodo} loading={hoje.data === undefined} /> : null}
+          {capacidadeMes ? <Item label="Este mês (equipamento)" real={mes.data ?? null} nominal={capacidadeMes} pct={pctMes} hint={fontePeriodo} loading={mes.data === undefined} /> : null}
+
         </div>
       </CardContent>
     </Card>
