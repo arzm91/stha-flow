@@ -357,11 +357,13 @@ function GrupoCard({
   tags,
   onEdit,
   onDelete,
+  calcByNome,
 }: {
   grupo: string;
   tags: TagRow[];
   onEdit: (t: TagRow) => void;
   onDelete: (t: TagRow) => void;
+  calcByNome: Map<string, CalcTag>;
 }) {
   const alertas = tags.filter((t) => outOfRange(t)).length;
   return (
@@ -382,7 +384,13 @@ function GrupoCard({
       <CardContent className="p-0">
         <ul className="divide-y">
           {tags.map((t) => (
-            <TagItem key={t.nome} tag={t} onEdit={onEdit} onDelete={onDelete} />
+            <TagItem
+              key={t.nome}
+              tag={t}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              isCalc={calcByNome.has(t.nome)}
+            />
           ))}
         </ul>
       </CardContent>
