@@ -2695,6 +2695,54 @@ export type Database = {
         }
         Relationships: []
       }
+      tags_calculadas: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          decimais: number
+          formula: string
+          grupo: string | null
+          id: string
+          nome: string
+          nome_amigavel: string | null
+          owner_id: string
+          unidade: string | null
+          updated_at: string
+          valor_max: number | null
+          valor_min: number | null
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          decimais?: number
+          formula: string
+          grupo?: string | null
+          id?: string
+          nome: string
+          nome_amigavel?: string | null
+          owner_id: string
+          unidade?: string | null
+          updated_at?: string
+          valor_max?: number | null
+          valor_min?: number | null
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          decimais?: number
+          formula?: string
+          grupo?: string | null
+          id?: string
+          nome?: string
+          nome_amigavel?: string | null
+          owner_id?: string
+          unidade?: string | null
+          updated_at?: string
+          valor_max?: number | null
+          valor_min?: number | null
+        }
+        Relationships: []
+      }
       tags_live: {
         Row: {
           atualizado_em: string
