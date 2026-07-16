@@ -158,7 +158,7 @@ function DashboardPage() {
             </Badge>
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="text-muted-foreground border-dashed">
+                <Button variant="outline" size="sm" className="text-muted-foreground border-dashed" disabled={frozen}>
                   <Plus className="mr-2 h-4 w-4" />Adicionar widget
                 </Button>
               </DialogTrigger>
@@ -169,6 +169,15 @@ function DashboardPage() {
                 loading={save.isPending}
               />
             </Dialog>
+            <Button
+              variant={frozen ? "default" : "outline"}
+              size="sm"
+              onClick={toggleFrozen}
+              aria-label={frozen ? "Descongelar dashboard" : "Congelar dashboard"}
+              title={frozen ? "Descongelar (permitir edição do layout)" : "Congelar (bloquear edição do layout)"}
+            >
+              {frozen ? <Lock className="h-4 w-4" /> : <Unlock className="h-4 w-4" />}
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -189,11 +198,12 @@ function DashboardPage() {
           icon={<LayoutGrid className="h-6 w-6" />}
           title="Seu dashboard está vazio"
           description="Adicione widgets para acompanhar produção, estoque, alertas, manutenção, qualidade e mais. Você pode arrastar e redimensionar cada card."
-          action={<Button onClick={() => setNewOpen(true)}><Plus className="mr-2 h-4 w-4" />Adicionar primeiro widget</Button>}
+          action={<Button onClick={() => setNewOpen(true)} disabled={frozen}><Plus className="mr-2 h-4 w-4" />Adicionar primeiro widget</Button>}
         />
       ) : (
         <DashboardGrid
           widgets={widgets.data!}
+          frozen={frozen}
           onEdit={setEditing}
           onDelete={(id) => remove.mutate(id)}
         />
