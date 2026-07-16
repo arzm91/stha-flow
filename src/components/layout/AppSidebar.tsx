@@ -12,7 +12,6 @@ import {
   Bell,
   Table as TableIcon,
   CalendarClock,
-  LineChart,
   Wrench,
 } from "lucide-react";
 
