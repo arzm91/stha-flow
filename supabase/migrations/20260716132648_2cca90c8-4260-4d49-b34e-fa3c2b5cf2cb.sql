@@ -1,0 +1,1 @@
+ALTER TABLE public.equipamentos ADD COLUMN IF NOT EXISTS tag_indices text[] NOT NULL DEFAULT '{}'::text[];

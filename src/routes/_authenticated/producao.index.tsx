@@ -28,7 +28,7 @@ export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
 });
 
-type Equip = { id: string; codigo: string; nome: string; status: string; localizacao: string | null; tipo: string | null; ativo: boolean; tag_producao_total: string | null; tag_velocidade_producao: string | null };
+type Equip = { id: string; codigo: string; nome: string; status: string; localizacao: string | null; tipo: string | null; ativo: boolean; tag_producao_total: string | null; tag_velocidade_producao: string | null; tag_indices: string[] | null };
 
 function ProducaoPage() {
   const [novaOpen, setNovaOpen] = useState(false);
@@ -58,19 +58,22 @@ function ProducaoPage() {
 
   const opByEquip = new Map((opsAtivas.data ?? []).map((o) => [o.equipamento_id, o]));
 
-  // Tags de produção total ativas
+  // Tags de produção total ativas + tags de índice/rendimento
   const tagsAvanco = Array.from(new Set(
     (equipamentos.data ?? [])
-      .filter((e) => e.tag_producao_total && opByEquip.has(e.id))
-      .map((e) => e.tag_producao_total as string)
+      .filter((e) => opByEquip.has(e.id))
+      .flatMap((e) => [
+        e.tag_producao_total,
+        ...((e.tag_indices ?? []) as string[]),
+      ].filter(Boolean) as string[])
   ));
   const tagsQuery = useQuery({
     queryKey: ["equip-cards-tags", tagsAvanco.join(",")],
     enabled: tagsAvanco.length > 0,
     queryFn: async () => {
       const { data } = await supabase.from("tags_live")
-        .select("nome,valor_num,unidade").in("nome", tagsAvanco);
-      return (data ?? []) as Array<{ nome: string; valor_num: number | null; unidade: string | null }>;
+        .select("nome,nome_amigavel,valor_num,unidade").in("nome", tagsAvanco);
+      return (data ?? []) as Array<{ nome: string; nome_amigavel: string | null; valor_num: number | null; unidade: string | null }>;
     },
     refetchInterval: 5000,
   });
@@ -155,6 +158,26 @@ function ProducaoPage() {
                           </div>
                         );
                       })()}
+                      {((e.tag_indices ?? []) as string[]).length > 0 ? (
+                        <div className="mt-2 border-t border-primary/20 pt-2">
+                          <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Rendimento / índice</div>
+                          <div className="grid grid-cols-2 gap-1 text-[11px]">
+                            {((e.tag_indices ?? []) as string[]).map((n) => {
+                              const t = tagMap.get(n);
+                              const label = t?.nome_amigavel?.trim() || n;
+                              return (
+                                <div key={n} className="flex items-baseline justify-between gap-1 rounded bg-background/70 px-1.5 py-0.5">
+                                  <span className="truncate text-muted-foreground" title={n}>{label}</span>
+                                  <span className="font-mono font-semibold">
+                                    {t?.valor_num != null ? t.valor_num.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) : "—"}
+                                    {t?.unidade ? ` ${t.unidade}` : ""}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   ) : (
                     <div className="mt-3 text-sm text-muted-foreground">

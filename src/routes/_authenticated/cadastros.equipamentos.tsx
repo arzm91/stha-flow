@@ -100,6 +100,17 @@ function EquipamentosPage() {
     { key: "capacidade_mes", label: "Capacidade nominal por mês", type: "number", help: "Produção máxima esperada em 30 dias." },
     { key: "capacidade_unidade", label: "Unidade da capacidade", placeholder: "kg, L, un, ..." },
 
+    // ===== Rendimento / Eficiência / Índice =====
+    {
+      key: "tag_indices",
+      label: "Tags de rendimento / eficiência / índice",
+      type: "multiselect",
+      options: tagOptions,
+      placeholder: "Pesquise por nome, grupo ou unidade...",
+      section: "Rendimento / Eficiência / Índice",
+      help: "Selecione tags (inclui tags calculadas) para exibir como indicadores de rendimento/eficiência/índice nos cards do dashboard, da página de produção e no acompanhamento da produção. Opcional.",
+    },
+
     // ===== Gestão de paradas =====
     { key: "parada_tag_nome", label: "Tag de parada (opcional)", type: "select", section: "Gestão de paradas",
       options: [{ value: "", label: "— nenhuma (não monitorar paradas) —" }, ...tagOptions],
@@ -152,7 +163,7 @@ function EquipamentosPage() {
       description="Cadastro e gestão dos equipamentos de produção da planta."
       searchKeys={["nome", "codigo", "tipo", "localizacao"]}
       filter={{ categoria: "producao" }}
-      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [], utilidade_ids: [], tag_velocidade_producao: "", tag_producao_total: "", capacidade_hora: "", capacidade_dia: "", capacidade_mes: "", capacidade_unidade: "", parada_tag_nome: "", parada_modo: "", parada_operador: "", parada_valor: "", parada_valor_min: "", parada_valor_max: "", parada_tempo_min_seg: 15, parada_alerta_apos_min: "", parada_motivos: ["Falta de energia","Parada programada","Parada não programada","Manutenção","Setup / Troca de produto","Falta de matéria-prima","Falha operacional","Outro"] }}
+      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [], utilidade_ids: [], tag_velocidade_producao: "", tag_producao_total: "", tag_indices: [], capacidade_hora: "", capacidade_dia: "", capacidade_mes: "", capacidade_unidade: "", parada_tag_nome: "", parada_modo: "", parada_operador: "", parada_valor: "", parada_valor_min: "", parada_valor_max: "", parada_tempo_min_seg: 15, parada_alerta_apos_min: "", parada_motivos: ["Falta de energia","Parada programada","Parada não programada","Manutenção","Setup / Troca de produto","Falta de matéria-prima","Falha operacional","Outro"] }}
       fields={fields}
 
 
