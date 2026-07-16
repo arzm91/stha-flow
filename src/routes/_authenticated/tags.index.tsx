@@ -43,9 +43,13 @@ import {
   Pencil,
   AlertTriangle,
   Trash2,
+  Calculator,
+  Plus,
 } from "lucide-react";
 import { formatRelative, formatNumber } from "@/lib/format";
 import { toast } from "sonner";
+import { CalcTagDialog } from "@/components/tags/CalcTagDialog";
+import type { CalcTag } from "@/lib/tags/calc";
 
 export const Route = createFileRoute("/_authenticated/tags/")({
   head: pageHead({ title: "Tags — STHApc", description: "Acesse e gerencie Tags no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/tags" }),
@@ -79,11 +83,15 @@ function outOfRange(t: TagRow): "low" | "high" | false {
 }
 
 function TagsPage() {
+  const qc = useQueryClient();
   const [filtro, setFiltro] = useState("");
   const [grupoSel, setGrupoSel] = useState<string>("todos");
   const [soAlertas, setSoAlertas] = useState(false);
   const [editando, setEditando] = useState<TagRow | null>(null);
   const [excluindo, setExcluindo] = useState<TagRow | null>(null);
+  const [calcDialogOpen, setCalcDialogOpen] = useState(false);
+  const [calcEditing, setCalcEditing] = useState<CalcTag | null>(null);
+  const [calcExcluindo, setCalcExcluindo] = useState<CalcTag | null>(null);
   const [, setTick] = useState(0);
 
   // re-render a cada 1s para atualizar os "há Xs"
@@ -105,6 +113,41 @@ function TagsPage() {
     refetchInterval: 1000,
     refetchIntervalInBackground: false,
   });
+
+  const calcTags = useQuery({
+    queryKey: ["tags-calculadas"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tags_calculadas" as never)
+        .select("*")
+        .order("nome");
+      if (error) throw error;
+      return (data ?? []) as unknown as CalcTag[];
+    },
+    refetchInterval: 5000,
+  });
+
+  const calcByNome = useMemo(() => {
+    const m = new Map<string, CalcTag>();
+    for (const t of calcTags.data ?? []) m.set(t.nome, t);
+    return m;
+  }, [calcTags.data]);
+
+  const liveValues = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const t of tags.data ?? []) {
+      if (t.valor_num != null) m.set(t.nome, Number(t.valor_num));
+    }
+    return m;
+  }, [tags.data]);
+
+  const nomesEndpoint = useMemo(() => {
+    const s = new Set<string>();
+    for (const t of tags.data ?? []) {
+      if (t.origem !== "calculada") s.add(t.nome);
+    }
+    return s;
+  }, [tags.data]);
 
   const grupos = useMemo(() => {
     const set = new Set<string>();
@@ -161,6 +204,13 @@ function TagsPage() {
               </span>
               Ao vivo
             </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { setCalcEditing(null); setCalcDialogOpen(true); }}
+            >
+              <Calculator className="mr-1 h-4 w-4" /> Nova tag calculada
+            </Button>
             <Button size="sm" variant="outline" asChild>
               <Link to="/tags/endpoints">
                 <Settings className="mr-1 h-4 w-4" /> Endpoints HTTP
@@ -237,8 +287,17 @@ function TagsPage() {
               key={grupo}
               grupo={grupo}
               tags={lista}
-              onEdit={setEditando}
-              onDelete={setExcluindo}
+              onEdit={(t) => {
+                const c = calcByNome.get(t.nome);
+                if (c) { setCalcEditing(c); setCalcDialogOpen(true); }
+                else setEditando(t);
+              }}
+              onDelete={(t) => {
+                const c = calcByNome.get(t.nome);
+                if (c) setCalcExcluindo(c);
+                else setExcluindo(t);
+              }}
+              calcByNome={calcByNome}
             />
           ))}
         </div>
@@ -246,6 +305,22 @@ function TagsPage() {
 
       <EditTagDialog tag={editando} onClose={() => setEditando(null)} />
       <DeleteTagDialog tag={excluindo} onClose={() => setExcluindo(null)} />
+      <CalcTagDialog
+        open={calcDialogOpen}
+        onClose={() => { setCalcDialogOpen(false); setCalcEditing(null); }}
+        editing={calcEditing}
+        liveValues={liveValues}
+        existingCalcTags={calcTags.data ?? []}
+        existingNames={nomesEndpoint}
+      />
+      <DeleteCalcTagDialog
+        tag={calcExcluindo}
+        onClose={() => setCalcExcluindo(null)}
+        onDeleted={() => {
+          qc.invalidateQueries({ queryKey: ["tags-calculadas"] });
+          qc.invalidateQueries({ queryKey: ["tags-live"] });
+        }}
+      />
     </div>
   );
 }
@@ -282,11 +357,13 @@ function GrupoCard({
   tags,
   onEdit,
   onDelete,
+  calcByNome,
 }: {
   grupo: string;
   tags: TagRow[];
   onEdit: (t: TagRow) => void;
   onDelete: (t: TagRow) => void;
+  calcByNome: Map<string, CalcTag>;
 }) {
   const alertas = tags.filter((t) => outOfRange(t)).length;
   return (
@@ -307,7 +384,13 @@ function GrupoCard({
       <CardContent className="p-0">
         <ul className="divide-y">
           {tags.map((t) => (
-            <TagItem key={t.nome} tag={t} onEdit={onEdit} onDelete={onDelete} />
+            <TagItem
+              key={t.nome}
+              tag={t}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              isCalc={calcByNome.has(t.nome)}
+            />
           ))}
         </ul>
       </CardContent>
@@ -319,10 +402,12 @@ function TagItem({
   tag: t,
   onEdit,
   onDelete,
+  isCalc,
 }: {
   tag: TagRow;
   onEdit: (t: TagRow) => void;
   onDelete: (t: TagRow) => void;
+  isCalc?: boolean;
 }) {
   const fora = outOfRange(t);
   return (
@@ -332,7 +417,11 @@ function TagItem({
       }`}
     >
       <div className="flex min-w-0 flex-1 items-center gap-2">
-        <TagIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+        {isCalc ? (
+          <Calculator className="h-3 w-3 shrink-0 text-primary" />
+        ) : (
+          <TagIcon className="h-3 w-3 shrink-0 text-muted-foreground" />
+        )}
         <div className="min-w-0 flex-1">
           {t.nome_amigavel ? (
             <>
@@ -602,6 +691,64 @@ function DeleteTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => 
           <AlertDialogDescription>
             A tag <span className="font-mono">{tag?.nome}</span> será apagada. Se o endpoint HTTP
             continuar enviando, ela será recriada no próximo ciclo.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(e) => {
+              e.preventDefault();
+              remover.mutate();
+            }}
+            disabled={remover.isPending}
+          >
+            Remover
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+function DeleteCalcTagDialog({
+  tag,
+  onClose,
+  onDeleted,
+}: {
+  tag: CalcTag | null;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const remover = useMutation({
+    mutationFn: async () => {
+      if (!tag) return;
+      const { error } = await supabase
+        .from("tags_calculadas" as never)
+        .delete()
+        .eq("id", tag.id);
+      if (error) throw error;
+      // remove também a linha atual em tags_live (só do dono)
+      await supabase
+        .from("tags_live")
+        .delete()
+        .eq("nome", tag.nome)
+        .eq("owner_id", tag.owner_id);
+    },
+    onSuccess: () => {
+      toast.success("Tag calculada removida");
+      onDeleted();
+      onClose();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+  return (
+    <AlertDialog open={!!tag} onOpenChange={(o) => !o && onClose()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remover tag calculada?</AlertDialogTitle>
+          <AlertDialogDescription>
+            A tag <span className="font-mono">{tag?.nome}</span> e sua fórmula serão apagadas.
+            Alertas, painéis ou SCADAs que a utilizam deixarão de exibir valor.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

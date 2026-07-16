@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { LogOut, User, Sun, Moon } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 import { ChatPopup } from "@/components/chat/ChatPopup";
+import { CalculatedTagsSync } from "@/components/tags/CalculatedTagsSync";
 
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -48,6 +49,7 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <SidebarProvider>
+      <CalculatedTagsSync />
       <div className="flex min-h-screen w-full bg-background">
         <AppSidebar />
         <div className="flex flex-1 flex-col">
