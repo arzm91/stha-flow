@@ -158,6 +158,26 @@ function ProducaoPage() {
                           </div>
                         );
                       })()}
+                      {((e.tag_indices ?? []) as string[]).length > 0 ? (
+                        <div className="mt-2 border-t border-primary/20 pt-2">
+                          <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Rendimento / índice</div>
+                          <div className="grid grid-cols-2 gap-1 text-[11px]">
+                            {((e.tag_indices ?? []) as string[]).map((n) => {
+                              const t = tagMap.get(n);
+                              const label = t?.nome_amigavel?.trim() || n;
+                              return (
+                                <div key={n} className="flex items-baseline justify-between gap-1 rounded bg-background/70 px-1.5 py-0.5">
+                                  <span className="truncate text-muted-foreground" title={n}>{label}</span>
+                                  <span className="font-mono font-semibold">
+                                    {t?.valor_num != null ? t.valor_num.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) : "—"}
+                                    {t?.unidade ? ` ${t.unidade}` : ""}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
                     </div>
                   ) : (
                     <div className="mt-3 text-sm text-muted-foreground">
