@@ -1827,21 +1827,24 @@ function CapacidadeNominalCard({
   };
 
   const hoje = useQuery({
-    queryKey: ["cap-eq-dia-v2", equipamentoId, tagTotal, totalLive],
+    queryKey: ["cap-eq-dia-v2", equipamentoId, tagTotal],
     queryFn: async () => {
       const start = new Date(); start.setHours(0, 0, 0, 0);
       return acumuladoPeriodo(start.toISOString());
     },
     refetchInterval: 60_000,
+    placeholderData: (prev) => prev,
   });
   const mes = useQuery({
-    queryKey: ["cap-eq-mes-v2", equipamentoId, tagTotal, totalLive],
+    queryKey: ["cap-eq-mes-v2", equipamentoId, tagTotal],
     queryFn: async () => {
       const start = new Date(); start.setDate(1); start.setHours(0, 0, 0, 0);
       return acumuladoPeriodo(start.toISOString());
     },
     refetchInterval: 60_000,
+    placeholderData: (prev) => prev,
   });
+
 
   const efHora = capacidadeHora && capacidadeHora > 0 ? (taxaPorHora / capacidadeHora) * 100 : null;
   const pctDia = capacidadeDia && capacidadeDia > 0 ? ((hoje.data ?? 0) / capacidadeDia) * 100 : null;
