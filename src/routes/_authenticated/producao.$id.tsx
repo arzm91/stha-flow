@@ -1847,8 +1847,9 @@ function CapacidadeNominalCard({
 
 
   const efHora = capacidadeHora && capacidadeHora > 0 ? (taxaPorHora / capacidadeHora) * 100 : null;
-  const pctDia = capacidadeDia && capacidadeDia > 0 ? ((hoje.data ?? 0) / capacidadeDia) * 100 : null;
-  const pctMes = capacidadeMes && capacidadeMes > 0 ? ((mes.data ?? 0) / capacidadeMes) * 100 : null;
+  const pctDia = capacidadeDia && capacidadeDia > 0 && hoje.data != null ? (hoje.data / capacidadeDia) * 100 : null;
+  const pctMes = capacidadeMes && capacidadeMes > 0 && mes.data != null ? (mes.data / capacidadeMes) * 100 : null;
+
 
   const Item = ({ label, real, nominal, pct, suffix, hint }: { label: string; real: number; nominal: number | null; pct: number | null; suffix?: string; hint?: string }) => (
     <div className="min-w-0">
