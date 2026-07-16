@@ -709,3 +709,61 @@ function DeleteTagDialog({ tag, onClose }: { tag: TagRow | null; onClose: () => 
     </AlertDialog>
   );
 }
+
+function DeleteCalcTagDialog({
+  tag,
+  onClose,
+  onDeleted,
+}: {
+  tag: CalcTag | null;
+  onClose: () => void;
+  onDeleted: () => void;
+}) {
+  const remover = useMutation({
+    mutationFn: async () => {
+      if (!tag) return;
+      const { error } = await supabase
+        .from("tags_calculadas" as never)
+        .delete()
+        .eq("id", tag.id);
+      if (error) throw error;
+      // remove também a linha atual em tags_live (só do dono)
+      await supabase
+        .from("tags_live")
+        .delete()
+        .eq("nome", tag.nome)
+        .eq("owner_id", tag.owner_id);
+    },
+    onSuccess: () => {
+      toast.success("Tag calculada removida");
+      onDeleted();
+      onClose();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+  return (
+    <AlertDialog open={!!tag} onOpenChange={(o) => !o && onClose()}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Remover tag calculada?</AlertDialogTitle>
+          <AlertDialogDescription>
+            A tag <span className="font-mono">{tag?.nome}</span> e sua fórmula serão apagadas.
+            Alertas, painéis ou SCADAs que a utilizam deixarão de exibir valor.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={(e) => {
+              e.preventDefault();
+              remover.mutate();
+            }}
+            disabled={remover.isPending}
+          >
+            Remover
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
