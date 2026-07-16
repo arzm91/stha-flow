@@ -43,9 +43,13 @@ import {
   Pencil,
   AlertTriangle,
   Trash2,
+  Calculator,
+  Plus,
 } from "lucide-react";
 import { formatRelative, formatNumber } from "@/lib/format";
 import { toast } from "sonner";
+import { CalcTagDialog } from "@/components/tags/CalcTagDialog";
+import type { CalcTag } from "@/lib/tags/calc";
 
 export const Route = createFileRoute("/_authenticated/tags/")({
   head: pageHead({ title: "Tags — STHApc", description: "Acesse e gerencie Tags no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/tags" }),
