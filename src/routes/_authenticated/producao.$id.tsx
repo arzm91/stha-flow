@@ -1851,11 +1851,11 @@ function CapacidadeNominalCard({
   const pctMes = capacidadeMes && capacidadeMes > 0 && mes.data != null ? (mes.data / capacidadeMes) * 100 : null;
 
 
-  const Item = ({ label, real, nominal, pct, suffix, hint }: { label: string; real: number; nominal: number | null; pct: number | null; suffix?: string; hint?: string }) => (
+  const Item = ({ label, real, nominal, pct, suffix, hint, loading }: { label: string; real: number | null; nominal: number | null; pct: number | null; suffix?: string; hint?: string; loading?: boolean }) => (
     <div className="min-w-0">
       <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
       <div className="mt-0.5 flex items-baseline gap-1">
-        <span className="font-mono text-lg font-semibold">{formatNumber(real)}</span>
+        <span className="font-mono text-lg font-semibold">{real == null ? (loading ? "…" : "—") : formatNumber(real)}</span>
         <span className="text-xs text-muted-foreground">{unidade}{suffix ?? ""}</span>
       </div>
       <div className="text-[11px] text-muted-foreground">
@@ -1870,6 +1870,7 @@ function CapacidadeNominalCard({
       {hint ? <div className="mt-1 text-[10px] text-muted-foreground">{hint}</div> : null}
     </div>
   );
+
 
   const fonteHora = taxaFonte === "instantanea"
     ? `via ${tagVelocidade}${velUnidade ? ` (${velUnidade})` : ""}`
