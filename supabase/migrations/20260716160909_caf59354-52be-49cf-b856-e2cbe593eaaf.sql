@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.grant_creator_resource_permission() FROM PUBLIC, anon, authenticated;
