@@ -225,9 +225,10 @@ function DashboardPage() {
 }
 
 function DashboardGrid({
-  widgets, onEdit, onDelete,
+  widgets, frozen, onEdit, onDelete,
 }: {
   widgets: Widget[];
+  frozen: boolean;
   onEdit: (w: Widget) => void;
   onDelete: (id: string) => void;
 }) {
