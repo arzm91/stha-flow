@@ -5,7 +5,6 @@ import {
   Boxes,
   ClipboardList,
   FileBarChart,
-  Activity,
   Settings,
   Radio,
   Workflow,
@@ -42,7 +41,7 @@ const items = [
   { title: "Turnos", url: "/turnos", icon: CalendarClock, pageKey: "turnos" },
   { title: "Manutenção", url: "/manutencao", icon: Wrench, prefix: "/manutencao", pageKey: "manutencao" },
   { title: "Relatórios", url: "/relatorios", icon: FileBarChart, prefix: "/relatorios", pageKey: "relatorios" },
-  { title: "Indicadores", url: "/indicadores", icon: Activity, pageKey: "indicadores" },
+  
   { title: "Configurações", url: "/configuracoes", icon: Settings, adminOnly: true },
 ];
 
