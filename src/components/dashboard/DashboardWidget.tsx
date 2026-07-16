@@ -333,8 +333,49 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
     );
   }
 
+  if (data.kind === "tag-multi") {
+    if (data.items.length === 0) {
+      return <div className="grid h-full place-items-center text-xs text-muted-foreground">Nenhuma tag selecionada</div>;
+    }
+    return (
+      <div className="h-full overflow-auto pr-16">
+        <ul className="divide-y text-sm">
+          {data.items.map((it) => (
+            <li key={it.nome} className="flex items-baseline justify-between gap-2 py-1.5">
+              <span className="min-w-0 truncate text-xs text-muted-foreground" title={it.nome}>
+                {it.nome_amigavel?.trim() || it.nome}
+              </span>
+              <span className="shrink-0 font-mono text-sm font-semibold">
+                {it.valor_num != null ? formatNumber(it.valor_num, 2) : (it.valor ?? "—")}
+                {it.unidade ? <span className="ml-1 text-[10px] text-muted-foreground">{it.unidade}</span> : null}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  if (data.kind === "tag-stats") {
+    return (
+      <div className="flex h-full flex-col gap-2 pr-16">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground truncate" title={data.tag}>{data.tag}</div>
+        <div className="font-mono text-2xl font-semibold">
+          {data.atual != null ? formatNumber(data.atual, 2) : "—"}
+          {data.unidade ? <span className="ml-1 text-xs text-muted-foreground">{data.unidade}</span> : null}
+        </div>
+        <div className="mt-auto grid grid-cols-3 gap-2 text-xs">
+          <MiniStat label="Mín (24h)" value={data.min != null ? formatNumber(data.min, 2) : "—"} />
+          <MiniStat label="Média" value={data.avg != null ? formatNumber(data.avg, 2) : "—"} />
+          <MiniStat label="Máx" value={data.max != null ? formatNumber(data.max, 2) : "—"} tone="text-primary" />
+        </div>
+      </div>
+    );
+  }
+
   return null;
 }
+
 
 function MiniStat({ icon, label, value, tone }: { icon?: React.ReactNode; label: string; value: number | string; tone?: string }) {
   return (
