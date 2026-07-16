@@ -55,7 +55,7 @@ type SheetRow = { id: string; nome: string };
 
 function DashboardPage() {
   const qc = useQueryClient();
-  const { ref: fsRef, isFullscreen, toggle } = useFullscreen();
+  const { ref: fsRef, isFullscreen, toggle } = useFullscreen<HTMLDivElement>();
   const [editing, setEditing] = useState<Widget | null>(null);
   const [newOpen, setNewOpen] = useState(false);
 
