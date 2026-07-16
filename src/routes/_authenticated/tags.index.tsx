@@ -114,6 +114,41 @@ function TagsPage() {
     refetchIntervalInBackground: false,
   });
 
+  const calcTags = useQuery({
+    queryKey: ["tags-calculadas"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tags_calculadas" as never)
+        .select("*")
+        .order("nome");
+      if (error) throw error;
+      return (data ?? []) as unknown as CalcTag[];
+    },
+    refetchInterval: 5000,
+  });
+
+  const calcByNome = useMemo(() => {
+    const m = new Map<string, CalcTag>();
+    for (const t of calcTags.data ?? []) m.set(t.nome, t);
+    return m;
+  }, [calcTags.data]);
+
+  const liveValues = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const t of tags.data ?? []) {
+      if (t.valor_num != null) m.set(t.nome, Number(t.valor_num));
+    }
+    return m;
+  }, [tags.data]);
+
+  const nomesEndpoint = useMemo(() => {
+    const s = new Set<string>();
+    for (const t of tags.data ?? []) {
+      if (t.origem !== "calculada") s.add(t.nome);
+    }
+    return s;
+  }, [tags.data]);
+
   const grupos = useMemo(() => {
     const set = new Set<string>();
     for (const t of tags.data ?? []) set.add(t.grupo ?? SEM_GRUPO);
