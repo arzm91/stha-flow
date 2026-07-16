@@ -210,6 +210,18 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
               </span>
             </div>
           ) : null}
+          {data.tag_indices && data.tag_indices.length > 0 ? (
+            <div className="flex flex-wrap gap-1 text-[10px]">
+              {data.tag_indices.slice(0, 4).map((t) => (
+                <span key={t.nome} className="inline-flex items-center gap-1 rounded bg-muted/60 px-1.5 py-0.5" title={t.nome}>
+                  <span className="text-muted-foreground">{t.nome_amigavel?.trim() || t.nome}:</span>
+                  <span className="font-mono font-semibold">
+                    {t.valor_num != null ? formatNumber(t.valor_num) : "—"}{t.unidade ? ` ${t.unidade}` : ""}
+                  </span>
+                </span>
+              ))}
+            </div>
+          ) : null}
           <div className="mt-auto">
             <div className="flex items-baseline justify-between">
               <span className="font-mono text-lg font-semibold">
