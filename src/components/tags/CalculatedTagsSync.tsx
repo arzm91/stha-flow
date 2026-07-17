@@ -45,14 +45,20 @@ export function CalculatedTagsSync() {
         const nowIso = new Date().toISOString();
         const upserts = calc
           .map((t) => {
-            const r = results.get(t.nome);
-            if (!r || r.valor == null) return null;
+            let valor: number | null = null;
+            if (t.tipo === "delta_janela") {
+              valor = t.ultimo_valor_calc != null ? Number(t.ultimo_valor_calc) : null;
+            } else {
+              const r = results.get(t.nome);
+              valor = r?.valor ?? null;
+            }
+            if (valor == null || !Number.isFinite(valor)) return null;
             return {
               nome: t.nome,
               nome_amigavel: t.nome_amigavel,
-              valor: String(r.valor),
-              valor_num: r.valor,
-              valor_num_bruto: r.valor,
+              valor: String(valor),
+              valor_num: valor,
+              valor_num_bruto: valor,
               unidade: t.unidade,
               grupo: t.grupo ?? "Calculadas",
               qualidade: "good",
