@@ -99,10 +99,15 @@ export function CalcTagDialog({
         snapshot_tag_nome?: string | null;
         snapshot_hora?: string | null;
         snapshot_janela_dias?: number | null;
+        acumulador_tag_nome?: string | null;
+        acumulador_reset_tipo?: string | null;
+        acumulador_reset_hora?: string | null;
+        acumulador_intervalo_horas?: number | null;
       }) | null;
       setNome(editing?.nome ?? "");
       setNomeAmigavel(editing?.nome_amigavel ?? "");
-      setTipo((editingAny?.tipo === "delta_janela" ? "delta_janela" : "formula"));
+      const t = editingAny?.tipo;
+      setTipo(t === "delta_janela" ? "delta_janela" : t === "acumulador_janela" ? "acumulador_janela" : "formula");
       setFormula(editing?.formula ?? "");
       setUnidade(editing?.unidade ?? "");
       setGrupo(editing?.grupo ?? "Calculadas");
@@ -112,6 +117,10 @@ export function CalcTagDialog({
       setSnapshotTag(editingAny?.snapshot_tag_nome ?? "");
       setSnapshotHora(editingAny?.snapshot_hora ?? "08:00");
       setSnapshotJanelaDias(String(editingAny?.snapshot_janela_dias ?? 1));
+      setAcumTag(editingAny?.acumulador_tag_nome ?? "");
+      setAcumResetTipo((editingAny?.acumulador_reset_tipo === "horas" ? "horas" : "diario"));
+      setAcumResetHora(editingAny?.acumulador_reset_hora ?? "00:00");
+      setAcumIntervaloHoras(String(editingAny?.acumulador_intervalo_horas ?? 1));
     }
   }, [open, editing]);
 
