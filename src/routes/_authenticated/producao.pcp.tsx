@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { guardAdmin, isAdminCancelled } from "@/lib/security/guard-admin";
+import { fetchNextOpNumero } from "@/lib/producao/next-op-numero";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import {
   AlertDialog,
