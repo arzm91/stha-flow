@@ -52,8 +52,9 @@ export function topoSortCalcTags(tags: CalcTag[]): { order: CalcTag[]; cycles: s
   const byName = new Map(tags.map((t) => [t.nome, t]));
   const deps = new Map<string, string[]>();
   for (const t of tags) {
+    if (t.tipo && t.tipo !== "formula") { deps.set(t.nome, []); continue; }
     try {
-      const { vars } = compileFormula(t.formula);
+      const { vars } = compileFormula(t.formula ?? "");
       deps.set(t.nome, vars.filter((v) => byName.has(v))); // só dependências calculadas
     } catch {
       deps.set(t.nome, []);
