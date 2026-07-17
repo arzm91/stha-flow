@@ -188,13 +188,112 @@ export function NodeConfigPanel({
               </>
             )}
 
-            {cfg.type === "schedule" && (
-              <div className="space-y-1">
-                <Label>Cron</Label>
-                <Input value={String(cfg.cron ?? "0 * * * *")} onChange={(e) => set({ cron: e.target.value })} />
-                <p className="text-xs text-muted-foreground">Ex: <code>0 * * * *</code> (a cada hora)</p>
-              </div>
-            )}
+            {cfg.type === "schedule" && (() => {
+              const mode = String(cfg.scheduleMode ?? "daily");
+              const cronStr = String(cfg.cron ?? "0 8 * * *");
+              const parts = cronStr.split(/\s+/);
+              const dailyTime = (() => {
+                const m = parts[0] ?? "0";
+                const h = parts[1] ?? "8";
+                const hh = String(Number(h) || 0).padStart(2, "0");
+                const mm = String(Number(m) || 0).padStart(2, "0");
+                return `${hh}:${mm}`;
+              })();
+              const everyHours = (() => {
+                const h = parts[1] ?? "*/1";
+                const match = /\*\/(\d+)/.exec(h);
+                return match ? Number(match[1]) : 1;
+              })();
+              const everyMinutes = (() => {
+                const m = parts[0] ?? "*/5";
+                const match = /\*\/(\d+)/.exec(m);
+                return match ? Number(match[1]) : 5;
+              })();
+              return (
+                <>
+                  <div className="space-y-1">
+                    <Label>Tipo de agendamento</Label>
+                    <Select
+                      value={mode}
+                      onValueChange={(v) => {
+                        let cron = cronStr;
+                        if (v === "daily") cron = `${Number(dailyTime.split(":")[1])} ${Number(dailyTime.split(":")[0])} * * *`;
+                        else if (v === "hourly") cron = `0 */${everyHours} * * *`;
+                        else if (v === "minutes") cron = `*/${everyMinutes} * * * *`;
+                        set({ scheduleMode: v, cron });
+                      }}
+                    >
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="daily">Diário em horário fixo</SelectItem>
+                        <SelectItem value="hourly">A cada N horas</SelectItem>
+                        <SelectItem value="minutes">A cada N minutos</SelectItem>
+                        <SelectItem value="cron">Cron avançado</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {mode === "daily" && (
+                    <div className="space-y-1">
+                      <Label>Horário (todo dia)</Label>
+                      <Input
+                        type="time"
+                        value={dailyTime}
+                        onChange={(e) => {
+                          const [hh, mm] = e.target.value.split(":");
+                          set({ cron: `${Number(mm)} ${Number(hh)} * * *` });
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground">Ex: 08:00 dispara todo dia às 8h da manhã.</p>
+                    </div>
+                  )}
+
+                  {mode === "hourly" && (
+                    <div className="space-y-1">
+                      <Label>A cada quantas horas</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={23}
+                        value={everyHours}
+                        onChange={(e) => {
+                          const n = Math.max(1, Math.min(23, Number(e.target.value) || 1));
+                          set({ cron: `0 */${n} * * *` });
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {mode === "minutes" && (
+                    <div className="space-y-1">
+                      <Label>A cada quantos minutos</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={59}
+                        value={everyMinutes}
+                        onChange={(e) => {
+                          const n = Math.max(1, Math.min(59, Number(e.target.value) || 5));
+                          set({ cron: `*/${n} * * * *` });
+                        }}
+                      />
+                    </div>
+                  )}
+
+                  {mode === "cron" && (
+                    <div className="space-y-1">
+                      <Label>Expressão cron</Label>
+                      <Input value={cronStr} onChange={(e) => set({ cron: e.target.value })} />
+                      <p className="text-xs text-muted-foreground">Formato: <code>min hora dia mês dia-semana</code></p>
+                    </div>
+                  )}
+
+                  <p className="text-[11px] text-muted-foreground">
+                    Cron atual: <code>{cronStr}</code> (horário UTC do servidor)
+                  </p>
+                </>
+              );
+            })()}
           </>
         )}
 
