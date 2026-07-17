@@ -301,6 +301,7 @@ export function CalcTagDialog({
           )}
 
           {tipo === "formula" && (
+          <>
           <div>
             <Label>Fórmula *</Label>
             <Textarea
