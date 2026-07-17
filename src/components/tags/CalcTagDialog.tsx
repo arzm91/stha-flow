@@ -239,6 +239,69 @@ export function CalcTagDialog({
           </div>
 
           <div>
+            <Label>Tipo *</Label>
+            <Select value={tipo} onValueChange={(v) => setTipo(v as "formula" | "delta_janela")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="formula">Fórmula matemática</SelectItem>
+                <SelectItem value="delta_janela">Delta em janela (ex: hoje 08:00 − ontem 08:00)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {tipo === "formula"
+                ? "Combine outras tags com uma expressão matemática."
+                : "Captura o valor de uma tag num horário fixo do dia e calcula a diferença em relação ao valor capturado N dias atrás no mesmo horário."}
+            </p>
+          </div>
+
+          {tipo === "delta_janela" && (
+            <div className="space-y-3 rounded-md border p-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="sm:col-span-3">
+                  <Label>Tag de origem *</Label>
+                  <Select value={snapshotTag} onValueChange={setSnapshotTag}>
+                    <SelectTrigger><SelectValue placeholder="Escolha a tag…" /></SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {(tagsDisponiveis.data ?? [])
+                        .filter((t) => !editing || t.nome !== editing.nome)
+                        .map((t) => (
+                          <SelectItem key={t.nome} value={t.nome}>
+                            {(t.nome_amigavel?.trim() || t.nome)} <span className="ml-1 text-[10px] text-muted-foreground">({t.nome})</span>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Horário da captura *</Label>
+                  <Input
+                    type="time"
+                    value={snapshotHora}
+                    onChange={(e) => setSnapshotHora(e.target.value)}
+                  />
+                  <p className="mt-1 text-[10px] text-muted-foreground">Fuso America/Sao_Paulo.</p>
+                </div>
+                <div>
+                  <Label>Janela (dias) *</Label>
+                  <Select value={snapshotJanelaDias} onValueChange={setSnapshotJanelaDias}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 dia (24h)</SelectItem>
+                      <SelectItem value="7">7 dias (semana)</SelectItem>
+                      <SelectItem value="30">30 dias (mês)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="sm:col-span-3 rounded-md bg-muted/40 p-2 text-[11px] text-muted-foreground">
+                  Ex.: horário <b>08:00</b> e janela <b>1 dia</b> → hoje às 08:00 grava o valor atual; o valor calculado
+                  passa a ser <code>captura de hoje − captura de ontem</code> e permanece assim até a próxima captura.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tipo === "formula" && (
+          <div>
             <Label>Fórmula *</Label>
             <Textarea
               ref={formulaRef}
