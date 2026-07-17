@@ -430,6 +430,7 @@ export function CalcTagDialog({
               ser usadas (com detecção de ciclo).
             </p>
           </div>
+          </>
           )}
 
 
