@@ -94,6 +94,7 @@ export function evaluateCalcTags(
     if (t.tipo && t.tipo !== "formula") continue; // delta_janela é calculado pelo cron server-side
     try {
       const { expr, vars } = compileFormula(t.formula ?? "");
+      const scope: Record<string, number> = {};
       let missing: string | null = null;
       for (const v of vars) {
         const val = values.get(v);
