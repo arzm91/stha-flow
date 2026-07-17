@@ -91,9 +91,9 @@ export function evaluateCalcTags(
   const values = new Map(baseValues);
   const out = new Map<string, { valor: number | null; erro: string | null }>();
   for (const t of order) {
+    if (t.tipo && t.tipo !== "formula") continue; // delta_janela é calculado pelo cron server-side
     try {
-      const { expr, vars } = compileFormula(t.formula);
-      const scope: Record<string, number> = {};
+      const { expr, vars } = compileFormula(t.formula ?? "");
       let missing: string | null = null;
       for (const v of vars) {
         const val = values.get(v);
