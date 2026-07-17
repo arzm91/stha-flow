@@ -144,13 +144,13 @@ export function CalcTagDialog({
         decimais: Math.max(0, Math.min(6, Number(decimais) || 0)),
         valor_min: vMin.trim() === "" ? null : Number(vMin),
         valor_max: vMax.trim() === "" ? null : Number(vMax),
-        owner_id: uid,
+        owner_id: ownerId as string,
       };
 
       if (editing) {
         // se mudou o nome, apaga a linha antiga em tags_live
         if (editing.nome !== n) {
-          await supabase.from("tags_live").delete().eq("nome", editing.nome).eq("owner_id", uid);
+          await supabase.from("tags_live").delete().eq("nome", editing.nome).eq("owner_id", ownerId as string);
         }
         const { error } = await supabase
           .from("tags_calculadas" as never)
