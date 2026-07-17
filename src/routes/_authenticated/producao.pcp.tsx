@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { guardAdmin, isAdminCancelled } from "@/lib/security/guard-admin";
+import { fetchNextOpNumero } from "@/lib/producao/next-op-numero";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import {
   AlertDialog,
@@ -666,6 +667,7 @@ function ProgramarOrdemDialog({
       setDuracao("");
       setPrioridade("media");
       setAutoIniciar(true);
+      fetchNextOpNumero().then((n) => setNumero((cur) => cur || n)).catch(() => {});
     }
   }, [open, editing]);
 
@@ -1103,6 +1105,7 @@ function RegistrarProducaoManualDialog({
     setInicio(toLocalDateTimeInput(oneHourAgo.toISOString()));
     setFim(toLocalDateTimeInput(now.toISOString()));
     setTanqueId(""); setObsIniciais(""); setObsFinais(""); setLancarEstoque(true);
+    fetchNextOpNumero().then((n) => setNumero((cur) => cur || n)).catch(() => {});
   }, [open]);
 
   const produtos = useQuery({

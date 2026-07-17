@@ -1,6 +1,7 @@
 import { pageHead } from "@/lib/seo";
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { fetchNextOpNumero } from "@/lib/producao/next-op-numero";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { PageHeader } from "@/components/PageHeader";
@@ -31,6 +32,14 @@ function NovaOPPage() {
   const [qtdPlanejada, setQtdPlanejada] = useState<number | "">("");
   const [obs, setObs] = useState("");
   const [createdOpId, setCreatedOpId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchNextOpNumero()
+      .then((n) => { if (!cancelled) setNumero((cur) => cur || n); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
 
   const equipamentos = useQuery({
     queryKey: ["equipamentos-disp"],

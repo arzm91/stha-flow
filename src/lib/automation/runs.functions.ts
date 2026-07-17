@@ -183,7 +183,9 @@ async function runActionNode(
   if (actionType === "criar_ordem") {
     const { data: prod } = await supabase
       .from("produtos").select("codigo").eq("id", cfg.produto_id as string).maybeSingle();
-    const numero = `AUTO-${Date.now()}`;
+    const { data: numeroRpc, error: nerr } = await supabase.rpc("next_op_numero", { _owner: ownerId });
+    if (nerr) throw new Error(nerr.message);
+    const numero = String(numeroRpc ?? `AUTO-${Date.now()}`);
     const { error, data } = await supabase.from("ordens_producao").insert({
       owner_id: ownerId,
       numero,
