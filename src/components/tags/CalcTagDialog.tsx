@@ -173,11 +173,19 @@ export function CalcTagDialog({
       if (tipo === "formula") {
         if (!validation.ok) throw new Error(validation.error);
         try { compileFormula(formula); } catch (e: any) { throw new Error(e.message); }
-      } else {
+      } else if (tipo === "delta_janela") {
         if (!snapshotTag.trim()) throw new Error("Escolha a tag de origem");
         if (!/^\d{1,2}:\d{2}$/.test(snapshotHora)) throw new Error("Horário inválido (use HH:MM)");
         const jan = Number(snapshotJanelaDias);
         if (!Number.isFinite(jan) || jan < 1 || jan > 366) throw new Error("Janela deve estar entre 1 e 366 dias");
+      } else if (tipo === "acumulador_janela") {
+        if (!acumTag.trim()) throw new Error("Escolha a tag de origem");
+        if (acumResetTipo === "diario") {
+          if (!/^\d{1,2}:\d{2}$/.test(acumResetHora)) throw new Error("Horário inválido (use HH:MM)");
+        } else {
+          const iv = Number(acumIntervaloHoras);
+          if (!Number.isFinite(iv) || iv < 1 || iv > 24) throw new Error("Intervalo deve estar entre 1 e 24 horas");
+        }
       }
 
       const isEditingSameName = editing?.nome === n;
@@ -206,6 +214,14 @@ export function CalcTagDialog({
         snapshot_tag_nome: tipo === "delta_janela" ? snapshotTag.trim() : null,
         snapshot_hora: tipo === "delta_janela" ? snapshotHora : null,
         snapshot_janela_dias: tipo === "delta_janela" ? Number(snapshotJanelaDias) : null,
+        acumulador_tag_nome: tipo === "acumulador_janela" ? acumTag.trim() : null,
+        acumulador_reset_tipo: tipo === "acumulador_janela" ? acumResetTipo : null,
+        acumulador_reset_hora: tipo === "acumulador_janela" && acumResetTipo === "diario" ? acumResetHora : null,
+        acumulador_intervalo_horas: tipo === "acumulador_janela" && acumResetTipo === "horas" ? Number(acumIntervaloHoras) : null,
+        // Ao criar/editar, força um novo ciclo na próxima execução do agendador
+        acumulador_valor: tipo === "acumulador_janela" ? 0 : null,
+        acumulador_ultimo_valor_fonte: null,
+        acumulador_janela_inicio: null,
       };
 
       if (editing) {
