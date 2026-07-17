@@ -28,7 +28,7 @@ export function CalcTagDialog({
   const qc = useQueryClient();
   const [nome, setNome] = useState("");
   const [nomeAmigavel, setNomeAmigavel] = useState("");
-  const [tipo, setTipo] = useState<"formula" | "delta_janela">("formula");
+  const [tipo, setTipo] = useState<"formula" | "delta_janela" | "acumulador_janela">("formula");
   const [formula, setFormula] = useState("");
   const [unidade, setUnidade] = useState("");
   const [grupo, setGrupo] = useState("Calculadas");
@@ -40,6 +40,11 @@ export function CalcTagDialog({
   const [snapshotTag, setSnapshotTag] = useState("");
   const [snapshotHora, setSnapshotHora] = useState("08:00");
   const [snapshotJanelaDias, setSnapshotJanelaDias] = useState("1");
+  // Config para tipo "acumulador_janela"
+  const [acumTag, setAcumTag] = useState("");
+  const [acumResetTipo, setAcumResetTipo] = useState<"diario" | "horas">("diario");
+  const [acumResetHora, setAcumResetHora] = useState("00:00");
+  const [acumIntervaloHoras, setAcumIntervaloHoras] = useState("1");
   const formulaRef = useRef<HTMLTextAreaElement>(null);
 
   // Lista de tags disponíveis para compor a fórmula (endpoint + outras calculadas)
@@ -94,10 +99,15 @@ export function CalcTagDialog({
         snapshot_tag_nome?: string | null;
         snapshot_hora?: string | null;
         snapshot_janela_dias?: number | null;
+        acumulador_tag_nome?: string | null;
+        acumulador_reset_tipo?: string | null;
+        acumulador_reset_hora?: string | null;
+        acumulador_intervalo_horas?: number | null;
       }) | null;
       setNome(editing?.nome ?? "");
       setNomeAmigavel(editing?.nome_amigavel ?? "");
-      setTipo((editingAny?.tipo === "delta_janela" ? "delta_janela" : "formula"));
+      const t = editingAny?.tipo;
+      setTipo(t === "delta_janela" ? "delta_janela" : t === "acumulador_janela" ? "acumulador_janela" : "formula");
       setFormula(editing?.formula ?? "");
       setUnidade(editing?.unidade ?? "");
       setGrupo(editing?.grupo ?? "Calculadas");
@@ -107,6 +117,10 @@ export function CalcTagDialog({
       setSnapshotTag(editingAny?.snapshot_tag_nome ?? "");
       setSnapshotHora(editingAny?.snapshot_hora ?? "08:00");
       setSnapshotJanelaDias(String(editingAny?.snapshot_janela_dias ?? 1));
+      setAcumTag(editingAny?.acumulador_tag_nome ?? "");
+      setAcumResetTipo((editingAny?.acumulador_reset_tipo === "horas" ? "horas" : "diario"));
+      setAcumResetHora(editingAny?.acumulador_reset_hora ?? "00:00");
+      setAcumIntervaloHoras(String(editingAny?.acumulador_intervalo_horas ?? 1));
     }
   }, [open, editing]);
 
@@ -126,6 +140,15 @@ export function CalcTagDialog({
           : "Delta será calculado após duas capturas no horário",
       };
     }
+    if (tipo === "acumulador_janela") {
+      const cur = liveValues.get(acumTag);
+      return {
+        valor: null as number | null,
+        erro: cur == null
+          ? "Aguardando primeira leitura da tag de origem"
+          : "Acumulado será atualizado pelo agendador (a cada minuto)",
+      };
+    }
     if (!validation.ok || !nome.trim()) return { valor: null as number | null, erro: null as string | null };
     const others = existingCalcTags.filter((t) => t.nome !== (editing?.nome ?? "__none__"));
     const tempTag: CalcTag = {
@@ -138,7 +161,7 @@ export function CalcTagDialog({
     };
     const result = evaluateCalcTags([...others, tempTag], liveValues);
     return result.get(tempTag.nome) ?? { valor: null, erro: null };
-  }, [tipo, snapshotTag, validation.ok, formula, nome, liveValues, existingCalcTags, editing]);
+  }, [tipo, snapshotTag, acumTag, validation.ok, formula, nome, liveValues, existingCalcTags, editing]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -150,11 +173,19 @@ export function CalcTagDialog({
       if (tipo === "formula") {
         if (!validation.ok) throw new Error(validation.error);
         try { compileFormula(formula); } catch (e: any) { throw new Error(e.message); }
-      } else {
+      } else if (tipo === "delta_janela") {
         if (!snapshotTag.trim()) throw new Error("Escolha a tag de origem");
         if (!/^\d{1,2}:\d{2}$/.test(snapshotHora)) throw new Error("Horário inválido (use HH:MM)");
         const jan = Number(snapshotJanelaDias);
         if (!Number.isFinite(jan) || jan < 1 || jan > 366) throw new Error("Janela deve estar entre 1 e 366 dias");
+      } else if (tipo === "acumulador_janela") {
+        if (!acumTag.trim()) throw new Error("Escolha a tag de origem");
+        if (acumResetTipo === "diario") {
+          if (!/^\d{1,2}:\d{2}$/.test(acumResetHora)) throw new Error("Horário inválido (use HH:MM)");
+        } else {
+          const iv = Number(acumIntervaloHoras);
+          if (!Number.isFinite(iv) || iv < 1 || iv > 24) throw new Error("Intervalo deve estar entre 1 e 24 horas");
+        }
       }
 
       const isEditingSameName = editing?.nome === n;
@@ -183,6 +214,14 @@ export function CalcTagDialog({
         snapshot_tag_nome: tipo === "delta_janela" ? snapshotTag.trim() : null,
         snapshot_hora: tipo === "delta_janela" ? snapshotHora : null,
         snapshot_janela_dias: tipo === "delta_janela" ? Number(snapshotJanelaDias) : null,
+        acumulador_tag_nome: tipo === "acumulador_janela" ? acumTag.trim() : null,
+        acumulador_reset_tipo: tipo === "acumulador_janela" ? acumResetTipo : null,
+        acumulador_reset_hora: tipo === "acumulador_janela" && acumResetTipo === "diario" ? acumResetHora : null,
+        acumulador_intervalo_horas: tipo === "acumulador_janela" && acumResetTipo === "horas" ? Number(acumIntervaloHoras) : null,
+        // Ao criar/editar, força um novo ciclo na próxima execução do agendador
+        acumulador_valor: tipo === "acumulador_janela" ? 0 : null,
+        acumulador_ultimo_valor_fonte: null,
+        acumulador_janela_inicio: null,
       };
 
       if (editing) {
@@ -214,7 +253,7 @@ export function CalcTagDialog({
             valor_num_bruto: null,
             unidade: unidade.trim() || null,
             grupo: grupo.trim() || "Calculadas",
-            qualidade: tipo === "delta_janela" ? "aguardando" : "good",
+            qualidade: tipo === "delta_janela" || tipo === "acumulador_janela" ? "aguardando" : "good",
             valor_min: vMin.trim() === "" ? null : Number(vMin),
             valor_max: vMax.trim() === "" ? null : Number(vMax),
             origem: "calculada",
@@ -264,19 +303,86 @@ export function CalcTagDialog({
 
           <div>
             <Label>Tipo *</Label>
-            <Select value={tipo} onValueChange={(v) => setTipo(v as "formula" | "delta_janela")}>
+            <Select value={tipo} onValueChange={(v) => setTipo(v as "formula" | "delta_janela" | "acumulador_janela")}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="formula">Fórmula matemática</SelectItem>
                 <SelectItem value="delta_janela">Delta em janela (ex: hoje 08:00 − ontem 08:00)</SelectItem>
+                <SelectItem value="acumulador_janela">Acumulador em janela (soma incrementos até zerar)</SelectItem>
               </SelectContent>
             </Select>
             <p className="mt-1 text-[11px] text-muted-foreground">
               {tipo === "formula"
                 ? "Combine outras tags com uma expressão matemática."
-                : "Captura o valor de uma tag num horário fixo do dia e calcula a diferença em relação ao valor capturado N dias atrás no mesmo horário."}
+                : tipo === "delta_janela"
+                ? "Captura o valor de uma tag num horário fixo do dia e calcula a diferença em relação ao valor capturado N dias atrás no mesmo horário."
+                : "Soma os incrementos positivos de uma tag ao longo de uma janela de tempo e zera automaticamente no fim do período. A primeira leitura de cada janela vira baseline (contagem inicia em 0), então o valor bruto da fonte pode ser qualquer número."}
             </p>
           </div>
+
+          {tipo === "acumulador_janela" && (
+            <div className="space-y-3 rounded-md border p-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="sm:col-span-3">
+                  <Label>Tag de origem *</Label>
+                  <Select value={acumTag} onValueChange={setAcumTag}>
+                    <SelectTrigger><SelectValue placeholder="Escolha a tag…" /></SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {(tagsDisponiveis.data ?? [])
+                        .filter((t) => !editing || t.nome !== editing.nome)
+                        .map((t) => (
+                          <SelectItem key={t.nome} value={t.nome}>
+                            {(t.nome_amigavel?.trim() || t.nome)} <span className="ml-1 text-[10px] text-muted-foreground">({t.nome})</span>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Tipo de reset *</Label>
+                  <Select value={acumResetTipo} onValueChange={(v) => setAcumResetTipo(v as "diario" | "horas")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="diario">Diário (hora fixa)</SelectItem>
+                      <SelectItem value="horas">A cada N horas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {acumResetTipo === "diario" ? (
+                  <div className="sm:col-span-2">
+                    <Label>Hora do reset *</Label>
+                    <Input
+                      type="time"
+                      value={acumResetHora}
+                      onChange={(e) => setAcumResetHora(e.target.value)}
+                    />
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      Fuso America/Sao_Paulo. Ex.: <b>00:00</b> zera todo dia à meia-noite.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="sm:col-span-2">
+                    <Label>Intervalo (horas) *</Label>
+                    <Select value={acumIntervaloHoras} onValueChange={setAcumIntervaloHoras}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 6, 8, 12, 24].map((h) => (
+                          <SelectItem key={h} value={String(h)}>{h}h</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      Janelas alinhadas à meia-noite. Ex.: 8h → 00:00, 08:00, 16:00.
+                    </p>
+                  </div>
+                )}
+                <div className="sm:col-span-3 rounded-md bg-muted/40 p-2 text-[11px] text-muted-foreground">
+                  A tag <b>acumula apenas incrementos positivos</b>. Se a fonte cair (rollover do totalizador), o baseline
+                  é atualizado sem subtrair. A atualização é feita pelo agendador (a cada minuto).
+                </div>
+              </div>
+            </div>
+          )}
 
           {tipo === "delta_janela" && (
             <div className="space-y-3 rounded-md border p-3">
@@ -498,7 +604,7 @@ export function CalcTagDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending || !nome.trim() || (tipo === "formula" ? (!validation.ok || !formula.trim()) : (!snapshotTag.trim() || !snapshotHora))}>
+          <Button onClick={() => save.mutate()} disabled={save.isPending || !nome.trim() || (tipo === "formula" ? (!validation.ok || !formula.trim()) : tipo === "delta_janela" ? (!snapshotTag.trim() || !snapshotHora) : (!acumTag.trim() || (acumResetTipo === "diario" ? !acumResetHora : !acumIntervaloHoras)))}>
             {save.isPending ? "Salvando…" : "Salvar"}
           </Button>
         </DialogFooter>
