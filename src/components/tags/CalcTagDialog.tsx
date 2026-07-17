@@ -200,6 +200,30 @@ export function CalcTagDialog({
           .insert(payload as never);
         if (error) throw error;
       }
+
+      // Garante que a tag apareça imediatamente na lista de tags ao vivo,
+      // mesmo antes da primeira captura (delta_janela) ou primeiro tick (formula).
+      await supabase
+        .from("tags_live" as never)
+        .upsert(
+          {
+            nome: n,
+            nome_amigavel: nomeAmigavel.trim() || null,
+            valor: null,
+            valor_num: null,
+            valor_num_bruto: null,
+            unidade: unidade.trim() || null,
+            grupo: grupo.trim() || "Calculadas",
+            qualidade: tipo === "delta_janela" ? "aguardando" : "good",
+            valor_min: vMin.trim() === "" ? null : Number(vMin),
+            valor_max: vMax.trim() === "" ? null : Number(vMax),
+            origem: "calculada",
+            owner_id: ownerId as string,
+            atualizado_em: new Date().toISOString(),
+          } as never,
+          { onConflict: "owner_id,nome" } as never,
+        );
+
     },
     onSuccess: () => {
       toast.success(editing ? "Tag calculada atualizada" : "Tag calculada criada");
