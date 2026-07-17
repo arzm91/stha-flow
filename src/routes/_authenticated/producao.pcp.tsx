@@ -667,6 +667,7 @@ function ProgramarOrdemDialog({
       setDuracao("");
       setPrioridade("media");
       setAutoIniciar(true);
+      fetchNextOpNumero().then((n) => setNumero((cur) => cur || n)).catch(() => {});
     }
   }, [open, editing]);
 
