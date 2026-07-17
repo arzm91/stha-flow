@@ -474,7 +474,7 @@ export function CalcTagDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending || !validation.ok || !nome.trim() || !formula.trim()}>
+          <Button onClick={() => save.mutate()} disabled={save.isPending || !nome.trim() || (tipo === "formula" ? (!validation.ok || !formula.trim()) : (!snapshotTag.trim() || !snapshotHora))}>
             {save.isPending ? "Salvando…" : "Salvar"}
           </Button>
         </DialogFooter>
