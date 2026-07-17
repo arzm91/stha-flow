@@ -303,19 +303,86 @@ export function CalcTagDialog({
 
           <div>
             <Label>Tipo *</Label>
-            <Select value={tipo} onValueChange={(v) => setTipo(v as "formula" | "delta_janela")}>
+            <Select value={tipo} onValueChange={(v) => setTipo(v as "formula" | "delta_janela" | "acumulador_janela")}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="formula">Fórmula matemática</SelectItem>
                 <SelectItem value="delta_janela">Delta em janela (ex: hoje 08:00 − ontem 08:00)</SelectItem>
+                <SelectItem value="acumulador_janela">Acumulador em janela (soma incrementos até zerar)</SelectItem>
               </SelectContent>
             </Select>
             <p className="mt-1 text-[11px] text-muted-foreground">
               {tipo === "formula"
                 ? "Combine outras tags com uma expressão matemática."
-                : "Captura o valor de uma tag num horário fixo do dia e calcula a diferença em relação ao valor capturado N dias atrás no mesmo horário."}
+                : tipo === "delta_janela"
+                ? "Captura o valor de uma tag num horário fixo do dia e calcula a diferença em relação ao valor capturado N dias atrás no mesmo horário."
+                : "Soma os incrementos positivos de uma tag ao longo de uma janela de tempo e zera automaticamente no fim do período. A primeira leitura de cada janela vira baseline (contagem inicia em 0), então o valor bruto da fonte pode ser qualquer número."}
             </p>
           </div>
+
+          {tipo === "acumulador_janela" && (
+            <div className="space-y-3 rounded-md border p-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="sm:col-span-3">
+                  <Label>Tag de origem *</Label>
+                  <Select value={acumTag} onValueChange={setAcumTag}>
+                    <SelectTrigger><SelectValue placeholder="Escolha a tag…" /></SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {(tagsDisponiveis.data ?? [])
+                        .filter((t) => !editing || t.nome !== editing.nome)
+                        .map((t) => (
+                          <SelectItem key={t.nome} value={t.nome}>
+                            {(t.nome_amigavel?.trim() || t.nome)} <span className="ml-1 text-[10px] text-muted-foreground">({t.nome})</span>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Tipo de reset *</Label>
+                  <Select value={acumResetTipo} onValueChange={(v) => setAcumResetTipo(v as "diario" | "horas")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="diario">Diário (hora fixa)</SelectItem>
+                      <SelectItem value="horas">A cada N horas</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {acumResetTipo === "diario" ? (
+                  <div className="sm:col-span-2">
+                    <Label>Hora do reset *</Label>
+                    <Input
+                      type="time"
+                      value={acumResetHora}
+                      onChange={(e) => setAcumResetHora(e.target.value)}
+                    />
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      Fuso America/Sao_Paulo. Ex.: <b>00:00</b> zera todo dia à meia-noite.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="sm:col-span-2">
+                    <Label>Intervalo (horas) *</Label>
+                    <Select value={acumIntervaloHoras} onValueChange={setAcumIntervaloHoras}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {[1, 2, 3, 4, 6, 8, 12, 24].map((h) => (
+                          <SelectItem key={h} value={String(h)}>{h}h</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="mt-1 text-[10px] text-muted-foreground">
+                      Janelas alinhadas à meia-noite. Ex.: 8h → 00:00, 08:00, 16:00.
+                    </p>
+                  </div>
+                )}
+                <div className="sm:col-span-3 rounded-md bg-muted/40 p-2 text-[11px] text-muted-foreground">
+                  A tag <b>acumula apenas incrementos positivos</b>. Se a fonte cair (rollover do totalizador), o baseline
+                  é atualizado sem subtrair. A atualização é feita pelo agendador (a cada minuto).
+                </div>
+              </div>
+            </div>
+          )}
 
           {tipo === "delta_janela" && (
             <div className="space-y-3 rounded-md border p-3">
