@@ -1105,6 +1105,7 @@ function RegistrarProducaoManualDialog({
     setInicio(toLocalDateTimeInput(oneHourAgo.toISOString()));
     setFim(toLocalDateTimeInput(now.toISOString()));
     setTanqueId(""); setObsIniciais(""); setObsFinais(""); setLancarEstoque(true);
+    fetchNextOpNumero().then((n) => setNumero((cur) => cur || n)).catch(() => {});
   }, [open]);
 
   const produtos = useQuery({
