@@ -604,7 +604,7 @@ export function CalcTagDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending || !nome.trim() || (tipo === "formula" ? (!validation.ok || !formula.trim()) : (!snapshotTag.trim() || !snapshotHora))}>
+          <Button onClick={() => save.mutate()} disabled={save.isPending || !nome.trim() || (tipo === "formula" ? (!validation.ok || !formula.trim()) : tipo === "delta_janela" ? (!snapshotTag.trim() || !snapshotHora) : (!acumTag.trim() || (acumResetTipo === "diario" ? !acumResetHora : !acumIntervaloHoras)))}>
             {save.isPending ? "Salvando…" : "Salvar"}
           </Button>
         </DialogFooter>
