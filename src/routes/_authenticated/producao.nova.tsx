@@ -33,6 +33,14 @@ function NovaOPPage() {
   const [obs, setObs] = useState("");
   const [createdOpId, setCreatedOpId] = useState<string | null>(null);
 
+  useEffect(() => {
+    let cancelled = false;
+    fetchNextOpNumero()
+      .then((n) => { if (!cancelled) setNumero((cur) => cur || n); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+
   const equipamentos = useQuery({
     queryKey: ["equipamentos-disp"],
     queryFn: async () => {
