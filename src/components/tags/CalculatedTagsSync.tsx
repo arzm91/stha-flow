@@ -59,7 +59,7 @@ export function CalculatedTagsSync() {
               valor_min: t.valor_min,
               valor_max: t.valor_max,
               origem: "calculada",
-              owner_id: uid,
+              owner_id: ownerId as string,
               atualizado_em: nowIso,
             };
           })
