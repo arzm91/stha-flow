@@ -28,7 +28,7 @@ export function CalcTagDialog({
   const qc = useQueryClient();
   const [nome, setNome] = useState("");
   const [nomeAmigavel, setNomeAmigavel] = useState("");
-  const [tipo, setTipo] = useState<"formula" | "delta_janela">("formula");
+  const [tipo, setTipo] = useState<"formula" | "delta_janela" | "acumulador_janela">("formula");
   const [formula, setFormula] = useState("");
   const [unidade, setUnidade] = useState("");
   const [grupo, setGrupo] = useState("Calculadas");
@@ -40,6 +40,11 @@ export function CalcTagDialog({
   const [snapshotTag, setSnapshotTag] = useState("");
   const [snapshotHora, setSnapshotHora] = useState("08:00");
   const [snapshotJanelaDias, setSnapshotJanelaDias] = useState("1");
+  // Config para tipo "acumulador_janela"
+  const [acumTag, setAcumTag] = useState("");
+  const [acumResetTipo, setAcumResetTipo] = useState<"diario" | "horas">("diario");
+  const [acumResetHora, setAcumResetHora] = useState("00:00");
+  const [acumIntervaloHoras, setAcumIntervaloHoras] = useState("1");
   const formulaRef = useRef<HTMLTextAreaElement>(null);
 
   // Lista de tags disponíveis para compor a fórmula (endpoint + outras calculadas)
