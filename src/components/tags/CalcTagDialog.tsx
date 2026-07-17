@@ -253,7 +253,7 @@ export function CalcTagDialog({
             valor_num_bruto: null,
             unidade: unidade.trim() || null,
             grupo: grupo.trim() || "Calculadas",
-            qualidade: tipo === "delta_janela" ? "aguardando" : "good",
+            qualidade: tipo === "delta_janela" || tipo === "acumulador_janela" ? "aguardando" : "good",
             valor_min: vMin.trim() === "" ? null : Number(vMin),
             valor_max: vMax.trim() === "" ? null : Number(vMax),
             origem: "calculada",
