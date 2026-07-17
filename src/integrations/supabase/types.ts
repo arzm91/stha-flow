@@ -1328,6 +1328,24 @@ export type Database = {
           },
         ]
       }
+      op_numero_seq: {
+        Row: {
+          current_val: number
+          owner_id: string
+          updated_at: string
+        }
+        Insert: {
+          current_val?: number
+          owner_id: string
+          updated_at?: string
+        }
+        Update: {
+          current_val?: number
+          owner_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ordem_etapas: {
         Row: {
           atividade_descricao: string | null
@@ -3181,6 +3199,7 @@ export type Database = {
         }
         Returns: number
       }
+      next_op_numero: { Args: { _owner: string }; Returns: string }
       poll_tag_endpoints_fire: { Args: never; Returns: number }
       poll_tag_endpoints_process: { Args: never; Returns: number }
       read_email_batch: {
