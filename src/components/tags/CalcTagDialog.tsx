@@ -429,6 +429,9 @@ export function CalcTagDialog({
               ser usadas (com detecção de ciclo).
             </p>
           </div>
+          )}
+
+
 
 
           <div className="grid grid-cols-3 gap-3">
