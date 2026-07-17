@@ -132,6 +132,9 @@ export function CalcTagDialog({
       const uid = sess.session?.user.id;
       if (!uid) throw new Error("Sessão expirada");
 
+      const { data: ownerId, error: ownerErr } = await supabase.rpc("effective_owner", { _user: uid });
+      if (ownerErr || !ownerId) throw new Error(ownerErr?.message ?? "Não foi possível resolver o tenant");
+
       const payload = {
         nome: n,
         nome_amigavel: nomeAmigavel.trim() || null,
