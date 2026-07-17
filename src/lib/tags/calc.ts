@@ -5,7 +5,7 @@ export type CalcTag = {
   id: string;
   nome: string;
   nome_amigavel: string | null;
-  formula: string;
+  formula: string | null;
   unidade: string | null;
   grupo: string | null;
   decimais: number;
@@ -13,6 +13,12 @@ export type CalcTag = {
   valor_max: number | null;
   ativo: boolean;
   owner_id: string;
+  tipo?: "formula" | "delta_janela" | string | null;
+  snapshot_tag_nome?: string | null;
+  snapshot_hora?: string | null;
+  snapshot_janela_dias?: number | null;
+  ultimo_valor_calc?: number | null;
+  ultimo_valor_calc_em?: string | null;
 };
 
 // Parser configurado com funções matemáticas seguras (sem acesso ao ambiente JS).
