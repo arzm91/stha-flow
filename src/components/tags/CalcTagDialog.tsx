@@ -140,6 +140,15 @@ export function CalcTagDialog({
           : "Delta será calculado após duas capturas no horário",
       };
     }
+    if (tipo === "acumulador_janela") {
+      const cur = liveValues.get(acumTag);
+      return {
+        valor: null as number | null,
+        erro: cur == null
+          ? "Aguardando primeira leitura da tag de origem"
+          : "Acumulado será atualizado pelo agendador (a cada minuto)",
+      };
+    }
     if (!validation.ok || !nome.trim()) return { valor: null as number | null, erro: null as string | null };
     const others = existingCalcTags.filter((t) => t.nome !== (editing?.nome ?? "__none__"));
     const tempTag: CalcTag = {
@@ -152,7 +161,7 @@ export function CalcTagDialog({
     };
     const result = evaluateCalcTags([...others, tempTag], liveValues);
     return result.get(tempTag.nome) ?? { valor: null, erro: null };
-  }, [tipo, snapshotTag, validation.ok, formula, nome, liveValues, existingCalcTags, editing]);
+  }, [tipo, snapshotTag, acumTag, validation.ok, formula, nome, liveValues, existingCalcTags, editing]);
 
   const save = useMutation({
     mutationFn: async () => {
