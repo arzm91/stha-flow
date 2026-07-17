@@ -69,6 +69,7 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as ApiPublicTagsSnapshotDiarioRouteImport } from './routes/api/public/tags.snapshot-diario'
 import { Route as ApiPublicTagsPushRouteImport } from './routes/api/public/tags.push'
 import { Route as ApiPublicTagsPollRouteImport } from './routes/api/public/tags.poll'
+import { Route as ApiPublicTagsAcumuladorTickRouteImport } from './routes/api/public/tags.acumulador-tick'
 import { Route as ApiPublicAutomationDispatchRunsRouteImport } from './routes/api/public/automation.dispatch-runs'
 import { Route as ApiPublicAlertasDispatchEmailRouteImport } from './routes/api/public/alertas.dispatch-email'
 import { Route as AuthenticatedProducaoHistoricoEquipIdRouteImport } from './routes/_authenticated/producao.historico.$equipId'
@@ -410,6 +411,12 @@ const ApiPublicTagsPollRoute = ApiPublicTagsPollRouteImport.update({
   path: '/api/public/tags/poll',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTagsAcumuladorTickRoute =
+  ApiPublicTagsAcumuladorTickRouteImport.update({
+    id: '/api/public/tags/acumulador-tick',
+    path: '/api/public/tags/acumulador-tick',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicAutomationDispatchRunsRoute =
   ApiPublicAutomationDispatchRunsRouteImport.update({
     id: '/api/public/automation/dispatch-runs',
@@ -519,6 +526,7 @@ export interface FileRoutesByFullPath {
   '/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/alertas/dispatch-email': typeof ApiPublicAlertasDispatchEmailRoute
   '/api/public/automation/dispatch-runs': typeof ApiPublicAutomationDispatchRunsRoute
+  '/api/public/tags/acumulador-tick': typeof ApiPublicTagsAcumuladorTickRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
   '/api/public/tags/snapshot-diario': typeof ApiPublicTagsSnapshotDiarioRoute
@@ -581,6 +589,7 @@ export interface FileRoutesByTo {
   '/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/alertas/dispatch-email': typeof ApiPublicAlertasDispatchEmailRoute
   '/api/public/automation/dispatch-runs': typeof ApiPublicAutomationDispatchRunsRoute
+  '/api/public/tags/acumulador-tick': typeof ApiPublicTagsAcumuladorTickRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
   '/api/public/tags/snapshot-diario': typeof ApiPublicTagsSnapshotDiarioRoute
@@ -652,6 +661,7 @@ export interface FileRoutesById {
   '/_authenticated/producao/historico/$equipId': typeof AuthenticatedProducaoHistoricoEquipIdRoute
   '/api/public/alertas/dispatch-email': typeof ApiPublicAlertasDispatchEmailRoute
   '/api/public/automation/dispatch-runs': typeof ApiPublicAutomationDispatchRunsRoute
+  '/api/public/tags/acumulador-tick': typeof ApiPublicTagsAcumuladorTickRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
   '/api/public/tags/snapshot-diario': typeof ApiPublicTagsSnapshotDiarioRoute
@@ -723,6 +733,7 @@ export interface FileRouteTypes {
     | '/producao/historico/$equipId'
     | '/api/public/alertas/dispatch-email'
     | '/api/public/automation/dispatch-runs'
+    | '/api/public/tags/acumulador-tick'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
     | '/api/public/tags/snapshot-diario'
@@ -785,6 +796,7 @@ export interface FileRouteTypes {
     | '/producao/historico/$equipId'
     | '/api/public/alertas/dispatch-email'
     | '/api/public/automation/dispatch-runs'
+    | '/api/public/tags/acumulador-tick'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
     | '/api/public/tags/snapshot-diario'
@@ -855,6 +867,7 @@ export interface FileRouteTypes {
     | '/_authenticated/producao/historico/$equipId'
     | '/api/public/alertas/dispatch-email'
     | '/api/public/automation/dispatch-runs'
+    | '/api/public/tags/acumulador-tick'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
     | '/api/public/tags/snapshot-diario'
@@ -882,6 +895,7 @@ export interface RootRouteChildren {
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
   ApiPublicAlertasDispatchEmailRoute: typeof ApiPublicAlertasDispatchEmailRoute
   ApiPublicAutomationDispatchRunsRoute: typeof ApiPublicAutomationDispatchRunsRoute
+  ApiPublicTagsAcumuladorTickRoute: typeof ApiPublicTagsAcumuladorTickRoute
   ApiPublicTagsPollRoute: typeof ApiPublicTagsPollRoute
   ApiPublicTagsPushRoute: typeof ApiPublicTagsPushRoute
   ApiPublicTagsSnapshotDiarioRoute: typeof ApiPublicTagsSnapshotDiarioRoute
@@ -1314,6 +1328,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTagsPollRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/tags/acumulador-tick': {
+      id: '/api/public/tags/acumulador-tick'
+      path: '/api/public/tags/acumulador-tick'
+      fullPath: '/api/public/tags/acumulador-tick'
+      preLoaderRoute: typeof ApiPublicTagsAcumuladorTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/automation/dispatch-runs': {
       id: '/api/public/automation/dispatch-runs'
       path: '/api/public/automation/dispatch-runs'
@@ -1592,6 +1613,7 @@ const rootRouteChildren: RootRouteChildren = {
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
   ApiPublicAlertasDispatchEmailRoute: ApiPublicAlertasDispatchEmailRoute,
   ApiPublicAutomationDispatchRunsRoute: ApiPublicAutomationDispatchRunsRoute,
+  ApiPublicTagsAcumuladorTickRoute: ApiPublicTagsAcumuladorTickRoute,
   ApiPublicTagsPollRoute: ApiPublicTagsPollRoute,
   ApiPublicTagsPushRoute: ApiPublicTagsPushRoute,
   ApiPublicTagsSnapshotDiarioRoute: ApiPublicTagsSnapshotDiarioRoute,
