@@ -18,16 +18,19 @@ export function CalculatedTagsSync() {
         const uid = sess.session?.user.id;
         if (!uid) return;
 
+        const { data: ownerId } = await supabase.rpc("effective_owner", { _user: uid });
+        if (!ownerId) return;
+
         const [{ data: calcRows }, { data: liveRows }] = await Promise.all([
           supabase
             .from("tags_calculadas" as never)
             .select("*")
-            .eq("owner_id", uid)
+            .eq("owner_id", ownerId as string)
             .eq("ativo", true),
           supabase
             .from("tags_live" as never)
             .select("nome,valor_num")
-            .eq("owner_id", uid),
+            .eq("owner_id", ownerId as string),
         ]);
 
         const calc = (calcRows ?? []) as unknown as CalcTag[];
@@ -56,7 +59,7 @@ export function CalculatedTagsSync() {
               valor_min: t.valor_min,
               valor_max: t.valor_max,
               origem: "calculada",
-              owner_id: uid,
+              owner_id: ownerId as string,
               atualizado_em: nowIso,
             };
           })

@@ -132,6 +132,9 @@ export function CalcTagDialog({
       const uid = sess.session?.user.id;
       if (!uid) throw new Error("Sessão expirada");
 
+      const { data: ownerId, error: ownerErr } = await supabase.rpc("effective_owner", { _user: uid });
+      if (ownerErr || !ownerId) throw new Error(ownerErr?.message ?? "Não foi possível resolver o tenant");
+
       const payload = {
         nome: n,
         nome_amigavel: nomeAmigavel.trim() || null,
@@ -141,13 +144,13 @@ export function CalcTagDialog({
         decimais: Math.max(0, Math.min(6, Number(decimais) || 0)),
         valor_min: vMin.trim() === "" ? null : Number(vMin),
         valor_max: vMax.trim() === "" ? null : Number(vMax),
-        owner_id: uid,
+        owner_id: ownerId as string,
       };
 
       if (editing) {
         // se mudou o nome, apaga a linha antiga em tags_live
         if (editing.nome !== n) {
-          await supabase.from("tags_live").delete().eq("nome", editing.nome).eq("owner_id", uid);
+          await supabase.from("tags_live").delete().eq("nome", editing.nome).eq("owner_id", ownerId as string);
         }
         const { error } = await supabase
           .from("tags_calculadas" as never)
