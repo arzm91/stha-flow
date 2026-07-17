@@ -2698,17 +2698,56 @@ export type Database = {
         }
         Relationships: []
       }
+      tag_snapshots_diarios: {
+        Row: {
+          capturado_em: string
+          created_at: string
+          dia_ref: string
+          hora_ref: string
+          id: string
+          owner_id: string
+          tag_nome: string
+          valor_num: number | null
+        }
+        Insert: {
+          capturado_em?: string
+          created_at?: string
+          dia_ref: string
+          hora_ref: string
+          id?: string
+          owner_id: string
+          tag_nome: string
+          valor_num?: number | null
+        }
+        Update: {
+          capturado_em?: string
+          created_at?: string
+          dia_ref?: string
+          hora_ref?: string
+          id?: string
+          owner_id?: string
+          tag_nome?: string
+          valor_num?: number | null
+        }
+        Relationships: []
+      }
       tags_calculadas: {
         Row: {
           ativo: boolean
           created_at: string
           decimais: number
-          formula: string
+          formula: string | null
           grupo: string | null
           id: string
           nome: string
           nome_amigavel: string | null
           owner_id: string
+          snapshot_hora: string | null
+          snapshot_janela_dias: number | null
+          snapshot_tag_nome: string | null
+          tipo: string
+          ultimo_valor_calc: number | null
+          ultimo_valor_calc_em: string | null
           unidade: string | null
           updated_at: string
           valor_max: number | null
@@ -2718,12 +2757,18 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           decimais?: number
-          formula: string
+          formula?: string | null
           grupo?: string | null
           id?: string
           nome: string
           nome_amigavel?: string | null
           owner_id: string
+          snapshot_hora?: string | null
+          snapshot_janela_dias?: number | null
+          snapshot_tag_nome?: string | null
+          tipo?: string
+          ultimo_valor_calc?: number | null
+          ultimo_valor_calc_em?: string | null
           unidade?: string | null
           updated_at?: string
           valor_max?: number | null
@@ -2733,12 +2778,18 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           decimais?: number
-          formula?: string
+          formula?: string | null
           grupo?: string | null
           id?: string
           nome?: string
           nome_amigavel?: string | null
           owner_id?: string
+          snapshot_hora?: string | null
+          snapshot_janela_dias?: number | null
+          snapshot_tag_nome?: string | null
+          tipo?: string
+          ultimo_valor_calc?: number | null
+          ultimo_valor_calc_em?: string | null
           unidade?: string | null
           updated_at?: string
           valor_max?: number | null

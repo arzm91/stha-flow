@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { compileFormula, evaluateCalcTags, validateFormula, type CalcTag } from "@/lib/tags/calc";
 import { formatNumber } from "@/lib/format";
@@ -27,6 +28,7 @@ export function CalcTagDialog({
   const qc = useQueryClient();
   const [nome, setNome] = useState("");
   const [nomeAmigavel, setNomeAmigavel] = useState("");
+  const [tipo, setTipo] = useState<"formula" | "delta_janela">("formula");
   const [formula, setFormula] = useState("");
   const [unidade, setUnidade] = useState("");
   const [grupo, setGrupo] = useState("Calculadas");
@@ -34,6 +36,10 @@ export function CalcTagDialog({
   const [vMin, setVMin] = useState("");
   const [vMax, setVMax] = useState("");
   const [tagFiltro, setTagFiltro] = useState("");
+  // Config para tipo "delta_janela"
+  const [snapshotTag, setSnapshotTag] = useState("");
+  const [snapshotHora, setSnapshotHora] = useState("08:00");
+  const [snapshotJanelaDias, setSnapshotJanelaDias] = useState("1");
   const formulaRef = useRef<HTMLTextAreaElement>(null);
 
   // Lista de tags disponíveis para compor a fórmula (endpoint + outras calculadas)
@@ -83,23 +89,44 @@ export function CalcTagDialog({
 
   useEffect(() => {
     if (open) {
+      const editingAny = editing as (CalcTag & {
+        tipo?: string | null;
+        snapshot_tag_nome?: string | null;
+        snapshot_hora?: string | null;
+        snapshot_janela_dias?: number | null;
+      }) | null;
       setNome(editing?.nome ?? "");
       setNomeAmigavel(editing?.nome_amigavel ?? "");
+      setTipo((editingAny?.tipo === "delta_janela" ? "delta_janela" : "formula"));
       setFormula(editing?.formula ?? "");
       setUnidade(editing?.unidade ?? "");
       setGrupo(editing?.grupo ?? "Calculadas");
       setDecimais(String(editing?.decimais ?? 2));
       setVMin(editing?.valor_min != null ? String(editing.valor_min) : "");
       setVMax(editing?.valor_max != null ? String(editing.valor_max) : "");
+      setSnapshotTag(editingAny?.snapshot_tag_nome ?? "");
+      setSnapshotHora(editingAny?.snapshot_hora ?? "08:00");
+      setSnapshotJanelaDias(String(editingAny?.snapshot_janela_dias ?? 1));
     }
   }, [open, editing]);
 
-  const validation = useMemo(() => validateFormula(formula), [formula]);
+  const validation = useMemo(
+    () => (tipo === "formula" ? validateFormula(formula) : { ok: true as const, vars: [] as string[] }),
+    [formula, tipo],
+  );
   const referenced = validation.ok ? validation.vars : [];
 
   const preview = useMemo(() => {
+    if (tipo === "delta_janela") {
+      const cur = liveValues.get(snapshotTag);
+      return {
+        valor: null as number | null,
+        erro: cur == null
+          ? "Aguardando primeira captura no horário configurado"
+          : "Delta será calculado após duas capturas no horário",
+      };
+    }
     if (!validation.ok || !nome.trim()) return { valor: null as number | null, erro: null as string | null };
-    // simula com a tag atual incluída na lista
     const others = existingCalcTags.filter((t) => t.nome !== (editing?.nome ?? "__none__"));
     const tempTag: CalcTag = {
       id: editing?.id ?? "preview",
@@ -107,10 +134,11 @@ export function CalcTagDialog({
       nome_amigavel: null, formula, unidade: null, grupo: null,
       decimais: 2, valor_min: null, valor_max: null,
       ativo: true, owner_id: "preview",
+      tipo: "formula",
     };
     const result = evaluateCalcTags([...others, tempTag], liveValues);
     return result.get(tempTag.nome) ?? { valor: null, erro: null };
-  }, [validation.ok, formula, nome, liveValues, existingCalcTags, editing]);
+  }, [tipo, snapshotTag, validation.ok, formula, nome, liveValues, existingCalcTags, editing]);
 
   const save = useMutation({
     mutationFn: async () => {
@@ -118,11 +146,17 @@ export function CalcTagDialog({
       if (!n) throw new Error("Informe um nome");
       if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(n))
         throw new Error("Nome deve começar com letra/_ e conter apenas letras, números ou _");
-      if (!validation.ok) throw new Error(validation.error);
-      // valida ciclo simulando junto às demais
-      try { compileFormula(formula); } catch (e: any) { throw new Error(e.message); }
 
-      // colisão com tag do endpoint
+      if (tipo === "formula") {
+        if (!validation.ok) throw new Error(validation.error);
+        try { compileFormula(formula); } catch (e: any) { throw new Error(e.message); }
+      } else {
+        if (!snapshotTag.trim()) throw new Error("Escolha a tag de origem");
+        if (!/^\d{1,2}:\d{2}$/.test(snapshotHora)) throw new Error("Horário inválido (use HH:MM)");
+        const jan = Number(snapshotJanelaDias);
+        if (!Number.isFinite(jan) || jan < 1 || jan > 366) throw new Error("Janela deve estar entre 1 e 366 dias");
+      }
+
       const isEditingSameName = editing?.nome === n;
       if (!isEditingSameName && existingNames.has(n)) {
         throw new Error(`Já existe uma tag chamada "${n}" recebida do endpoint. Escolha outro nome.`);
@@ -135,20 +169,23 @@ export function CalcTagDialog({
       const { data: ownerId, error: ownerErr } = await supabase.rpc("effective_owner", { _user: uid });
       if (ownerErr || !ownerId) throw new Error(ownerErr?.message ?? "Não foi possível resolver o tenant");
 
-      const payload = {
+      const payload: Record<string, unknown> = {
         nome: n,
         nome_amigavel: nomeAmigavel.trim() || null,
-        formula: formula.trim(),
         unidade: unidade.trim() || null,
         grupo: grupo.trim() || "Calculadas",
         decimais: Math.max(0, Math.min(6, Number(decimais) || 0)),
         valor_min: vMin.trim() === "" ? null : Number(vMin),
         valor_max: vMax.trim() === "" ? null : Number(vMax),
         owner_id: ownerId as string,
+        tipo,
+        formula: tipo === "formula" ? formula.trim() : null,
+        snapshot_tag_nome: tipo === "delta_janela" ? snapshotTag.trim() : null,
+        snapshot_hora: tipo === "delta_janela" ? snapshotHora : null,
+        snapshot_janela_dias: tipo === "delta_janela" ? Number(snapshotJanelaDias) : null,
       };
 
       if (editing) {
-        // se mudou o nome, apaga a linha antiga em tags_live
         if (editing.nome !== n) {
           await supabase.from("tags_live").delete().eq("nome", editing.nome).eq("owner_id", ownerId as string);
         }
@@ -201,6 +238,70 @@ export function CalcTagDialog({
             </div>
           </div>
 
+          <div>
+            <Label>Tipo *</Label>
+            <Select value={tipo} onValueChange={(v) => setTipo(v as "formula" | "delta_janela")}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="formula">Fórmula matemática</SelectItem>
+                <SelectItem value="delta_janela">Delta em janela (ex: hoje 08:00 − ontem 08:00)</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              {tipo === "formula"
+                ? "Combine outras tags com uma expressão matemática."
+                : "Captura o valor de uma tag num horário fixo do dia e calcula a diferença em relação ao valor capturado N dias atrás no mesmo horário."}
+            </p>
+          </div>
+
+          {tipo === "delta_janela" && (
+            <div className="space-y-3 rounded-md border p-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="sm:col-span-3">
+                  <Label>Tag de origem *</Label>
+                  <Select value={snapshotTag} onValueChange={setSnapshotTag}>
+                    <SelectTrigger><SelectValue placeholder="Escolha a tag…" /></SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {(tagsDisponiveis.data ?? [])
+                        .filter((t) => !editing || t.nome !== editing.nome)
+                        .map((t) => (
+                          <SelectItem key={t.nome} value={t.nome}>
+                            {(t.nome_amigavel?.trim() || t.nome)} <span className="ml-1 text-[10px] text-muted-foreground">({t.nome})</span>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Horário da captura *</Label>
+                  <Input
+                    type="time"
+                    value={snapshotHora}
+                    onChange={(e) => setSnapshotHora(e.target.value)}
+                  />
+                  <p className="mt-1 text-[10px] text-muted-foreground">Fuso America/Sao_Paulo.</p>
+                </div>
+                <div>
+                  <Label>Janela (dias) *</Label>
+                  <Select value={snapshotJanelaDias} onValueChange={setSnapshotJanelaDias}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">1 dia (24h)</SelectItem>
+                      <SelectItem value="7">7 dias (semana)</SelectItem>
+                      <SelectItem value="30">30 dias (mês)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="sm:col-span-3 rounded-md bg-muted/40 p-2 text-[11px] text-muted-foreground">
+                  Ex.: horário <b>08:00</b> e janela <b>1 dia</b> → hoje às 08:00 grava o valor atual; o valor calculado
+                  passa a ser <code>captura de hoje − captura de ontem</code> e permanece assim até a próxima captura.
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tipo === "formula" && (
+          <>
           <div>
             <Label>Fórmula *</Label>
             <Textarea
@@ -329,6 +430,10 @@ export function CalcTagDialog({
               ser usadas (com detecção de ciclo).
             </p>
           </div>
+          </>
+          )}
+
+
 
 
           <div className="grid grid-cols-3 gap-3">
@@ -369,7 +474,7 @@ export function CalcTagDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending || !validation.ok || !nome.trim() || !formula.trim()}>
+          <Button onClick={() => save.mutate()} disabled={save.isPending || !nome.trim() || (tipo === "formula" ? (!validation.ok || !formula.trim()) : (!snapshotTag.trim() || !snapshotHora))}>
             {save.isPending ? "Salvando…" : "Salvar"}
           </Button>
         </DialogFooter>

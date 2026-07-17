@@ -5,7 +5,7 @@ export type CalcTag = {
   id: string;
   nome: string;
   nome_amigavel: string | null;
-  formula: string;
+  formula: string | null;
   unidade: string | null;
   grupo: string | null;
   decimais: number;
@@ -13,6 +13,12 @@ export type CalcTag = {
   valor_max: number | null;
   ativo: boolean;
   owner_id: string;
+  tipo?: "formula" | "delta_janela" | string | null;
+  snapshot_tag_nome?: string | null;
+  snapshot_hora?: string | null;
+  snapshot_janela_dias?: number | null;
+  ultimo_valor_calc?: number | null;
+  ultimo_valor_calc_em?: string | null;
 };
 
 // Parser configurado com funções matemáticas seguras (sem acesso ao ambiente JS).
@@ -46,8 +52,9 @@ export function topoSortCalcTags(tags: CalcTag[]): { order: CalcTag[]; cycles: s
   const byName = new Map(tags.map((t) => [t.nome, t]));
   const deps = new Map<string, string[]>();
   for (const t of tags) {
+    if (t.tipo && t.tipo !== "formula") { deps.set(t.nome, []); continue; }
     try {
-      const { vars } = compileFormula(t.formula);
+      const { vars } = compileFormula(t.formula ?? "");
       deps.set(t.nome, vars.filter((v) => byName.has(v))); // só dependências calculadas
     } catch {
       deps.set(t.nome, []);
@@ -84,8 +91,9 @@ export function evaluateCalcTags(
   const values = new Map(baseValues);
   const out = new Map<string, { valor: number | null; erro: string | null }>();
   for (const t of order) {
+    if (t.tipo && t.tipo !== "formula") continue; // delta_janela é calculado pelo cron server-side
     try {
-      const { expr, vars } = compileFormula(t.formula);
+      const { expr, vars } = compileFormula(t.formula ?? "");
       const scope: Record<string, number> = {};
       let missing: string | null = null;
       for (const v of vars) {
