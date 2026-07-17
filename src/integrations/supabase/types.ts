@@ -2751,6 +2751,13 @@ export type Database = {
       }
       tags_calculadas: {
         Row: {
+          acumulador_intervalo_horas: number | null
+          acumulador_janela_inicio: string | null
+          acumulador_reset_hora: string | null
+          acumulador_reset_tipo: string | null
+          acumulador_tag_nome: string | null
+          acumulador_ultimo_valor_fonte: number | null
+          acumulador_valor: number | null
           ativo: boolean
           created_at: string
           decimais: number
@@ -2772,6 +2779,13 @@ export type Database = {
           valor_min: number | null
         }
         Insert: {
+          acumulador_intervalo_horas?: number | null
+          acumulador_janela_inicio?: string | null
+          acumulador_reset_hora?: string | null
+          acumulador_reset_tipo?: string | null
+          acumulador_tag_nome?: string | null
+          acumulador_ultimo_valor_fonte?: number | null
+          acumulador_valor?: number | null
           ativo?: boolean
           created_at?: string
           decimais?: number
@@ -2793,6 +2807,13 @@ export type Database = {
           valor_min?: number | null
         }
         Update: {
+          acumulador_intervalo_horas?: number | null
+          acumulador_janela_inicio?: string | null
+          acumulador_reset_hora?: string | null
+          acumulador_reset_tipo?: string | null
+          acumulador_tag_nome?: string | null
+          acumulador_ultimo_valor_fonte?: number | null
+          acumulador_valor?: number | null
           ativo?: boolean
           created_at?: string
           decimais?: number
