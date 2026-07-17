@@ -66,6 +66,7 @@ import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/l
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as ApiPublicTagsSnapshotDiarioRouteImport } from './routes/api/public/tags.snapshot-diario'
 import { Route as ApiPublicTagsPushRouteImport } from './routes/api/public/tags.push'
 import { Route as ApiPublicTagsPollRouteImport } from './routes/api/public/tags.poll'
 import { Route as ApiPublicAutomationDispatchRunsRouteImport } from './routes/api/public/automation.dispatch-runs'
@@ -393,6 +394,12 @@ const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   path: '/lovable/email/auth/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTagsSnapshotDiarioRoute =
+  ApiPublicTagsSnapshotDiarioRouteImport.update({
+    id: '/api/public/tags/snapshot-diario',
+    path: '/api/public/tags/snapshot-diario',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicTagsPushRoute = ApiPublicTagsPushRouteImport.update({
   id: '/api/public/tags/push',
   path: '/api/public/tags/push',
@@ -514,6 +521,7 @@ export interface FileRoutesByFullPath {
   '/api/public/automation/dispatch-runs': typeof ApiPublicAutomationDispatchRunsRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
+  '/api/public/tags/snapshot-diario': typeof ApiPublicTagsSnapshotDiarioRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -575,6 +583,7 @@ export interface FileRoutesByTo {
   '/api/public/automation/dispatch-runs': typeof ApiPublicAutomationDispatchRunsRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
+  '/api/public/tags/snapshot-diario': typeof ApiPublicTagsSnapshotDiarioRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -645,6 +654,7 @@ export interface FileRoutesById {
   '/api/public/automation/dispatch-runs': typeof ApiPublicAutomationDispatchRunsRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
+  '/api/public/tags/snapshot-diario': typeof ApiPublicTagsSnapshotDiarioRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -715,6 +725,7 @@ export interface FileRouteTypes {
     | '/api/public/automation/dispatch-runs'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
+    | '/api/public/tags/snapshot-diario'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -776,6 +787,7 @@ export interface FileRouteTypes {
     | '/api/public/automation/dispatch-runs'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
+    | '/api/public/tags/snapshot-diario'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -845,6 +857,7 @@ export interface FileRouteTypes {
     | '/api/public/automation/dispatch-runs'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
+    | '/api/public/tags/snapshot-diario'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -871,6 +884,7 @@ export interface RootRouteChildren {
   ApiPublicAutomationDispatchRunsRoute: typeof ApiPublicAutomationDispatchRunsRoute
   ApiPublicTagsPollRoute: typeof ApiPublicTagsPollRoute
   ApiPublicTagsPushRoute: typeof ApiPublicTagsPushRoute
+  ApiPublicTagsSnapshotDiarioRoute: typeof ApiPublicTagsSnapshotDiarioRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -1279,6 +1293,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/tags/snapshot-diario': {
+      id: '/api/public/tags/snapshot-diario'
+      path: '/api/public/tags/snapshot-diario'
+      fullPath: '/api/public/tags/snapshot-diario'
+      preLoaderRoute: typeof ApiPublicTagsSnapshotDiarioRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/tags/push': {
       id: '/api/public/tags/push'
       path: '/api/public/tags/push'
@@ -1573,6 +1594,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAutomationDispatchRunsRoute: ApiPublicAutomationDispatchRunsRoute,
   ApiPublicTagsPollRoute: ApiPublicTagsPollRoute,
   ApiPublicTagsPushRoute: ApiPublicTagsPushRoute,
+  ApiPublicTagsSnapshotDiarioRoute: ApiPublicTagsSnapshotDiarioRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
