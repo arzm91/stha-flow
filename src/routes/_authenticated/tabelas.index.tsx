@@ -32,7 +32,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { SheetColumn, ColumnType } from "@/lib/tabelas/types";
+import type { SheetColumn, ColumnType, ColumnSource } from "@/lib/tabelas/types";
+import { COLUMN_SOURCE_LABELS } from "@/lib/tabelas/types";
+import { Switch } from "@/components/ui/switch";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useResourcePermissions } from "@/hooks/useResourcePermissions";
 
