@@ -370,6 +370,19 @@ function SheetFormDialog({
             </div>
           </div>
 
+          <div className="rounded-md border border-border p-3 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label className="text-sm">Preencher automaticamente ao finalizar produção</Label>
+                <p className="text-xs text-muted-foreground">
+                  Quando uma OP for finalizada em algum equipamento associado acima, uma linha é criada
+                  aqui, preenchendo cada coluna conforme a "Origem" configurada abaixo.
+                </p>
+              </div>
+              <Switch checked={autoFinish} onCheckedChange={setAutoFinish} />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>Colunas (cabeçalho)</Label>
@@ -377,45 +390,112 @@ function SheetFormDialog({
                 <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar coluna
               </Button>
             </div>
-            {columns.map((col, i) => (
-              <div
-                key={col.key + i}
-                className="grid grid-cols-[1fr_130px_auto] gap-2 items-center"
-              >
-                <Input
-                  value={col.label}
-                  onChange={(e) => updateCol(i, { label: e.target.value })}
-                  placeholder="Nome da coluna"
-                />
-                <Select
-                  value={col.type}
-                  onValueChange={(v) => updateCol(i, { type: v as ColumnType })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="text">Texto</SelectItem>
-                    <SelectItem value="number">Número</SelectItem>
-                    <SelectItem value="date">Data</SelectItem>
-                    <SelectItem value="boolean">Sim/Não</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeCol(i)}
-                  disabled={columns.length === 1}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+            {columns.map((col, i) => {
+              const isOpen = expandedCol === i;
+              const hasExtras = !!(col.formula || col.tagNome || (col.source && col.source !== "none"));
+              return (
+                <div key={col.key + i} className="rounded-md border border-border/70 p-2 space-y-2">
+                  <div className="grid grid-cols-[auto_1fr_130px_auto] gap-2 items-center">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setExpandedCol(isOpen ? null : i)}
+                      title="Fórmula, tag e origem"
+                    >
+                      {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </Button>
+                    <Input
+                      value={col.label}
+                      onChange={(e) => updateCol(i, { label: e.target.value })}
+                      placeholder="Nome da coluna"
+                    />
+                    <Select
+                      value={col.type}
+                      onValueChange={(v) => updateCol(i, { type: v as ColumnType })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="text">Texto</SelectItem>
+                        <SelectItem value="number">Número</SelectItem>
+                        <SelectItem value="date">Data</SelectItem>
+                        <SelectItem value="boolean">Sim/Não</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeCol(i)}
+                      disabled={columns.length === 1}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {(isOpen || hasExtras) && (
+                    <div className="grid gap-2 pl-10">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Fórmula (opcional)</Label>
+                        <Input
+                          value={col.formula ?? ""}
+                          onChange={(e) => updateCol(i, { formula: e.target.value })}
+                          placeholder="Ex.: temp_saida - temp_reator  ou  tag_x / 1000"
+                          className="font-mono text-xs"
+                        />
+                        <p className="text-[11px] text-muted-foreground">
+                          Use os identificadores (key) das outras colunas ou nomes de tags ao vivo. Operadores: + - * / ^ e funções (abs, min, max, sqrt, round, floor, ceil).
+                        </p>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Tag associada (opcional)</Label>
+                          <Input
+                            list={`tags-live-${i}`}
+                            value={col.tagNome ?? ""}
+                            onChange={(e) => updateCol(i, { tagNome: e.target.value })}
+                            placeholder="nome_da_tag"
+                            className="font-mono text-xs"
+                          />
+                          <datalist id={`tags-live-${i}`}>
+                            {(tagsQ.data ?? []).map((t: any) => (
+                              <option key={t.nome} value={t.nome}>
+                                {t.nome_amigavel ?? t.nome}
+                              </option>
+                            ))}
+                          </datalist>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Origem no auto-preenchimento</Label>
+                          <Select
+                            value={col.source ?? "none"}
+                            onValueChange={(v) => updateCol(i, { source: v as ColumnSource })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(Object.keys(COLUMN_SOURCE_LABELS) as ColumnSource[]).map((k) => (
+                                <SelectItem key={k} value={k}>{COLUMN_SOURCE_LABELS[k]}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        Identificador (key) desta coluna: <span className="font-mono">{col.key}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             {mode === "edit" && (
               <p className="text-xs text-muted-foreground">
                 Alterar/remover colunas não apaga dados antigos das linhas — apenas
-                deixa de exibi-los.
+                deixa de exibi-los. Colunas calculadas só são preenchidas em novos registros e edições.
               </p>
             )}
           </div>
