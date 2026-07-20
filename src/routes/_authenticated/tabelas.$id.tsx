@@ -671,6 +671,7 @@ function ChartDialog({
   rows: Row[];
   columns: SheetColumn[];
   sheetName: string;
+  computeCell: (col: SheetColumn, data: Record<string, unknown>) => unknown;
 }) {
   const numericColumns = columns.filter((c) => c.type === "number");
   const dateColumns = columns.filter((c) => c.type === "date");
@@ -694,15 +695,17 @@ function ChartDialog({
         }
         const point: Record<string, unknown> = { x };
         for (const k of yKeys) {
-          const v = d[k];
-          point[k] = typeof v === "number" ? v : v == null ? null : Number(v);
+          const col = numericColumns.find((c) => c.key === k);
+          const v = col ? computeCell(col, d) : d[k];
+          point[k] = typeof v === "number" ? v : v == null || v === "" ? null : Number(v);
         }
         return point;
       })
       .filter((p) => p.x)
       .sort((a, b) => String(a.x).localeCompare(String(b.x)));
     return out;
-  }, [rows, xKey, yKeys]);
+  }, [rows, xKey, yKeys, numericColumns, computeCell]);
+
 
   const colors = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899"];
 
