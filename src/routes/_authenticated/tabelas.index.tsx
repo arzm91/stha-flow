@@ -51,6 +51,7 @@ type SheetRow = {
   descricao: string | null;
   columns: SheetColumn[];
   equipamento_ids: string[] | null;
+  auto_on_producao_finish?: boolean | null;
   updated_at: string;
 };
 
