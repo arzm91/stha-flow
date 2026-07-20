@@ -91,6 +91,23 @@ function TabelaDetail() {
     },
   });
 
+  const { data: tagsLive = [] } = useQuery({
+    queryKey: ["tags-live-map"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("tags_live").select("nome, valor_num");
+      if (error) throw error;
+      return data ?? [];
+    },
+    refetchInterval: 5000,
+  });
+  const tagsMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const t of tagsLive as { nome: string; valor_num: number | null }[]) {
+      if (t.valor_num != null) m.set(t.nome, Number(t.valor_num));
+    }
+    return m;
+  }, [tagsLive]);
+
   const deleteRow = useMutation({
     mutationFn: async (rowId: string) => {
       const { error } = await supabase.from("custom_sheet_rows").delete().eq("id", rowId);
