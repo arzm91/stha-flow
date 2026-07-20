@@ -69,7 +69,7 @@ function TabelasIndex() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("custom_sheets")
-        .select("id, nome, descricao, columns, equipamento_ids, updated_at")
+        .select("id, nome, descricao, columns, equipamento_ids, auto_on_producao_finish, updated_at")
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return data as unknown as SheetRow[];
