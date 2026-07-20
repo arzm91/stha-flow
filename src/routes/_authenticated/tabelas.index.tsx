@@ -271,6 +271,9 @@ function SheetFormDialog({
           key: c.key || `col${i + 1}`,
           label: c.label.trim(),
           type: c.type,
+          ...(c.formula?.trim() ? { formula: c.formula.trim() } : {}),
+          ...(c.tagNome?.trim() ? { tagNome: c.tagNome.trim() } : {}),
+          ...(c.source && c.source !== "none" ? { source: c.source } : {}),
         }));
       if (cleaned.length === 0) throw new Error("Adicione ao menos uma coluna");
       const { data: u } = await supabase.auth.getUser();
@@ -281,8 +284,9 @@ function SheetFormDialog({
           descricao: descricao.trim() || null,
           columns: cleaned as never,
           equipamento_ids: equipIds as never,
+          auto_on_producao_finish: autoFinish,
           owner_id: u.user.id,
-        });
+        } as never);
         if (error) throw error;
       } else if (initial) {
         const { error } = await supabase
@@ -292,7 +296,8 @@ function SheetFormDialog({
             descricao: descricao.trim() || null,
             columns: cleaned as never,
             equipamento_ids: equipIds as never,
-          })
+            auto_on_producao_finish: autoFinish,
+          } as never)
           .eq("id", initial.id);
         if (error) throw error;
       }
