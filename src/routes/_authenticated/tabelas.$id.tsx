@@ -445,6 +445,7 @@ function TabelaDetail() {
             sheetId={id}
             columns={columns}
             initial={editingRow}
+            tagsMap={tagsMap}
             onSaved={() => setEditingRow(null)}
           />
         </Dialog>
@@ -456,6 +457,7 @@ function TabelaDetail() {
             rows={filteredRows}
             columns={columns}
             sheetName={sheet.nome}
+            computeCell={computeCell}
           />
         </Dialog>
       )}
