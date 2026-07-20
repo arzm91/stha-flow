@@ -315,6 +315,7 @@ function TabelaDetail() {
                 <RowDialog
                   sheetId={id}
                   columns={columns}
+                  tagsMap={tagsMap}
                   onSaved={() => setOpen(false)}
                 />
               </Dialog>
