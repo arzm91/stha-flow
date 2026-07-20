@@ -232,7 +232,6 @@ function TabelaDetail() {
 
 
 
-  const columns = (sheet?.columns as SheetColumn[] | undefined) ?? [];
   const dateColumns = columns.filter((c) => c.type === "date");
   const numericColumns = columns.filter((c) => c.type === "number");
 
