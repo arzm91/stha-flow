@@ -413,7 +413,7 @@ function TabelaDetail() {
                           onClick={() => editable && setEditingRow(r)}
                           title={editable ? "Clique para editar" : undefined}
                         >
-                          {formatCell(d[c.key], c.type)}
+                          {formatCell(computeCell(c, d), c.type)}{c.formula ? <span className="ml-1 text-[10px] text-muted-foreground align-super">fx</span> : null}
                         </td>
                       ))}
                       <td className="px-3 py-2 text-right">
