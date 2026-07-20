@@ -184,13 +184,34 @@ function TabelaDetail() {
     onError: (e: Error) => toast.error(`Falha ao importar: ${e.message}`),
   });
 
+  const columns = (sheet?.columns as SheetColumn[] | undefined) ?? [];
+
+  const computeCell = (col: SheetColumn, data: Record<string, unknown>): unknown => {
+    if (col.formula && col.formula.trim()) {
+      const scope: Record<string, number> = {};
+      for (const c of columns) {
+        const v = data[c.key];
+        if (typeof v === "number") scope[c.key] = v;
+        else if (typeof v === "string" && v !== "" && !isNaN(Number(v))) scope[c.key] = Number(v);
+      }
+      for (const [nome, val] of tagsMap.entries()) scope[nome] = val;
+      const r = evalTabelaFormula(col.formula, scope);
+      if (r != null) return r;
+    }
+    if (col.type !== "number" && col.tagNome) {
+      const v = tagsMap.get(col.tagNome);
+      if (v != null && data[col.key] == null) return v;
+    }
+    return data[col.key];
+  };
+
   const exportExcel = () => {
-    const cols = (sheet?.columns as SheetColumn[] | undefined) ?? [];
+    const cols = columns;
     const data = filteredRows.map((r) => {
       const d = (r.data ?? {}) as Record<string, unknown>;
       const out: Record<string, unknown> = {};
       for (const c of cols) {
-        const v = d[c.key];
+        const v = computeCell(c, d);
         if (c.type === "date" && typeof v === "string") {
           const dt = parseDateSafe(v);
           out[c.label] = dt ? dt.toLocaleDateString("pt-BR") : v;
@@ -208,6 +229,7 @@ function TabelaDetail() {
     const safe = (sheet?.nome ?? "tabela").replace(/[^a-zA-Z0-9-_]+/g, "_");
     XLSX.writeFile(wb, `${safe}_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
+
 
 
   const columns = (sheet?.columns as SheetColumn[] | undefined) ?? [];
