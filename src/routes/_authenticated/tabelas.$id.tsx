@@ -38,6 +38,7 @@ import {
   Legend,
 } from "recharts";
 import type { SheetColumn } from "@/lib/tabelas/types";
+import { evalTabelaFormula } from "@/lib/tabelas/formula";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 export const Route = createFileRoute("/_authenticated/tabelas/$id")({
