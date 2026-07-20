@@ -489,11 +489,13 @@ function RowDialog({
   sheetId,
   columns,
   initial,
+  tagsMap,
   onSaved,
 }: {
   sheetId: string;
   columns: SheetColumn[];
   initial?: Row;
+  tagsMap: Map<string, number>;
   onSaved: () => void;
 }) {
   const qc = useQueryClient();
@@ -512,19 +514,40 @@ function RowDialog({
     );
   });
 
+  // Computa valores das colunas com fórmula em tempo real (colunas + tags ao vivo).
+  const computed = useMemo(() => {
+    const out: Record<string, number | null> = {};
+    const scope: Record<string, number> = {};
+    for (const c of columns) {
+      const v = values[c.key];
+      if (typeof v === "number") scope[c.key] = v;
+      else if (typeof v === "string" && v !== "" && !isNaN(Number(v))) scope[c.key] = Number(v);
+    }
+    for (const [nome, val] of tagsMap.entries()) scope[nome] = val;
+    for (const c of columns) {
+      if (c.formula && c.formula.trim()) {
+        out[c.key] = evalTabelaFormula(c.formula, scope);
+      }
+    }
+    return out;
+  }, [values, columns, tagsMap]);
+
   const saveMut = useMutation({
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Não autenticado");
       const payload: Record<string, unknown> = {};
       for (const c of columns) {
+        if (c.formula && c.formula.trim()) {
+          payload[c.key] = computed[c.key] ?? null;
+          continue;
+        }
         const v = values[c.key];
         if (c.type === "number" && v !== "" && v !== null && v !== undefined) {
           payload[c.key] = Number(v);
         } else if (c.type === "boolean") {
           payload[c.key] = !!v;
         } else {
-          // dates stored as plain YYYY-MM-DD string (no timezone conversion)
           payload[c.key] = v === "" ? null : v;
         }
       }
@@ -565,37 +588,68 @@ function RowDialog({
         className="flex flex-col flex-1 min-h-0"
       >
         <div className="flex-1 overflow-y-auto px-6 py-3 space-y-3">
-          {columns.map((c) => (
-            <div key={c.key} className="space-y-1.5">
-              <Label>{c.label}</Label>
-              {c.type === "boolean" ? (
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={!!values[c.key]}
-                    onCheckedChange={(v) =>
-                      setValues((s) => ({ ...s, [c.key]: !!v }))
+          {columns.map((c) => {
+            const isFormula = !!(c.formula && c.formula.trim());
+            return (
+              <div key={c.key} className="space-y-1.5">
+                <Label className="flex items-center gap-2">
+                  {c.label}
+                  {isFormula && (
+                    <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-mono text-primary">
+                      fx
+                    </span>
+                  )}
+                </Label>
+                {isFormula ? (
+                  <>
+                    <Input
+                      readOnly
+                      className="bg-muted/40"
+                      value={
+                        computed[c.key] == null
+                          ? "—"
+                          : String(computed[c.key])
+                      }
+                    />
+                    <p className="text-[11px] text-muted-foreground font-mono">
+                      = {c.formula}
+                    </p>
+                  </>
+                ) : c.type === "boolean" ? (
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={!!values[c.key]}
+                      onCheckedChange={(v) =>
+                        setValues((s) => ({ ...s, [c.key]: !!v }))
+                      }
+                    />
+                    <span className="text-sm text-muted-foreground">Sim</span>
+                  </div>
+                ) : (
+                  <Input
+                    type={
+                      c.type === "number"
+                        ? "number"
+                        : c.type === "date"
+                          ? "date"
+                          : "text"
+                    }
+                    step={c.type === "number" ? "any" : undefined}
+                    value={String(values[c.key] ?? "")}
+                    onChange={(e) =>
+                      setValues((s) => ({ ...s, [c.key]: e.target.value }))
                     }
                   />
-                  <span className="text-sm text-muted-foreground">Sim</span>
-                </div>
-              ) : (
-                <Input
-                  type={
-                    c.type === "number"
-                      ? "number"
-                      : c.type === "date"
-                        ? "date"
-                        : "text"
-                  }
-                  step={c.type === "number" ? "any" : undefined}
-                  value={String(values[c.key] ?? "")}
-                  onChange={(e) =>
-                    setValues((s) => ({ ...s, [c.key]: e.target.value }))
-                  }
-                />
-              )}
-            </div>
-          ))}
+                )}
+                {c.tagNome && !isFormula ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    Tag ao vivo <span className="font-mono">{c.tagNome}</span>:{" "}
+                    {tagsMap.get(c.tagNome) ?? "—"}
+                  </p>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
         <DialogFooter className="px-6 py-4 border-t shrink-0">
           <Button type="submit" disabled={saveMut.isPending}>
@@ -606,6 +660,7 @@ function RowDialog({
     </DialogContent>
   );
 }
+
 
 function ChartDialog({
   rows,
