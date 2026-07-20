@@ -38,7 +38,7 @@ import {
   Legend,
 } from "recharts";
 import type { SheetColumn } from "@/lib/tabelas/types";
-import { evalTabelaFormula } from "@/lib/tabelas/formula";
+import { evalTabelaFormula, slugifyVar } from "@/lib/tabelas/formula";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 export const Route = createFileRoute("/_authenticated/tabelas/$id")({
@@ -191,10 +191,18 @@ function TabelaDetail() {
       const scope: Record<string, number> = {};
       for (const c of columns) {
         const v = data[c.key];
-        if (typeof v === "number") scope[c.key] = v;
-        else if (typeof v === "string" && v !== "" && !isNaN(Number(v))) scope[c.key] = Number(v);
+        let n: number | null = null;
+        if (typeof v === "number") n = v;
+        else if (typeof v === "string" && v !== "" && !isNaN(Number(v))) n = Number(v);
+        if (n != null) {
+          scope[c.key] = n;
+          scope[slugifyVar(c.label)] = n;
+        }
       }
-      for (const [nome, val] of tagsMap.entries()) scope[nome] = val;
+      for (const [nome, val] of tagsMap.entries()) {
+        scope[nome] = val;
+        scope[slugifyVar(nome)] = val;
+      }
       const r = evalTabelaFormula(col.formula, scope);
       if (r != null) return r;
     }
@@ -521,10 +529,18 @@ function RowDialog({
     const scope: Record<string, number> = {};
     for (const c of columns) {
       const v = values[c.key];
-      if (typeof v === "number") scope[c.key] = v;
-      else if (typeof v === "string" && v !== "" && !isNaN(Number(v))) scope[c.key] = Number(v);
+      let n: number | null = null;
+      if (typeof v === "number") n = v;
+      else if (typeof v === "string" && v !== "" && !isNaN(Number(v))) n = Number(v);
+      if (n != null) {
+        scope[c.key] = n;
+        scope[slugifyVar(c.label)] = n;
+      }
     }
-    for (const [nome, val] of tagsMap.entries()) scope[nome] = val;
+    for (const [nome, val] of tagsMap.entries()) {
+      scope[nome] = val;
+      scope[slugifyVar(nome)] = val;
+    }
     for (const c of columns) {
       if (c.formula && c.formula.trim()) {
         out[c.key] = evalTabelaFormula(c.formula, scope);
