@@ -34,6 +34,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import type { SheetColumn, ColumnType, ColumnSource } from "@/lib/tabelas/types";
 import { COLUMN_SOURCE_LABELS } from "@/lib/tabelas/types";
+import { slugifyVar } from "@/lib/tabelas/formula";
 import { Switch } from "@/components/ui/switch";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
@@ -446,8 +447,62 @@ function SheetFormDialog({
                           className="font-mono text-xs"
                         />
                         <p className="text-[11px] text-muted-foreground">
-                          Use os identificadores (key) das outras colunas ou nomes de tags ao vivo. Operadores: + - * / ^ e funções (abs, min, max, sqrt, round, floor, ceil).
+                          Use o <strong>nome</strong> das colunas ou tags — clique nos botões abaixo para inserir. Operadores: + - * / ^ e funções (abs, min, max, sqrt, round, floor, ceil).
                         </p>
+                        {(columns.filter((_, idx) => idx !== i).length > 0 || (tagsQ.data ?? []).length > 0) && (
+                          <div className="space-y-1 pt-1">
+                            {columns.filter((_, idx) => idx !== i).length > 0 && (
+                              <div className="flex flex-wrap items-center gap-1">
+                                <span className="text-[11px] text-muted-foreground mr-1">Colunas:</span>
+                                {columns.filter((_, idx) => idx !== i).map((other) => {
+                                  const v = slugifyVar(other.label);
+                                  return (
+                                    <Button
+                                      key={other.key}
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-6 px-2 text-[11px] font-mono"
+                                      title={`Inserir ${v}`}
+                                      onClick={() =>
+                                        updateCol(i, {
+                                          formula: ((col.formula ?? "") + (col.formula?.trim() ? " " : "") + v).trimStart(),
+                                        })
+                                      }
+                                    >
+                                      {other.label}
+                                    </Button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            {(tagsQ.data ?? []).length > 0 && (
+                              <div className="flex flex-wrap items-center gap-1">
+                                <span className="text-[11px] text-muted-foreground mr-1">Tags:</span>
+                                {(tagsQ.data ?? []).slice(0, 30).map((t: any) => {
+                                  const v = slugifyVar(t.nome);
+                                  return (
+                                    <Button
+                                      key={t.nome}
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      className="h-6 px-2 text-[11px] font-mono"
+                                      title={`Inserir ${v}`}
+                                      onClick={() =>
+                                        updateCol(i, {
+                                          formula: ((col.formula ?? "") + (col.formula?.trim() ? " " : "") + v).trimStart(),
+                                        })
+                                      }
+                                    >
+                                      {t.nome_amigavel ?? t.nome}
+                                    </Button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="grid gap-2 sm:grid-cols-2">
                         <div className="space-y-1">
@@ -485,7 +540,7 @@ function SheetFormDialog({
                         </div>
                       </div>
                       <div className="text-[11px] text-muted-foreground">
-                        Identificador (key) desta coluna: <span className="font-mono">{col.key}</span>
+                        Nome desta coluna em fórmulas: <span className="font-mono">{slugifyVar(col.label || "coluna")}</span>
                       </div>
                     </div>
                   )}
