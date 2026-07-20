@@ -219,6 +219,8 @@ function SheetFormDialog({
     initial?.columns ?? [{ key: "col1", label: "Coluna 1", type: "text" }],
   );
   const [equipIds, setEquipIds] = useState<string[]>(initial?.equipamento_ids ?? []);
+  const [autoFinish, setAutoFinish] = useState<boolean>(!!initial?.auto_on_producao_finish);
+  const [expandedCol, setExpandedCol] = useState<number | null>(null);
 
   const equipamentosQ = useQuery({
     queryKey: ["equipamentos-min"],
@@ -227,6 +229,18 @@ function SheetFormDialog({
         .from("equipamentos")
         .select("id, codigo, nome")
         .order("codigo");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const tagsQ = useQuery({
+    queryKey: ["tags-live-nomes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tags_live")
+        .select("nome, nome_amigavel, unidade")
+        .order("nome");
       if (error) throw error;
       return data ?? [];
     },
