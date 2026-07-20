@@ -667,6 +667,7 @@ function ChartDialog({
   rows,
   columns,
   sheetName,
+  computeCell,
 }: {
   rows: Row[];
   columns: SheetColumn[];
