@@ -38,6 +38,7 @@ import {
   Legend,
 } from "recharts";
 import type { SheetColumn } from "@/lib/tabelas/types";
+import { evalTabelaFormula } from "@/lib/tabelas/formula";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 
 export const Route = createFileRoute("/_authenticated/tabelas/$id")({
@@ -89,6 +90,23 @@ function TabelaDetail() {
       return data as unknown as Row[];
     },
   });
+
+  const { data: tagsLive = [] } = useQuery({
+    queryKey: ["tags-live-map"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("tags_live").select("nome, valor_num");
+      if (error) throw error;
+      return data ?? [];
+    },
+    refetchInterval: 5000,
+  });
+  const tagsMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const t of tagsLive as { nome: string; valor_num: number | null }[]) {
+      if (t.valor_num != null) m.set(t.nome, Number(t.valor_num));
+    }
+    return m;
+  }, [tagsLive]);
 
   const deleteRow = useMutation({
     mutationFn: async (rowId: string) => {
@@ -166,13 +184,34 @@ function TabelaDetail() {
     onError: (e: Error) => toast.error(`Falha ao importar: ${e.message}`),
   });
 
+  const columns = (sheet?.columns as SheetColumn[] | undefined) ?? [];
+
+  const computeCell = (col: SheetColumn, data: Record<string, unknown>): unknown => {
+    if (col.formula && col.formula.trim()) {
+      const scope: Record<string, number> = {};
+      for (const c of columns) {
+        const v = data[c.key];
+        if (typeof v === "number") scope[c.key] = v;
+        else if (typeof v === "string" && v !== "" && !isNaN(Number(v))) scope[c.key] = Number(v);
+      }
+      for (const [nome, val] of tagsMap.entries()) scope[nome] = val;
+      const r = evalTabelaFormula(col.formula, scope);
+      if (r != null) return r;
+    }
+    if (col.type !== "number" && col.tagNome) {
+      const v = tagsMap.get(col.tagNome);
+      if (v != null && data[col.key] == null) return v;
+    }
+    return data[col.key];
+  };
+
   const exportExcel = () => {
-    const cols = (sheet?.columns as SheetColumn[] | undefined) ?? [];
+    const cols = columns;
     const data = filteredRows.map((r) => {
       const d = (r.data ?? {}) as Record<string, unknown>;
       const out: Record<string, unknown> = {};
       for (const c of cols) {
-        const v = d[c.key];
+        const v = computeCell(c, d);
         if (c.type === "date" && typeof v === "string") {
           const dt = parseDateSafe(v);
           out[c.label] = dt ? dt.toLocaleDateString("pt-BR") : v;
@@ -192,7 +231,7 @@ function TabelaDetail() {
   };
 
 
-  const columns = (sheet?.columns as SheetColumn[] | undefined) ?? [];
+
   const dateColumns = columns.filter((c) => c.type === "date");
   const numericColumns = columns.filter((c) => c.type === "number");
 
@@ -276,6 +315,7 @@ function TabelaDetail() {
                 <RowDialog
                   sheetId={id}
                   columns={columns}
+                  tagsMap={tagsMap}
                   onSaved={() => setOpen(false)}
                 />
               </Dialog>
@@ -374,7 +414,7 @@ function TabelaDetail() {
                           onClick={() => editable && setEditingRow(r)}
                           title={editable ? "Clique para editar" : undefined}
                         >
-                          {formatCell(d[c.key], c.type)}
+                          {formatCell(computeCell(c, d), c.type)}{c.formula ? <span className="ml-1 text-[10px] text-muted-foreground align-super">fx</span> : null}
                         </td>
                       ))}
                       <td className="px-3 py-2 text-right">
@@ -406,6 +446,7 @@ function TabelaDetail() {
             sheetId={id}
             columns={columns}
             initial={editingRow}
+            tagsMap={tagsMap}
             onSaved={() => setEditingRow(null)}
           />
         </Dialog>
@@ -417,6 +458,7 @@ function TabelaDetail() {
             rows={filteredRows}
             columns={columns}
             sheetName={sheet.nome}
+            computeCell={computeCell}
           />
         </Dialog>
       )}
@@ -448,11 +490,13 @@ function RowDialog({
   sheetId,
   columns,
   initial,
+  tagsMap,
   onSaved,
 }: {
   sheetId: string;
   columns: SheetColumn[];
   initial?: Row;
+  tagsMap: Map<string, number>;
   onSaved: () => void;
 }) {
   const qc = useQueryClient();
@@ -471,19 +515,40 @@ function RowDialog({
     );
   });
 
+  // Computa valores das colunas com fórmula em tempo real (colunas + tags ao vivo).
+  const computed = useMemo(() => {
+    const out: Record<string, number | null> = {};
+    const scope: Record<string, number> = {};
+    for (const c of columns) {
+      const v = values[c.key];
+      if (typeof v === "number") scope[c.key] = v;
+      else if (typeof v === "string" && v !== "" && !isNaN(Number(v))) scope[c.key] = Number(v);
+    }
+    for (const [nome, val] of tagsMap.entries()) scope[nome] = val;
+    for (const c of columns) {
+      if (c.formula && c.formula.trim()) {
+        out[c.key] = evalTabelaFormula(c.formula, scope);
+      }
+    }
+    return out;
+  }, [values, columns, tagsMap]);
+
   const saveMut = useMutation({
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Não autenticado");
       const payload: Record<string, unknown> = {};
       for (const c of columns) {
+        if (c.formula && c.formula.trim()) {
+          payload[c.key] = computed[c.key] ?? null;
+          continue;
+        }
         const v = values[c.key];
         if (c.type === "number" && v !== "" && v !== null && v !== undefined) {
           payload[c.key] = Number(v);
         } else if (c.type === "boolean") {
           payload[c.key] = !!v;
         } else {
-          // dates stored as plain YYYY-MM-DD string (no timezone conversion)
           payload[c.key] = v === "" ? null : v;
         }
       }
@@ -524,37 +589,68 @@ function RowDialog({
         className="flex flex-col flex-1 min-h-0"
       >
         <div className="flex-1 overflow-y-auto px-6 py-3 space-y-3">
-          {columns.map((c) => (
-            <div key={c.key} className="space-y-1.5">
-              <Label>{c.label}</Label>
-              {c.type === "boolean" ? (
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    checked={!!values[c.key]}
-                    onCheckedChange={(v) =>
-                      setValues((s) => ({ ...s, [c.key]: !!v }))
+          {columns.map((c) => {
+            const isFormula = !!(c.formula && c.formula.trim());
+            return (
+              <div key={c.key} className="space-y-1.5">
+                <Label className="flex items-center gap-2">
+                  {c.label}
+                  {isFormula && (
+                    <span className="rounded bg-primary/15 px-1.5 py-0.5 text-[10px] font-mono text-primary">
+                      fx
+                    </span>
+                  )}
+                </Label>
+                {isFormula ? (
+                  <>
+                    <Input
+                      readOnly
+                      className="bg-muted/40"
+                      value={
+                        computed[c.key] == null
+                          ? "—"
+                          : String(computed[c.key])
+                      }
+                    />
+                    <p className="text-[11px] text-muted-foreground font-mono">
+                      = {c.formula}
+                    </p>
+                  </>
+                ) : c.type === "boolean" ? (
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={!!values[c.key]}
+                      onCheckedChange={(v) =>
+                        setValues((s) => ({ ...s, [c.key]: !!v }))
+                      }
+                    />
+                    <span className="text-sm text-muted-foreground">Sim</span>
+                  </div>
+                ) : (
+                  <Input
+                    type={
+                      c.type === "number"
+                        ? "number"
+                        : c.type === "date"
+                          ? "date"
+                          : "text"
+                    }
+                    step={c.type === "number" ? "any" : undefined}
+                    value={String(values[c.key] ?? "")}
+                    onChange={(e) =>
+                      setValues((s) => ({ ...s, [c.key]: e.target.value }))
                     }
                   />
-                  <span className="text-sm text-muted-foreground">Sim</span>
-                </div>
-              ) : (
-                <Input
-                  type={
-                    c.type === "number"
-                      ? "number"
-                      : c.type === "date"
-                        ? "date"
-                        : "text"
-                  }
-                  step={c.type === "number" ? "any" : undefined}
-                  value={String(values[c.key] ?? "")}
-                  onChange={(e) =>
-                    setValues((s) => ({ ...s, [c.key]: e.target.value }))
-                  }
-                />
-              )}
-            </div>
-          ))}
+                )}
+                {c.tagNome && !isFormula ? (
+                  <p className="text-[11px] text-muted-foreground">
+                    Tag ao vivo <span className="font-mono">{c.tagNome}</span>:{" "}
+                    {tagsMap.get(c.tagNome) ?? "—"}
+                  </p>
+                ) : null}
+              </div>
+            );
+          })}
         </div>
         <DialogFooter className="px-6 py-4 border-t shrink-0">
           <Button type="submit" disabled={saveMut.isPending}>
@@ -566,14 +662,17 @@ function RowDialog({
   );
 }
 
+
 function ChartDialog({
   rows,
   columns,
   sheetName,
+  computeCell,
 }: {
   rows: Row[];
   columns: SheetColumn[];
   sheetName: string;
+  computeCell: (col: SheetColumn, data: Record<string, unknown>) => unknown;
 }) {
   const numericColumns = columns.filter((c) => c.type === "number");
   const dateColumns = columns.filter((c) => c.type === "date");
@@ -597,15 +696,17 @@ function ChartDialog({
         }
         const point: Record<string, unknown> = { x };
         for (const k of yKeys) {
-          const v = d[k];
-          point[k] = typeof v === "number" ? v : v == null ? null : Number(v);
+          const col = numericColumns.find((c) => c.key === k);
+          const v = col ? computeCell(col, d) : d[k];
+          point[k] = typeof v === "number" ? v : v == null || v === "" ? null : Number(v);
         }
         return point;
       })
       .filter((p) => p.x)
       .sort((a, b) => String(a.x).localeCompare(String(b.x)));
     return out;
-  }, [rows, xKey, yKeys]);
+  }, [rows, xKey, yKeys, numericColumns, computeCell]);
+
 
   const colors = ["#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#ec4899"];
 

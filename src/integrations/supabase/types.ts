@@ -650,6 +650,7 @@ export type Database = {
       }
       custom_sheets: {
         Row: {
+          auto_on_producao_finish: boolean
           columns: Json
           created_at: string
           descricao: string | null
@@ -660,6 +661,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          auto_on_producao_finish?: boolean
           columns?: Json
           created_at?: string
           descricao?: string | null
@@ -670,6 +672,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          auto_on_producao_finish?: boolean
           columns?: Json
           created_at?: string
           descricao?: string | null

@@ -32,7 +32,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type { SheetColumn, ColumnType } from "@/lib/tabelas/types";
+import type { SheetColumn, ColumnType, ColumnSource } from "@/lib/tabelas/types";
+import { COLUMN_SOURCE_LABELS } from "@/lib/tabelas/types";
+import { Switch } from "@/components/ui/switch";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
 import { useResourcePermissions } from "@/hooks/useResourcePermissions";
 
@@ -48,6 +51,7 @@ type SheetRow = {
   descricao: string | null;
   columns: SheetColumn[];
   equipamento_ids: string[] | null;
+  auto_on_producao_finish?: boolean | null;
   updated_at: string;
 };
 
@@ -65,7 +69,7 @@ function TabelasIndex() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("custom_sheets")
-        .select("id, nome, descricao, columns, equipamento_ids, updated_at")
+        .select("id, nome, descricao, columns, equipamento_ids, auto_on_producao_finish, updated_at")
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return data as unknown as SheetRow[];
@@ -215,6 +219,8 @@ function SheetFormDialog({
     initial?.columns ?? [{ key: "col1", label: "Coluna 1", type: "text" }],
   );
   const [equipIds, setEquipIds] = useState<string[]>(initial?.equipamento_ids ?? []);
+  const [autoFinish, setAutoFinish] = useState<boolean>(!!initial?.auto_on_producao_finish);
+  const [expandedCol, setExpandedCol] = useState<number | null>(null);
 
   const equipamentosQ = useQuery({
     queryKey: ["equipamentos-min"],
@@ -223,6 +229,18 @@ function SheetFormDialog({
         .from("equipamentos")
         .select("id, codigo, nome")
         .order("codigo");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const tagsQ = useQuery({
+    queryKey: ["tags-live-nomes"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("tags_live")
+        .select("nome, nome_amigavel, unidade")
+        .order("nome");
       if (error) throw error;
       return data ?? [];
     },
@@ -253,6 +271,9 @@ function SheetFormDialog({
           key: c.key || `col${i + 1}`,
           label: c.label.trim(),
           type: c.type,
+          ...(c.formula?.trim() ? { formula: c.formula.trim() } : {}),
+          ...(c.tagNome?.trim() ? { tagNome: c.tagNome.trim() } : {}),
+          ...(c.source && c.source !== "none" ? { source: c.source } : {}),
         }));
       if (cleaned.length === 0) throw new Error("Adicione ao menos uma coluna");
       const { data: u } = await supabase.auth.getUser();
@@ -263,8 +284,9 @@ function SheetFormDialog({
           descricao: descricao.trim() || null,
           columns: cleaned as never,
           equipamento_ids: equipIds as never,
+          auto_on_producao_finish: autoFinish,
           owner_id: u.user.id,
-        });
+        } as never);
         if (error) throw error;
       } else if (initial) {
         const { error } = await supabase
@@ -274,7 +296,8 @@ function SheetFormDialog({
             descricao: descricao.trim() || null,
             columns: cleaned as never,
             equipamento_ids: equipIds as never,
-          })
+            auto_on_producao_finish: autoFinish,
+          } as never)
           .eq("id", initial.id);
         if (error) throw error;
       }
@@ -347,6 +370,19 @@ function SheetFormDialog({
             </div>
           </div>
 
+          <div className="rounded-md border border-border p-3 space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label className="text-sm">Preencher automaticamente ao finalizar produção</Label>
+                <p className="text-xs text-muted-foreground">
+                  Quando uma OP for finalizada em algum equipamento associado acima, uma linha é criada
+                  aqui, preenchendo cada coluna conforme a "Origem" configurada abaixo.
+                </p>
+              </div>
+              <Switch checked={autoFinish} onCheckedChange={setAutoFinish} />
+            </div>
+          </div>
+
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>Colunas (cabeçalho)</Label>
@@ -354,45 +390,112 @@ function SheetFormDialog({
                 <Plus className="mr-1 h-3.5 w-3.5" /> Adicionar coluna
               </Button>
             </div>
-            {columns.map((col, i) => (
-              <div
-                key={col.key + i}
-                className="grid grid-cols-[1fr_130px_auto] gap-2 items-center"
-              >
-                <Input
-                  value={col.label}
-                  onChange={(e) => updateCol(i, { label: e.target.value })}
-                  placeholder="Nome da coluna"
-                />
-                <Select
-                  value={col.type}
-                  onValueChange={(v) => updateCol(i, { type: v as ColumnType })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="text">Texto</SelectItem>
-                    <SelectItem value="number">Número</SelectItem>
-                    <SelectItem value="date">Data</SelectItem>
-                    <SelectItem value="boolean">Sim/Não</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => removeCol(i)}
-                  disabled={columns.length === 1}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
+            {columns.map((col, i) => {
+              const isOpen = expandedCol === i;
+              const hasExtras = !!(col.formula || col.tagNome || (col.source && col.source !== "none"));
+              return (
+                <div key={col.key + i} className="rounded-md border border-border/70 p-2 space-y-2">
+                  <div className="grid grid-cols-[auto_1fr_130px_auto] gap-2 items-center">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => setExpandedCol(isOpen ? null : i)}
+                      title="Fórmula, tag e origem"
+                    >
+                      {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    </Button>
+                    <Input
+                      value={col.label}
+                      onChange={(e) => updateCol(i, { label: e.target.value })}
+                      placeholder="Nome da coluna"
+                    />
+                    <Select
+                      value={col.type}
+                      onValueChange={(v) => updateCol(i, { type: v as ColumnType })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="text">Texto</SelectItem>
+                        <SelectItem value="number">Número</SelectItem>
+                        <SelectItem value="date">Data</SelectItem>
+                        <SelectItem value="boolean">Sim/Não</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeCol(i)}
+                      disabled={columns.length === 1}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  {(isOpen || hasExtras) && (
+                    <div className="grid gap-2 pl-10">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Fórmula (opcional)</Label>
+                        <Input
+                          value={col.formula ?? ""}
+                          onChange={(e) => updateCol(i, { formula: e.target.value })}
+                          placeholder="Ex.: temp_saida - temp_reator  ou  tag_x / 1000"
+                          className="font-mono text-xs"
+                        />
+                        <p className="text-[11px] text-muted-foreground">
+                          Use os identificadores (key) das outras colunas ou nomes de tags ao vivo. Operadores: + - * / ^ e funções (abs, min, max, sqrt, round, floor, ceil).
+                        </p>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <div className="space-y-1">
+                          <Label className="text-xs">Tag associada (opcional)</Label>
+                          <Input
+                            list={`tags-live-${i}`}
+                            value={col.tagNome ?? ""}
+                            onChange={(e) => updateCol(i, { tagNome: e.target.value })}
+                            placeholder="nome_da_tag"
+                            className="font-mono text-xs"
+                          />
+                          <datalist id={`tags-live-${i}`}>
+                            {(tagsQ.data ?? []).map((t: any) => (
+                              <option key={t.nome} value={t.nome}>
+                                {t.nome_amigavel ?? t.nome}
+                              </option>
+                            ))}
+                          </datalist>
+                        </div>
+                        <div className="space-y-1">
+                          <Label className="text-xs">Origem no auto-preenchimento</Label>
+                          <Select
+                            value={col.source ?? "none"}
+                            onValueChange={(v) => updateCol(i, { source: v as ColumnSource })}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(Object.keys(COLUMN_SOURCE_LABELS) as ColumnSource[]).map((k) => (
+                                <SelectItem key={k} value={k}>{COLUMN_SOURCE_LABELS[k]}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                      <div className="text-[11px] text-muted-foreground">
+                        Identificador (key) desta coluna: <span className="font-mono">{col.key}</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
             {mode === "edit" && (
               <p className="text-xs text-muted-foreground">
                 Alterar/remover colunas não apaga dados antigos das linhas — apenas
-                deixa de exibi-los.
+                deixa de exibi-los. Colunas calculadas só são preenchidas em novos registros e edições.
               </p>
             )}
           </div>
