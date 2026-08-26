@@ -26,34 +26,71 @@ export const askAssistente = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data, context }) => {
-    const { supabase } = context;
+    const { supabase, userId } = context;
     const apiKey = process.env["LOVABLE_API_KEY"];
     if (!apiKey) throw new Error("Assistente indisponível: chave de IA não configurada.");
+
+    // Empresa (tenant) do usuário autenticado — mesma regra usada nas políticas RLS.
+    const { data: owner, error: ownerErr } = await supabase.rpc("effective_owner", {
+      _user: userId,
+    });
+    if (ownerErr || !owner) throw new Error("Não foi possível identificar sua empresa.");
+
+    // Permissões por página: o assistente só consulta o que o usuário pode ver.
+    const podeVer = async (page: string) => {
+      const { data: ok } = await supabase.rpc("can_access_page", {
+        _user: userId,
+        _page: page,
+      });
+      return ok === true;
+    };
+    const [podeTags, podeProducao, podeAlertas] = await Promise.all([
+      podeVer("tags"),
+      podeVer("producao"),
+      podeVer("alertas"),
+    ]);
+
+    if (!podeTags && !podeProducao && !podeAlertas) {
+      return {
+        resposta:
+          "Você não tem permissão para consultar tags, produção ou alertas. Fale com um administrador para liberar o acesso.",
+      };
+    }
 
     const words = norm(data.pergunta);
     const since7 = new Date(Date.now() - 7 * 86400_000).toISOString();
     const since30 = new Date(Date.now() - 30 * 86400_000).toISOString();
 
     const [tagsRes, ordensRes, alertasRes, produtosRes, equipRes] = await Promise.all([
-      supabase
-        .from("tags_live")
-        .select("nome,nome_amigavel,grupo,unidade,valor,valor_num,qualidade,atualizado_em")
-        .order("atualizado_em", { ascending: false })
-        .limit(400),
-      supabase
-        .from("ordens_producao")
-        .select("numero,status,equipamento_id,produto_id,qtd_planejada,qtd_produzida,inicio_em,fim_em,created_at")
-        .gte("created_at", since30)
-        .order("created_at", { ascending: false })
-        .limit(300),
-      supabase
-        .from("alertas_disparos")
-        .select("status,severidade,alerta_nome,mensagem,created_at")
-        .order("created_at", { ascending: false })
-        .limit(20),
-      supabase.from("produtos").select("id,nome,unidade").limit(300),
-      supabase.from("equipamentos").select("id,nome").limit(100),
+      podeTags
+        ? supabase
+            .from("tags_live")
+            .select("nome,nome_amigavel,grupo,unidade,valor,valor_num,qualidade,atualizado_em")
+            .eq("owner_id", owner)
+            .order("atualizado_em", { ascending: false })
+            .limit(400)
+        : Promise.resolve({ data: [] as never[] }),
+      podeProducao
+        ? supabase
+            .from("ordens_producao")
+            .select("numero,status,equipamento_id,produto_id,qtd_planejada,qtd_produzida,inicio_em,fim_em,created_at")
+            .eq("owner_id", owner)
+            .gte("created_at", since30)
+            .order("created_at", { ascending: false })
+            .limit(300)
+        : Promise.resolve({ data: [] as never[] }),
+      podeAlertas
+        ? supabase
+            .from("alertas_disparos")
+            .select("status,severidade,alerta_nome,mensagem,created_at")
+            .eq("owner_id", owner)
+            .order("created_at", { ascending: false })
+            .limit(20)
+        : Promise.resolve({ data: [] as never[] }),
+      supabase.from("produtos").select("id,nome,unidade").eq("owner_id", owner).limit(300),
+      supabase.from("equipamentos").select("id,nome").eq("owner_id", owner).limit(100),
     ]);
+
 
     const produtos = new Map((produtosRes.data ?? []).map((p) => [p.id, p]));
     const equipamentos = new Map((equipRes.data ?? []).map((e) => [e.id, e.nome]));
