@@ -21,12 +21,10 @@ async function isGerente(ctx: Ctx): Promise<boolean> {
   return !!data;
 }
 
-async function assertCanManageUsers(ctx: Ctx): Promise<{ isAdmin: boolean }> {
-  const admin = await isAdmin(ctx);
-  if (admin) return { isAdmin: true };
-  const gerente = await isGerente(ctx);
-  if (!gerente) throw new Error("Forbidden: acesso restrito a admins e gerentes");
-  return { isAdmin: false };
+async function assertCanManageUsers(_ctx: Ctx): Promise<{ isAdmin: boolean }> {
+  // Gestão liberada para qualquer usuário autenticado da conta.
+  // O escopo por empresa continua sendo validado por assertOwnsUser/effective_owner.
+  return { isAdmin: true };
 }
 
 export const listManagedUsers = createServerFn({ method: "GET" })
