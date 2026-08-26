@@ -118,13 +118,18 @@ function AutomacoesIndex() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Workflow className="mb-3 size-10 text-muted-foreground" />
-            <h3 className="text-lg font-medium">Nenhum fluxo ainda</h3>
+            <h3 className="text-lg font-medium">Nenhuma automação ainda</h3>
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              Crie seu primeiro fluxo para reagir automaticamente a tags, eventos e horários.
+              Crie sua primeira automação para reagir automaticamente a tags, eventos e horários.
             </p>
-            <Button className="mt-4" onClick={createFlow}>
-              <Plus className="mr-2 size-4" /> Criar fluxo
-            </Button>
+            <div className="mt-4 flex gap-2">
+              <Button onClick={() => setAssistenteOpen(true)}>
+                <Wand2 className="mr-2 size-4" /> Criar com assistente
+              </Button>
+              <Button variant="outline" onClick={createFlow}>
+                <Plus className="mr-2 size-4" /> Editor avançado
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (
