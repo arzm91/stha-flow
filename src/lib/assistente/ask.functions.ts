@@ -48,8 +48,8 @@ export const askAssistente = createServerFn({ method: "POST" })
         .limit(300),
       supabase
         .from("alertas_disparos")
-        .select("status,criado_em,mensagem")
-        .order("criado_em", { ascending: false })
+        .select("status,severidade,alerta_nome,mensagem,created_at")
+        .order("created_at", { ascending: false })
         .limit(20),
       supabase.from("produtos").select("id,nome,unidade").limit(300),
       supabase.from("equipamentos").select("id,nome").limit(100),
@@ -121,7 +121,9 @@ export const askAssistente = createServerFn({ method: "POST" })
       ordens_recentes: ordensCtx,
       alertas_recentes: (alertasRes.data ?? []).map((a) => ({
         status: a.status,
-        quando: a.criado_em,
+        severidade: a.severidade,
+        alerta: a.alerta_nome,
+        quando: a.created_at,
         mensagem: a.mensagem,
       })),
     };
