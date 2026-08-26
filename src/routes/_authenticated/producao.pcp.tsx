@@ -215,6 +215,8 @@ function PcpPage() {
         <KpiMini label="Equipamentos disponíveis" value={(equipamentos.data ?? []).filter((e) => e.status === "disponivel").length} />
       </div>
 
+      <ProgramacaoAutomaticaCard />
+
       <Tabs defaultValue="kanban">
         <TabsList>
           <TabsTrigger value="kanban">Kanban</TabsTrigger>
