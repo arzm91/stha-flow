@@ -94,8 +94,28 @@ export function AppShell({ children }: { children: ReactNode }) {
                 aria-label={theme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
                 title={theme === "dark" ? "Modo claro" : "Modo escuro"}
               >
-                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
+
+              <Link to="/alertas">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Alertas ativos"
+                  title="Alertas ativos"
+                  className="relative"
+                >
+                  <Bell className="h-4 w-4" />
+                  {activeAlerts > 0 && (
+                    <Badge
+                      variant="destructive"
+                      className="pointer-events-none absolute -right-1 -top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full p-0 text-[10px]"
+                    >
+                      {activeAlerts > 99 ? "99+" : activeAlerts}
+                    </Badge>
+                  )}
+                </Button>
+              </Link>
 
               <ChatPopup />
 
