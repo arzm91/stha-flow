@@ -115,15 +115,15 @@ async function loadPreview(pageKey: string): Promise<{ heading: string; items: P
     case "turnos": {
       const { data } = await supabase
         .from("relatorio_turno_eventos")
-        .select("id, tipo, mensagem, created_at")
+        .select("id, categoria, titulo, descricao, created_at")
         .order("created_at", { ascending: false })
         .limit(5);
       return {
         heading: "Últimos eventos de turno",
         items: (data ?? []).map((e) => ({
           id: e.id,
-          title: (e.mensagem ?? "").slice(0, 60) || e.tipo,
-          subtitle: new Date(e.created_at).toLocaleString("pt-BR"),
+          title: (e.titulo ?? e.descricao ?? "").slice(0, 60) || e.categoria,
+          subtitle: `${e.categoria} · ${new Date(e.created_at).toLocaleString("pt-BR")}`,
           to: "/turnos",
         })),
       };
@@ -131,16 +131,15 @@ async function loadPreview(pageKey: string): Promise<{ heading: string; items: P
     case "manutencao": {
       const { data } = await supabase
         .from("ordens_manutencao")
-        .select("id, titulo, status")
-        .neq("status", "concluida")
+        .select("id, numero, descricao_problema, status")
         .order("created_at", { ascending: false })
         .limit(5);
       return {
-        heading: "Ordens de manutenção abertas",
+        heading: "Ordens de manutenção recentes",
         items: (data ?? []).map((o) => ({
           id: o.id,
-          title: o.titulo ?? "OS",
-          subtitle: o.status ?? "",
+          title: `OS ${o.numero}`,
+          subtitle: `${(o.descricao_problema ?? "").slice(0, 40)} · ${o.status}`,
           to: "/manutencao",
         })),
       };
