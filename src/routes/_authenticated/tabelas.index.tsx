@@ -56,6 +56,9 @@ type SheetRow = {
   updated_at: string;
 };
 
+type ViewMode = "grid" | "list";
+type SortMode = "recent" | "nome" | "colunas";
+
 function TabelasIndex() {
   const qc = useQueryClient();
   const { canEdit } = usePagePermissions();
@@ -64,6 +67,16 @@ function TabelasIndex() {
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<SheetRow | null>(null);
+  const [search, setSearch] = useState("");
+  const [view, setView] = useState<ViewMode>(() =>
+    (typeof window !== "undefined" && (localStorage.getItem("tabelas:view") as ViewMode)) || "grid",
+  );
+  const [sort, setSort] = useState<SortMode>("recent");
+
+  const changeView = (v: ViewMode) => {
+    setView(v);
+    try { localStorage.setItem("tabelas:view", v); } catch { /* noop */ }
+  };
 
   const { data: sheets = [], isLoading } = useQuery({
     queryKey: ["custom_sheets"],
