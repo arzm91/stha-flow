@@ -103,7 +103,7 @@ export function AdminPasswordGate() {
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="admin-password">Senha do administrador</Label>
+            <Label htmlFor="admin-password">Senha de administrador ou gerente</Label>
             <Input
               id="admin-password"
               type="password"
