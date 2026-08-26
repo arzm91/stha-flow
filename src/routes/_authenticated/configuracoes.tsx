@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { Bell, LogOut, Mail, Shield, User, Users } from "lucide-react";
+import { Bell, LogOut, Shield, User, Users } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { UserManagementCard } from "@/components/configuracoes/UserManagementCard";
 import { ModulesAccessCard } from "@/components/configuracoes/ModulesAccessCard";
@@ -126,9 +126,6 @@ function ConfiguracoesPage() {
           <ModulesAccessCard />
         </TabsContent>
       </Tabs>
-
-      {/* ícone usado só para evitar import órfão caso cards internos mudem */}
-      <span className="hidden"><Mail className="h-0 w-0" /></span>
     </div>
   );
 }
