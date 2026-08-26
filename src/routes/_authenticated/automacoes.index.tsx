@@ -99,11 +99,16 @@ function AutomacoesIndex() {
     <div className="space-y-6 p-6">
       <PageHeader
         title="Automações"
-        description="Crie fluxos visuais para automatizar tarefas a partir de tags, eventos de produção e agendamentos."
+        description="Crie fluxos para automatizar tarefas a partir de tags, eventos de produção e agendamentos."
         actions={
-          <Button onClick={createFlow}>
-            <Plus className="mr-2 size-4" /> Novo fluxo
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setAssistenteOpen(true)}>
+              <Wand2 className="mr-2 size-4" /> Assistente guiado
+            </Button>
+            <Button onClick={createFlow}>
+              <Plus className="mr-2 size-4" /> Editor avançado
+            </Button>
+          </div>
         }
       />
 
