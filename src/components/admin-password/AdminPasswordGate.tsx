@@ -93,17 +93,17 @@ export function AdminPasswordGate() {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ShieldAlert className="h-5 w-5 text-amber-500" />
-            Confirmação de administrador
+            Confirmação de administrador ou gerente
           </DialogTitle>
           <DialogDescription>
             {pending?.reason
-              ? `Para ${pending.reason}, informe a senha do administrador.`
-              : "Informe a senha do administrador para continuar."}
+              ? `Para ${pending.reason}, informe a senha de um administrador ou gerente.`
+              : "Informe a senha de um administrador ou gerente para continuar."}
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={onSubmit} className="space-y-3">
           <div className="space-y-1.5">
-            <Label htmlFor="admin-password">Senha do administrador</Label>
+            <Label htmlFor="admin-password">Senha de administrador ou gerente</Label>
             <Input
               id="admin-password"
               type="password"
