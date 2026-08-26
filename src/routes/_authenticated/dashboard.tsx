@@ -122,7 +122,8 @@ function DashboardPage() {
           user_id: u.user.id,
           titulo: w.titulo!, tipo: w.tipo!, fonte: w.fonte!,
           config: (w.config ?? {}) as never,
-          layout: (w.layout ?? { x: 0, y: 0, w: 3, h: 2 }) as never,
+          // y alto: o compactador encaixa o widget na primeira posição livre abaixo
+          layout: (w.layout ?? { x: 0, y: 10000, w: 4, h: 3 }) as never,
         });
         if (error) throw error;
       }
@@ -142,6 +143,21 @@ function DashboardPage() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["dashboard_widgets"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const resizePreset = useMutation({
+    mutationFn: async ({ id, w, h, layout }: { id: string; w: number; h: number; layout: Widget["layout"] }) => {
+      const { error } = await supabase
+        .from("dashboard_widgets")
+        .update({ layout: { ...layout, w, h } as never })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["dashboard_widgets"] });
+      toast.success("Tamanho atualizado");
+    },
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -206,6 +222,10 @@ function DashboardPage() {
           frozen={frozen}
           onEdit={setEditing}
           onDelete={(id) => remove.mutate(id)}
+          onResizePreset={(id, w, h) => {
+            const wdg = widgets.data!.find((x) => x.id === id);
+            if (wdg) resizePreset.mutate({ id, w, h, layout: wdg.layout });
+          }}
         />
       )}
 
@@ -224,13 +244,21 @@ function DashboardPage() {
   );
 }
 
+const SIZE_PRESETS: Array<{ label: string; w: number; h: number }> = [
+  { label: "Pequeno", w: 3, h: 2 },
+  { label: "Médio", w: 4, h: 3 },
+  { label: "Grande", w: 6, h: 4 },
+  { label: "Largo (faixa)", w: 12, h: 3 },
+];
+
 function DashboardGrid({
-  widgets, frozen, onEdit, onDelete,
+  widgets, frozen, onEdit, onDelete, onResizePreset,
 }: {
   widgets: Widget[];
   frozen: boolean;
   onEdit: (w: Widget) => void;
   onDelete: (id: string) => void;
+  onResizePreset: (id: string, w: number, h: number) => void;
 }) {
   const qc = useQueryClient();
 
@@ -242,11 +270,12 @@ function DashboardGrid({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [widgetIdsKey]);
 
-  // Persistência (debounced)
+  // Persistência (debounced) — SÓ chamada em interações reais do usuário
+  // (drag stop / resize stop). Nunca em onLayoutChange, que dispara na
+  // montagem e em mudanças de breakpoint e pode gravar um layout normalizado.
   const pendingRef = useRef<LayoutItem[] | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const persist = useCallback(async (layouts: LayoutItem[]) => {
-    // Só atualiza os que mudaram vs registro atual
     const byId = new Map(widgets.map((w) => [w.id, w.layout]));
     const changed = layouts.filter((l) => {
       const prev = byId.get(l.i);
@@ -254,7 +283,7 @@ function DashboardGrid({
       return prev.x !== l.x || prev.y !== l.y || prev.w !== l.w || prev.h !== l.h;
     });
     if (changed.length === 0) return;
-    await Promise.all(
+    const results = await Promise.all(
       changed.map((l) =>
         supabase
           .from("dashboard_widgets")
@@ -262,6 +291,11 @@ function DashboardGrid({
           .eq("id", l.i),
       ),
     );
+    const failed = results.find((r) => r.error);
+    if (failed) {
+      toast.error("Não foi possível salvar o layout");
+      return;
+    }
     qc.invalidateQueries({ queryKey: ["dashboard_widgets"] });
   }, [widgets, qc]);
 
@@ -275,6 +309,17 @@ function DashboardGrid({
 
   useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
 
+  // Persiste layout em qualquer item que ainda esteja fora da grade de 12 colunas
+  // (legado), apenas quando o usuário interage — nunca automaticamente.
+  const handleUserLayout = useCallback((layout: readonly LayoutItem[]) => {
+    const next = layout.map((l) => ({ i: l.i, x: l.x, y: l.y, w: l.w, h: l.h }));
+    setLocalLayout((prev) => prev.map((p) => {
+      const n = next.find((x) => x.i === p.i);
+      return n ? { ...p, ...n } : p;
+    }));
+    scheduleSave(next);
+  }, [scheduleSave]);
+
   const { width, containerRef, mounted } = useContainerWidth({ measureBeforeMount: true });
 
   return (
@@ -283,21 +328,17 @@ function DashboardGrid({
         <Responsive
           width={width}
           className="dash-grid"
-          layouts={{ lg: localLayout, md: localLayout, sm: localLayout, xs: localLayout }}
-          breakpoints={{ lg: 1200, md: 900, sm: 600, xs: 0 }}
-          cols={{ lg: 12, md: 12, sm: 6, xs: 2 }}
+          layouts={{ lg: localLayout }}
+          breakpoints={{ lg: 0 }}
+          cols={{ lg: 12 }}
           rowHeight={90}
           margin={[16, 16]}
           containerPadding={[0, 0]}
           dragConfig={{ enabled: !frozen, handle: ".drag-handle" }}
           resizeConfig={{ enabled: !frozen }}
           compactor={verticalCompactor}
-          onLayoutChange={(current) => {
-            if (frozen) return;
-            const next = current as LayoutItem[];
-            setLocalLayout(next);
-            scheduleSave(next);
-          }}
+          onDragStop={(layout) => handleUserLayout(layout as unknown as LayoutItem[])}
+          onResizeStop={(layout) => handleUserLayout(layout as unknown as LayoutItem[])}
         >
           {widgets.map((w) => (
             <div key={w.id} className="group">
@@ -323,6 +364,16 @@ function DashboardGrid({
                       <DropdownMenuItem onClick={() => onEdit(w)}>
                         <Pencil className="mr-2 h-3.5 w-3.5" /> Editar
                       </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      {SIZE_PRESETS.map((p) => (
+                        <DropdownMenuItem
+                          key={p.label}
+                          disabled={frozen}
+                          onClick={() => onResizePreset(w.id, p.w, p.h)}
+                        >
+                          <LayoutGrid className="mr-2 h-3.5 w-3.5" /> Tamanho: {p.label}
+                        </DropdownMenuItem>
+                      ))}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-destructive" onClick={() => onDelete(w.id)}>
                         <Trash2 className="mr-2 h-3.5 w-3.5" /> Remover
