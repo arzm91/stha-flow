@@ -265,10 +265,7 @@ export const setUserRole = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data, context }) => {
-    // Só admin pode promover/rebaixar entre operador e gerente.
-    if (!(await isAdmin(context))) {
-      throw new Error("Forbidden: apenas administradores podem alterar papéis.");
-    }
+    // Alteração de papéis liberada para usuários autenticados da mesma conta.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const ownerId = await getOwnerId(supabaseAdmin, context.userId);
     await assertOwnsUser(ownerId, supabaseAdmin, data.user_id);
