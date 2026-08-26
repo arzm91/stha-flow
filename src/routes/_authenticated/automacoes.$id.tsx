@@ -40,7 +40,7 @@ const NODE_STYLES: Record<string, string> = {
 };
 
 function AutomacaoEditor() {
-  const { id } = Route.useParams();
+  const { id } = Route.useParams() as { id: string };
   const navigate = useNavigate();
 
   const [nome, setNome] = useState("");

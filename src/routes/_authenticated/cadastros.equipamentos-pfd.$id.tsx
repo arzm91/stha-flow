@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_authenticated/cadastros/equipamentos-pfd
 });
 
 function ScadaEditorPage() {
-  const { id } = Route.useParams();
+  const { id } = Route.useParams() as { id: string };
   const nav = useNavigate();
   const [doc, setDoc] = useState<ScadaDoc>(emptyDoc());
   const [saving, setSaving] = useState(false);

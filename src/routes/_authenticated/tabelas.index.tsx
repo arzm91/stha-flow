@@ -24,7 +24,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, Table as TableIcon, Pencil, MoreVertical } from "lucide-react";
+import { Plus, Trash2, Table as TableIcon, Pencil, MoreVertical, Search, LayoutGrid, List, ArrowUpDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -56,6 +56,9 @@ type SheetRow = {
   updated_at: string;
 };
 
+type ViewMode = "grid" | "list";
+type SortMode = "recent" | "nome" | "colunas";
+
 function TabelasIndex() {
   const qc = useQueryClient();
   const { canEdit } = usePagePermissions();
@@ -64,6 +67,16 @@ function TabelasIndex() {
 
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<SheetRow | null>(null);
+  const [search, setSearch] = useState("");
+  const [view, setView] = useState<ViewMode>(() =>
+    (typeof window !== "undefined" && (localStorage.getItem("tabelas:view") as ViewMode)) || "grid",
+  );
+  const [sort, setSort] = useState<SortMode>("recent");
+
+  const changeView = (v: ViewMode) => {
+    setView(v);
+    try { localStorage.setItem("tabelas:view", v); } catch { /* noop */ }
+  };
 
   const { data: sheets = [], isLoading } = useQuery({
     queryKey: ["custom_sheets"],
@@ -125,67 +138,169 @@ function TabelasIndex() {
             </Card>
           );
         }
-        return (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {visibleSheets.map((s) => (
 
-            <Card key={s.id} className="hover:border-primary/50 transition-colors">
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between gap-2">
-                  <Link to="/tabelas/$id" params={{ id: s.id }} className="flex-1 min-w-0">
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <TableIcon className="h-4 w-4 text-muted-foreground" />
-                      <span className="truncate">{s.nome}</span>
-                    </CardTitle>
-                  </Link>
-                  {editable && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 -mt-1 -mr-1"
-                          title="Opções"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                        <DropdownMenuItem onSelect={() => setEditing(s)}>
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Editar tabela
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
-                          onSelect={() => {
-                            if (confirm(`Excluir "${s.nome}" e todas as linhas?`))
-                              deleteMut.mutate(s.id);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Excluir tabela
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-                <Link to="/tabelas/$id" params={{ id: s.id }} className="block">
-                  {s.descricao && (
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
-                      {s.descricao}
-                    </p>
-                  )}
-                  <p className="text-xs text-muted-foreground">
-                    {(s.columns as SheetColumn[]).length} colunas
-                  </p>
-                </Link>
-              </CardContent>
-            </Card>
-            ))}
+        const q = search.trim().toLowerCase();
+        const filtered = q
+          ? visibleSheets.filter(
+              (s) =>
+                s.nome.toLowerCase().includes(q) ||
+                (s.descricao ?? "").toLowerCase().includes(q),
+            )
+          : visibleSheets;
+        const sorted = [...filtered].sort((a, b) => {
+          if (sort === "nome") return a.nome.localeCompare(b.nome, "pt-BR");
+          if (sort === "colunas")
+            return (b.columns as SheetColumn[]).length - (a.columns as SheetColumn[]).length;
+          return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+        });
+
+        const renderActions = (s: SheetRow) =>
+          editable && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 -mt-1 -mr-1"
+                  title="Opções"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                <DropdownMenuItem onSelect={() => setEditing(s)}>
+                  <Pencil className="h-4 w-4 mr-2" />
+                  Editar tabela
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onSelect={() => {
+                    if (confirm(`Excluir "${s.nome}" e todas as linhas?`))
+                      deleteMut.mutate(s.id);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir tabela
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          );
+
+        return (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative flex-1 min-w-[200px] max-w-sm">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar tabela por nome ou descrição..."
+                  className="pl-8 h-9"
+                />
+              </div>
+              <Select value={sort} onValueChange={(v) => setSort(v as SortMode)}>
+                <SelectTrigger className="w-[170px] h-9">
+                  <ArrowUpDown className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="recent">Mais recentes</SelectItem>
+                  <SelectItem value="nome">Nome (A–Z)</SelectItem>
+                  <SelectItem value="colunas">Nº de colunas</SelectItem>
+                </SelectContent>
+              </Select>
+              <div className="flex rounded-md border border-border overflow-hidden">
+                <Button
+                  type="button"
+                  variant={view === "grid" ? "default" : "ghost"}
+                  size="icon"
+                  className="h-9 w-9 rounded-none"
+                  title="Grade"
+                  onClick={() => changeView("grid")}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </Button>
+                <Button
+                  type="button"
+                  variant={view === "list" ? "default" : "ghost"}
+                  size="icon"
+                  className="h-9 w-9 rounded-none"
+                  title="Lista compacta"
+                  onClick={() => changeView("list")}
+                >
+                  <List className="h-4 w-4" />
+                </Button>
+              </div>
+              <span className="text-xs text-muted-foreground ml-auto">
+                {sorted.length} de {visibleSheets.length} tabela(s)
+              </span>
+            </div>
+
+            {sorted.length === 0 ? (
+              <Card>
+                <CardContent className="py-10 text-center text-sm text-muted-foreground">
+                  Nenhuma tabela encontrada para "{search}".
+                </CardContent>
+              </Card>
+            ) : view === "grid" ? (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {sorted.map((s) => (
+                  <Card key={s.id} className="hover:border-primary/50 transition-colors">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <Link to="/tabelas/$id" params={{ id: s.id }} className="flex-1 min-w-0">
+                          <CardTitle className="text-base flex items-center gap-2">
+                            <TableIcon className="h-4 w-4 text-muted-foreground" />
+                            <span className="truncate">{s.nome}</span>
+                          </CardTitle>
+                        </Link>
+                        {renderActions(s)}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <Link to="/tabelas/$id" params={{ id: s.id }} className="block">
+                        {s.descricao && (
+                          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                            {s.descricao}
+                          </p>
+                        )}
+                        <p className="text-xs text-muted-foreground">
+                          {(s.columns as SheetColumn[]).length} colunas
+                        </p>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-md border border-border divide-y divide-border overflow-hidden">
+                {sorted.map((s) => (
+                  <div
+                    key={s.id}
+                    className="flex items-center gap-3 px-3 py-2 hover:bg-muted/40 transition-colors"
+                  >
+                    <TableIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <Link to="/tabelas/$id" params={{ id: s.id }} className="flex-1 min-w-0">
+                      <span className="text-sm font-medium truncate block">{s.nome}</span>
+                      {s.descricao && (
+                        <span className="text-xs text-muted-foreground truncate block">
+                          {s.descricao}
+                        </span>
+                      )}
+                    </Link>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap hidden sm:block">
+                      {(s.columns as SheetColumn[]).length} colunas
+                    </span>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap hidden md:block">
+                      {new Date(s.updated_at).toLocaleDateString("pt-BR")}
+                    </span>
+                    {renderActions(s)}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       })()}

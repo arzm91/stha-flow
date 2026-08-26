@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/producao/historico/$equipI
 });
 
 function HistoricoEquip() {
-  const { equipId } = Route.useParams();
+  const { equipId } = Route.useParams() as { equipId: string };
 
   const equip = useQuery({
     queryKey: ["equipamento", equipId],
