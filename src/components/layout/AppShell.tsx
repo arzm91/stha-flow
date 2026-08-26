@@ -1,9 +1,10 @@
 import { type ReactNode, useEffect, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, Link } from "@tanstack/react-router";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Sun, Moon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { LogOut, User, Sun, Moon, Bell } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 import { ChatPopup } from "@/components/chat/ChatPopup";
 import { CalculatedTagsSync } from "@/components/tags/CalculatedTagsSync";
@@ -17,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
@@ -25,6 +26,32 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { theme, toggle } = useTheme();
   const [profile, setProfile] = useState<{ nome: string; empresa: string | null; email: string | null } | null>(null);
 
+  const { data: activeAlerts = 0 } = useQuery({
+    queryKey: ["active_alerts_count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("alertas_disparos")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "novo");
+      if (error) throw error;
+      return count ?? 0;
+    },
+    refetchInterval: 30_000,
+  });
+
+  useEffect(() => {
+    const ch = supabase
+      .channel("header_alerts_count")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "alertas_disparos" },
+        () => qc.invalidateQueries({ queryKey: ["active_alerts_count"] }),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [qc]);
 
   useEffect(() => {
     (async () => {
@@ -67,8 +94,28 @@ export function AppShell({ children }: { children: ReactNode }) {
                 aria-label={theme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
                 title={theme === "dark" ? "Modo claro" : "Modo escuro"}
               >
-                {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
               </Button>
+
+              <Link to="/alertas">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  aria-label="Alertas ativos"
+                  title="Alertas ativos"
+                  className="relative"
+                >
+                  <Bell className="h-4 w-4" />
+                  {activeAlerts > 0 && (
+                    <Badge
+                      variant="destructive"
+                      className="pointer-events-none absolute -right-1 -top-1 flex h-4 min-w-[1rem] items-center justify-center rounded-full p-0 text-[10px]"
+                    >
+                      {activeAlerts > 99 ? "99+" : activeAlerts}
+                    </Badge>
+                  )}
+                </Button>
+              </Link>
 
               <ChatPopup />
 

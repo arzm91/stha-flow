@@ -798,7 +798,7 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
         },
         tag_total: eq?.tag_producao_total ? (tMap.get(eq.tag_producao_total) ?? null) : null,
         tag_vel: eq?.tag_velocidade_producao ? (tMap.get(eq.tag_velocidade_producao) ?? null) : null,
-        tag_indices: tagIndices.map((n) => ({ nome: n, ...(tMap.get(n) ?? { nome_amigavel: null, valor_num: null, unidade: null }) })),
+        tag_indices: tagIndices.map((n) => ({ ...(tMap.get(n) ?? { nome_amigavel: null, valor_num: null, unidade: null }), nome: n })),
       };
     }
 
