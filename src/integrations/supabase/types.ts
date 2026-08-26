@@ -3137,6 +3137,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _cron_field_matches: {
+        Args: { p_field: string; p_val: number }
+        Returns: boolean
+      }
       _equip_tem_atividades: {
         Args: { p_equip: string; p_owner: string }
         Returns: boolean
@@ -3176,6 +3180,7 @@ export type Database = {
         Args: { _id: string }
         Returns: undefined
       }
+      dispatch_automation_schedules: { Args: never; Returns: number }
       dispatch_automation_trigger: {
         Args: { p_context: Json; p_owner_id: string; p_trigger_type: string }
         Returns: number

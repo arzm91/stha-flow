@@ -209,6 +209,21 @@ export function NodeConfigPanel({
                 const match = /\*\/(\d+)/.exec(m);
                 return match ? Number(match[1]) : 5;
               })();
+              const weeklyDays: number[] = (() => {
+                const d = parts[4] ?? "*";
+                if (d === "*") return [1, 2, 3, 4, 5];
+                return d.split(",").map((x) => Number(x.trim()) % 7).filter((x) => !Number.isNaN(x));
+              })();
+              const WEEK_DAYS = [
+                { v: 1, label: "Seg" }, { v: 2, label: "Ter" }, { v: 3, label: "Qua" },
+                { v: 4, label: "Qui" }, { v: 5, label: "Sex" }, { v: 6, label: "Sáb" },
+                { v: 0, label: "Dom" },
+              ];
+              const buildWeeklyCron = (time: string, days: number[]) => {
+                const [hh, mm] = time.split(":");
+                const dow = days.length ? [...days].sort((a, b) => a - b).join(",") : "*";
+                return `${Number(mm)} ${Number(hh)} * * ${dow}`;
+              };
               return (
                 <>
                   <div className="space-y-1">
@@ -218,6 +233,7 @@ export function NodeConfigPanel({
                       onValueChange={(v) => {
                         let cron = cronStr;
                         if (v === "daily") cron = `${Number(dailyTime.split(":")[1])} ${Number(dailyTime.split(":")[0])} * * *`;
+                        else if (v === "weekly") cron = buildWeeklyCron(dailyTime, weeklyDays);
                         else if (v === "hourly") cron = `0 */${everyHours} * * *`;
                         else if (v === "minutes") cron = `*/${everyMinutes} * * * *`;
                         set({ scheduleMode: v, cron });
@@ -226,6 +242,7 @@ export function NodeConfigPanel({
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="daily">Diário em horário fixo</SelectItem>
+                        <SelectItem value="weekly">Semanal (dias da semana)</SelectItem>
                         <SelectItem value="hourly">A cada N horas</SelectItem>
                         <SelectItem value="minutes">A cada N minutos</SelectItem>
                         <SelectItem value="cron">Cron avançado</SelectItem>
@@ -233,18 +250,52 @@ export function NodeConfigPanel({
                     </Select>
                   </div>
 
-                  {mode === "daily" && (
+                  {(mode === "daily" || mode === "weekly") && (
                     <div className="space-y-1">
-                      <Label>Horário (todo dia)</Label>
+                      <Label>Horário</Label>
                       <Input
                         type="time"
                         value={dailyTime}
                         onChange={(e) => {
-                          const [hh, mm] = e.target.value.split(":");
-                          set({ cron: `${Number(mm)} ${Number(hh)} * * *` });
+                          if (mode === "weekly") set({ cron: buildWeeklyCron(e.target.value, weeklyDays) });
+                          else {
+                            const [hh, mm] = e.target.value.split(":");
+                            set({ cron: `${Number(mm)} ${Number(hh)} * * *` });
+                          }
                         }}
                       />
-                      <p className="text-xs text-muted-foreground">Ex: 08:00 dispara todo dia às 8h da manhã.</p>
+                      {mode === "daily" && (
+                        <p className="text-xs text-muted-foreground">Ex: 08:00 dispara todo dia às 8h da manhã.</p>
+                      )}
+                    </div>
+                  )}
+
+                  {mode === "weekly" && (
+                    <div className="space-y-1">
+                      <Label>Nos dias</Label>
+                      <div className="flex flex-wrap gap-1.5">
+                        {WEEK_DAYS.map((d) => {
+                          const on = weeklyDays.includes(d.v);
+                          return (
+                            <Button
+                              key={d.v}
+                              type="button"
+                              size="sm"
+                              variant={on ? "default" : "outline"}
+                              className="h-7 px-2 text-xs"
+                              onClick={() => {
+                                const next = on ? weeklyDays.filter((x) => x !== d.v) : [...weeklyDays, d.v];
+                                set({ cron: buildWeeklyCron(dailyTime, next) });
+                              }}
+                            >
+                              {d.label}
+                            </Button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Dispara às {dailyTime} nos dias marcados.
+                      </p>
                     </div>
                   )}
 
@@ -289,7 +340,7 @@ export function NodeConfigPanel({
                   )}
 
                   <p className="text-[11px] text-muted-foreground">
-                    Cron atual: <code>{cronStr}</code> (horário UTC do servidor)
+                    Cron atual: <code>{cronStr}</code> — avaliado no <strong>horário de Brasília</strong>, com checagem a cada minuto.
                   </p>
                 </>
               );
