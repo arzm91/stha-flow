@@ -27,6 +27,8 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 import { usePagePermissions } from "@/hooks/usePagePermissions";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
+import { SidebarPreview } from "@/components/layout/SidebarPreview";
 
 type Item = {
   title: string;
