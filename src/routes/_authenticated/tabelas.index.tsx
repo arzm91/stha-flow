@@ -24,7 +24,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Trash2, Table as TableIcon, Pencil, MoreVertical } from "lucide-react";
+import { Plus, Trash2, Table as TableIcon, Pencil, MoreVertical, Search, LayoutGrid, List, ArrowUpDown } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
