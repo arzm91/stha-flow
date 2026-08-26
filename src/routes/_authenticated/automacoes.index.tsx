@@ -36,6 +36,7 @@ export const Route = createFileRoute("/_authenticated/automacoes/")({
 function AutomacoesIndex() {
   const [flows, setFlows] = useState<Flow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [assistenteOpen, setAssistenteOpen] = useState(false);
   const navigate = useNavigate();
 
   async function load() {
