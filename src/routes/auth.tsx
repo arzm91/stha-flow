@@ -16,7 +16,7 @@ import { signUpWithAccessCode } from "@/lib/signup.functions";
 export const Route = createFileRoute("/auth")({
   head: pageHead({ title: "Acessar STHApc", description: "Entre na sua conta ou cadastre-se no STHApc — sistema de gestão industrial.", path: "/auth" }),
   ssr: false,
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { next?: string } => ({
     next: typeof s.next === "string" && s.next.startsWith("/") && !s.next.startsWith("//") ? s.next : undefined,
   }),
   component: AuthPage,
