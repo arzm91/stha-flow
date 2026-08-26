@@ -562,8 +562,34 @@ function SheetFormDialog({
                           className="font-mono text-xs"
                         />
                         <p className="text-[11px] text-muted-foreground">
-                          Use o <strong>nome</strong> das colunas ou tags — clique nos botões abaixo para inserir. Operadores: + - * / ^ e funções (abs, min, max, sqrt, round, floor, ceil).
+                          Use o <strong>nome</strong> das colunas ou tags — clique nos botões abaixo para inserir.
+                          Operadores: <code>+ - * / ^</code>, comparações <code>&gt; &lt; &gt;= &lt;= == !=</code>,
+                          condições <code>and</code>, <code>or</code>, <code>not</code> e{" "}
+                          <code>se ? valor1 : valor2</code> — ex.: <code>temperatura &gt; 80 ? 1 : 0</code> ou{" "}
+                          <code>pressao &gt;= 5 and temperatura &lt; 60</code>.
+                          Comparações retornam 1 (verdadeiro) ou 0 (falso) — na coluna do tipo Sim/Não aparecem como Sim/Não.
+                          Funções: abs, min, max, sqrt, round, floor, ceil.
                         </p>
+                        <div className="flex flex-wrap items-center gap-1 pt-1">
+                          <span className="text-[11px] text-muted-foreground mr-1">Operadores:</span>
+                          {[">", "<", ">=", "<=", "==", "!=", "and", "or", "not", "?", ":"].map((op) => (
+                            <Button
+                              key={op}
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-6 px-2 text-[11px] font-mono"
+                              title={`Inserir ${op}`}
+                              onClick={() =>
+                                updateCol(i, {
+                                  formula: ((col.formula ?? "") + (col.formula?.trim() ? " " : "") + op + " ").trimStart(),
+                                })
+                              }
+                            >
+                              {op}
+                            </Button>
+                          ))}
+                        </div>
                         {(columns.filter((_, idx) => idx !== i).length > 0 || (tagsQ.data ?? []).length > 0) && (
                           <div className="space-y-1 pt-1">
                             {columns.filter((_, idx) => idx !== i).length > 0 && (
