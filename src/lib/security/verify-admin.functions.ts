@@ -2,11 +2,10 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 /**
- * Verifies the password of the OWNER admin of the currently authenticated user.
- * - If the user was created by an admin (profiles.created_by), checks against that admin's password.
- * - If the user is the admin themselves, checks against their own password.
+ * Verifies the password of ANY admin or gerente belonging to the same tenant
+ * (effective owner) as the currently authenticated user.
  *
- * Returns { ok: true } when the password matches, { ok: false } otherwise.
+ * Returns { ok: true } when the password matches one of them, { ok: false } otherwise.
  * Never reveals which email is being checked.
  */
 export const verifyOwnerAdminPassword = createServerFn({ method: "POST" })
