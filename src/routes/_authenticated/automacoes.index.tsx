@@ -7,8 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/PageHeader";
-import { Plus, Workflow, Trash2 } from "lucide-react";
+import { Plus, Workflow, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
+import { AssistenteFluxo } from "@/components/automation/AssistenteFluxo";
+
+const TRIGGER_LABELS: Record<string, string> = {
+  tag_value: "Tag atinge valor",
+  tag_stale: "Tag parada",
+  tag_stabilization: "Tag estabilizou",
+  production_event: "Evento de produção",
+  schedule: "Agendamento",
+};
 
 type Flow = {
   id: string;
