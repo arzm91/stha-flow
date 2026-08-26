@@ -87,16 +87,29 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {visibleItems.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={isActive(item)} tooltip={item.title}>
-                    <Link to={item.url}>
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {visibleItems.map((item) => {
+                const button = (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={isActive(item)} tooltip={item.title}>
+                      <Link to={item.url}>
+                        <item.icon />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+
+                if (!item.pageKey) return button;
+
+                return (
+                  <HoverCard key={item.title} openDelay={250} closeDelay={150}>
+                    <HoverCardTrigger asChild>{button}</HoverCardTrigger>
+                    <HoverCardContent side="right" align="start" sideOffset={12} className="w-auto p-3">
+                      <SidebarPreview pageKey={item.pageKey} title={item.title} />
+                    </HoverCardContent>
+                  </HoverCard>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
