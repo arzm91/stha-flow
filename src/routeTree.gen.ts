@@ -69,6 +69,7 @@ import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/em
 import { Route as ApiPublicTagsSnapshotDiarioRouteImport } from './routes/api/public/tags.snapshot-diario'
 import { Route as ApiPublicTagsPushRouteImport } from './routes/api/public/tags.push'
 import { Route as ApiPublicTagsPollRouteImport } from './routes/api/public/tags.poll'
+import { Route as ApiPublicTagsCalcTickRouteImport } from './routes/api/public/tags.calc-tick'
 import { Route as ApiPublicTagsAcumuladorTickRouteImport } from './routes/api/public/tags.acumulador-tick'
 import { Route as ApiPublicAutomationDispatchRunsRouteImport } from './routes/api/public/automation.dispatch-runs'
 import { Route as ApiPublicAlertasDispatchEmailRouteImport } from './routes/api/public/alertas.dispatch-email'
@@ -411,6 +412,11 @@ const ApiPublicTagsPollRoute = ApiPublicTagsPollRouteImport.update({
   path: '/api/public/tags/poll',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicTagsCalcTickRoute = ApiPublicTagsCalcTickRouteImport.update({
+  id: '/api/public/tags/calc-tick',
+  path: '/api/public/tags/calc-tick',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicTagsAcumuladorTickRoute =
   ApiPublicTagsAcumuladorTickRouteImport.update({
     id: '/api/public/tags/acumulador-tick',
@@ -527,6 +533,7 @@ export interface FileRoutesByFullPath {
   '/api/public/alertas/dispatch-email': typeof ApiPublicAlertasDispatchEmailRoute
   '/api/public/automation/dispatch-runs': typeof ApiPublicAutomationDispatchRunsRoute
   '/api/public/tags/acumulador-tick': typeof ApiPublicTagsAcumuladorTickRoute
+  '/api/public/tags/calc-tick': typeof ApiPublicTagsCalcTickRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
   '/api/public/tags/snapshot-diario': typeof ApiPublicTagsSnapshotDiarioRoute
@@ -590,6 +597,7 @@ export interface FileRoutesByTo {
   '/api/public/alertas/dispatch-email': typeof ApiPublicAlertasDispatchEmailRoute
   '/api/public/automation/dispatch-runs': typeof ApiPublicAutomationDispatchRunsRoute
   '/api/public/tags/acumulador-tick': typeof ApiPublicTagsAcumuladorTickRoute
+  '/api/public/tags/calc-tick': typeof ApiPublicTagsCalcTickRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
   '/api/public/tags/snapshot-diario': typeof ApiPublicTagsSnapshotDiarioRoute
@@ -662,6 +670,7 @@ export interface FileRoutesById {
   '/api/public/alertas/dispatch-email': typeof ApiPublicAlertasDispatchEmailRoute
   '/api/public/automation/dispatch-runs': typeof ApiPublicAutomationDispatchRunsRoute
   '/api/public/tags/acumulador-tick': typeof ApiPublicTagsAcumuladorTickRoute
+  '/api/public/tags/calc-tick': typeof ApiPublicTagsCalcTickRoute
   '/api/public/tags/poll': typeof ApiPublicTagsPollRoute
   '/api/public/tags/push': typeof ApiPublicTagsPushRoute
   '/api/public/tags/snapshot-diario': typeof ApiPublicTagsSnapshotDiarioRoute
@@ -734,6 +743,7 @@ export interface FileRouteTypes {
     | '/api/public/alertas/dispatch-email'
     | '/api/public/automation/dispatch-runs'
     | '/api/public/tags/acumulador-tick'
+    | '/api/public/tags/calc-tick'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
     | '/api/public/tags/snapshot-diario'
@@ -797,6 +807,7 @@ export interface FileRouteTypes {
     | '/api/public/alertas/dispatch-email'
     | '/api/public/automation/dispatch-runs'
     | '/api/public/tags/acumulador-tick'
+    | '/api/public/tags/calc-tick'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
     | '/api/public/tags/snapshot-diario'
@@ -868,6 +879,7 @@ export interface FileRouteTypes {
     | '/api/public/alertas/dispatch-email'
     | '/api/public/automation/dispatch-runs'
     | '/api/public/tags/acumulador-tick'
+    | '/api/public/tags/calc-tick'
     | '/api/public/tags/poll'
     | '/api/public/tags/push'
     | '/api/public/tags/snapshot-diario'
@@ -896,6 +908,7 @@ export interface RootRouteChildren {
   ApiPublicAlertasDispatchEmailRoute: typeof ApiPublicAlertasDispatchEmailRoute
   ApiPublicAutomationDispatchRunsRoute: typeof ApiPublicAutomationDispatchRunsRoute
   ApiPublicTagsAcumuladorTickRoute: typeof ApiPublicTagsAcumuladorTickRoute
+  ApiPublicTagsCalcTickRoute: typeof ApiPublicTagsCalcTickRoute
   ApiPublicTagsPollRoute: typeof ApiPublicTagsPollRoute
   ApiPublicTagsPushRoute: typeof ApiPublicTagsPushRoute
   ApiPublicTagsSnapshotDiarioRoute: typeof ApiPublicTagsSnapshotDiarioRoute
@@ -1328,6 +1341,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTagsPollRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/tags/calc-tick': {
+      id: '/api/public/tags/calc-tick'
+      path: '/api/public/tags/calc-tick'
+      fullPath: '/api/public/tags/calc-tick'
+      preLoaderRoute: typeof ApiPublicTagsCalcTickRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/tags/acumulador-tick': {
       id: '/api/public/tags/acumulador-tick'
       path: '/api/public/tags/acumulador-tick'
@@ -1614,6 +1634,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicAlertasDispatchEmailRoute: ApiPublicAlertasDispatchEmailRoute,
   ApiPublicAutomationDispatchRunsRoute: ApiPublicAutomationDispatchRunsRoute,
   ApiPublicTagsAcumuladorTickRoute: ApiPublicTagsAcumuladorTickRoute,
+  ApiPublicTagsCalcTickRoute: ApiPublicTagsCalcTickRoute,
   ApiPublicTagsPollRoute: ApiPublicTagsPollRoute,
   ApiPublicTagsPushRoute: ApiPublicTagsPushRoute,
   ApiPublicTagsSnapshotDiarioRoute: ApiPublicTagsSnapshotDiarioRoute,

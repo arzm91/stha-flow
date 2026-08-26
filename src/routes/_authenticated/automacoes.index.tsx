@@ -7,8 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/PageHeader";
-import { Plus, Workflow, Trash2 } from "lucide-react";
+import { Plus, Workflow, Trash2, Wand2 } from "lucide-react";
 import { toast } from "sonner";
+import { AssistenteFluxo } from "@/components/automation/AssistenteFluxo";
+
+const TRIGGER_LABELS: Record<string, string> = {
+  tag_value: "Tag atinge valor",
+  tag_stale: "Tag parada",
+  tag_stabilization: "Tag estabilizou",
+  production_event: "Evento de produção",
+  schedule: "Agendamento",
+};
 
 type Flow = {
   id: string;
@@ -27,6 +36,7 @@ export const Route = createFileRoute("/_authenticated/automacoes/")({
 function AutomacoesIndex() {
   const [flows, setFlows] = useState<Flow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [assistenteOpen, setAssistenteOpen] = useState(false);
   const navigate = useNavigate();
 
   async function load() {
@@ -89,11 +99,16 @@ function AutomacoesIndex() {
     <div className="space-y-6 p-6">
       <PageHeader
         title="Automações"
-        description="Crie fluxos visuais para automatizar tarefas a partir de tags, eventos de produção e agendamentos."
+        description="Crie fluxos para automatizar tarefas a partir de tags, eventos de produção e agendamentos."
         actions={
-          <Button onClick={createFlow}>
-            <Plus className="mr-2 size-4" /> Novo fluxo
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setAssistenteOpen(true)}>
+              <Wand2 className="mr-2 size-4" /> Assistente guiado
+            </Button>
+            <Button onClick={createFlow}>
+              <Plus className="mr-2 size-4" /> Editor avançado
+            </Button>
+          </div>
         }
       />
 
@@ -103,13 +118,18 @@ function AutomacoesIndex() {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Workflow className="mb-3 size-10 text-muted-foreground" />
-            <h3 className="text-lg font-medium">Nenhum fluxo ainda</h3>
+            <h3 className="text-lg font-medium">Nenhuma automação ainda</h3>
             <p className="mt-1 max-w-md text-sm text-muted-foreground">
-              Crie seu primeiro fluxo para reagir automaticamente a tags, eventos e horários.
+              Crie sua primeira automação para reagir automaticamente a tags, eventos e horários.
             </p>
-            <Button className="mt-4" onClick={createFlow}>
-              <Plus className="mr-2 size-4" /> Criar fluxo
-            </Button>
+            <div className="mt-4 flex gap-2">
+              <Button onClick={() => setAssistenteOpen(true)}>
+                <Wand2 className="mr-2 size-4" /> Criar com assistente
+              </Button>
+              <Button variant="outline" onClick={createFlow}>
+                <Plus className="mr-2 size-4" /> Editor avançado
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (
@@ -132,7 +152,9 @@ function AutomacoesIndex() {
               <CardContent className="flex items-center justify-between">
                 <div className="flex gap-2 text-xs">
                   {flow.trigger_type ? (
-                    <Badge variant="secondary">{flow.trigger_type}</Badge>
+                    <Badge variant="secondary">
+                      {TRIGGER_LABELS[flow.trigger_type] ?? flow.trigger_type}
+                    </Badge>
                   ) : (
                     <Badge variant="outline">sem gatilho</Badge>
                   )}
@@ -155,6 +177,8 @@ function AutomacoesIndex() {
           ))}
         </div>
       )}
+
+      <AssistenteFluxo open={assistenteOpen} onOpenChange={setAssistenteOpen} />
     </div>
   );
 }
