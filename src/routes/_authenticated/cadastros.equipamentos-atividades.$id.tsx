@@ -120,7 +120,7 @@ function emptyForm(): Form {
 }
 
 function EquipAtividadesPage() {
-  const { id: equipId } = Route.useParams();
+  const { id: equipId } = Route.useParams() as { id: string };
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<Form>(emptyForm());

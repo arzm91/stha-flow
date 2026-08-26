@@ -33,7 +33,7 @@ export const Route = createFileRoute("/_authenticated/producao/$id")({
 });
 
 function OPPage() {
-  const { id } = Route.useParams();
+  const { id } = Route.useParams() as { id: string };
   const qc = useQueryClient();
   const navigate = useNavigate();
 

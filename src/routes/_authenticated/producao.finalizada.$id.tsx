@@ -79,7 +79,7 @@ const TIPO_META: Record<
 };
 
 function FinalizadaPage() {
-  const { id } = Route.useParams();
+  const { id } = Route.useParams() as { id: string };
 
   const op = useQuery({
     queryKey: ["op-finalizada", id],

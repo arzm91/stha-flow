@@ -16,7 +16,7 @@ export const Route = createFileRoute("/_authenticated/cadastros/equipamentos/$id
 });
 
 function EquipDetail() {
-  const { id } = Route.useParams();
+  const { id } = Route.useParams() as { id: string };
   const equip = useQuery({
     queryKey: ["equipamento", id],
     queryFn: async () => {
