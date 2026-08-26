@@ -80,9 +80,12 @@ function DashboardPage() {
   const widgets = useQuery({
     queryKey: ["dashboard_widgets"],
     queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return [] as Widget[];
       const { data, error } = await supabase
         .from("dashboard_widgets")
         .select("id,titulo,tipo,fonte,config,layout")
+        .eq("user_id", u.user.id)
         .order("created_at");
       if (error) throw error;
       return (data ?? []) as unknown as Widget[];
