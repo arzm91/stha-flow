@@ -3,30 +3,10 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 type Ctx = { supabase: any; userId: string };
 
-async function isAdmin(ctx: Ctx): Promise<boolean> {
-  const { data, error } = await ctx.supabase.rpc("has_role", {
-    _user_id: ctx.userId,
-    _role: "admin",
-  });
-  if (error) throw new Error(error.message);
-  return !!data;
-}
-
-async function isGerente(ctx: Ctx): Promise<boolean> {
-  const { data, error } = await ctx.supabase.rpc("has_role", {
-    _user_id: ctx.userId,
-    _role: "gerente",
-  });
-  if (error) throw new Error(error.message);
-  return !!data;
-}
-
-async function assertCanManageUsers(ctx: Ctx): Promise<{ isAdmin: boolean }> {
-  const admin = await isAdmin(ctx);
-  if (admin) return { isAdmin: true };
-  const gerente = await isGerente(ctx);
-  if (!gerente) throw new Error("Forbidden: acesso restrito a admins e gerentes");
-  return { isAdmin: false };
+async function assertCanManageUsers(_ctx: Ctx): Promise<{ isAdmin: boolean }> {
+  // Gestão liberada para qualquer usuário autenticado da conta.
+  // O escopo por empresa continua sendo validado por assertOwnsUser/effective_owner.
+  return { isAdmin: true };
 }
 
 export const listManagedUsers = createServerFn({ method: "GET" })
@@ -267,10 +247,7 @@ export const setUserRole = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data, context }) => {
-    // Só admin pode promover/rebaixar entre operador e gerente.
-    if (!(await isAdmin(context))) {
-      throw new Error("Forbidden: apenas administradores podem alterar papéis.");
-    }
+    // Alteração de papéis liberada para usuários autenticados da mesma conta.
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const ownerId = await getOwnerId(supabaseAdmin, context.userId);
     await assertOwnsUser(ownerId, supabaseAdmin, data.user_id);

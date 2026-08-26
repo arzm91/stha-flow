@@ -537,7 +537,14 @@ export async function executeRunInternal(
   const { data: run, error: e1 } = await supabase
     .from("automation_runs").select("*").eq("id", runId).maybeSingle();
   if (e1 || !run) throw new Error("Execução não encontrada");
-  if (run.owner_id !== userId) throw new Error("Sem permissão");
+  // Escopo multitenant: usa o owner efetivo (admin da conta), não o userId bruto.
+  {
+    const { data: ownerRow } = await supabase.rpc("effective_owner", { _user: userId });
+    const ownerId = (ownerRow as string | null) ?? userId;
+    if (run.owner_id !== ownerId && run.owner_id !== userId) {
+      throw new Error("Sem permissão");
+    }
+  }
   if (!["pending_approval", "approved", "snoozed"].includes(run.status)) {
     throw new Error("Execução não está pendente");
   }

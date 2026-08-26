@@ -36,19 +36,10 @@ export const askAssistente = createServerFn({ method: "POST" })
     });
     if (ownerErr || !owner) throw new Error("Não foi possível identificar sua empresa.");
 
-    // Permissões por página: o assistente só consulta o que o usuário pode ver.
-    const podeVer = async (page: string) => {
-      const { data: ok } = await supabase.rpc("can_access_page", {
-        _user: userId,
-        _page: page,
-      });
-      return ok === true;
-    };
-    const [podeTags, podeProducao, podeAlertas] = await Promise.all([
-      podeVer("tags"),
-      podeVer("producao"),
-      podeVer("alertas"),
-    ]);
+    // Acesso liberado: qualquer usuário autenticado consulta os dados da própria empresa.
+    const podeTags = true;
+    const podeProducao = true;
+    const podeAlertas = true;
 
     if (!podeTags && !podeProducao && !podeAlertas) {
       return {

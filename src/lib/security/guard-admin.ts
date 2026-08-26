@@ -1,14 +1,12 @@
-import { requireAdminPassword } from "@/components/admin-password/AdminPasswordGate";
-
 export const ADMIN_CANCELLED = "__admin_cancelled__";
 
 /**
- * Throws ADMIN_CANCELLED if the admin password modal is cancelled or wrong.
- * Wrap inside mutationFn or async handlers. Combine with isAdminCancelled in onError.
+ * Confirmação por senha desativada.
+ * Todos os usuários autenticados podem editar/excluir dentro do seu tenant (RLS).
+ * Mantido como no-op para não quebrar as chamadas existentes.
  */
-export async function guardAdmin(reason: string): Promise<void> {
-  const ok = await requireAdminPassword(reason);
-  if (!ok) throw new Error(ADMIN_CANCELLED);
+export async function guardAdmin(_reason: string): Promise<void> {
+  return;
 }
 
 export function isAdminCancelled(err: unknown): boolean {
