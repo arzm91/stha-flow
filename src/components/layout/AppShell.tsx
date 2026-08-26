@@ -8,6 +8,7 @@ import { LogOut, User, Sun, Moon, Bell } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 import { ChatPopup } from "@/components/chat/ChatPopup";
 import { CalculatedTagsSync } from "@/components/tags/CalculatedTagsSync";
+import { AssistenteBusca } from "@/components/assistente/AssistenteBusca";
 
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -87,6 +88,8 @@ export function AppShell({ children }: { children: ReactNode }) {
               <span className="text-sm font-semibold">{profile?.empresa ?? "—"}</span>
             </div>
             <div className="ml-auto flex items-center gap-2">
+              <AssistenteBusca />
+
               <Button
                 variant="ghost"
                 size="icon"
