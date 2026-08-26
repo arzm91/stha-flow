@@ -1,9 +1,10 @@
 import { type ReactNode, useEffect, useState } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, Link } from "@tanstack/react-router";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "./AppSidebar";
 import { Button } from "@/components/ui/button";
-import { LogOut, User, Sun, Moon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { LogOut, User, Sun, Moon, Bell } from "lucide-react";
 import { useTheme } from "@/lib/theme";
 import { ChatPopup } from "@/components/chat/ChatPopup";
 import { CalculatedTagsSync } from "@/components/tags/CalculatedTagsSync";
@@ -17,7 +18,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function AppShell({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
