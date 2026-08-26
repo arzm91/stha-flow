@@ -29,22 +29,28 @@ export const verifyOwnerAdminPassword = createServerFn({ method: "POST" })
     const ownerId = ownerRow as string | null;
     if (!ownerId) return { ok: false as const };
 
-    // Owner must actually have the admin role
-    const { data: isAdmin, error: roleErr } = await supabaseAdmin.rpc("has_role", {
-      _user_id: ownerId,
-      _role: "admin",
-    });
-    if (roleErr) throw new Error(roleErr.message);
-    if (!isAdmin) return { ok: false as const };
+    // Gather every user of this tenant (the owner + users created by the owner)
+    const { data: memberRows, error: membersErr } = await supabaseAdmin
+      .from("profiles")
+      .select("id")
+      .or(`id.eq.${ownerId},created_by.eq.${ownerId}`);
+    if (membersErr) throw new Error(membersErr.message);
+    const memberIds = (memberRows ?? []).map((r) => r.id);
+    if (memberIds.length === 0) return { ok: false as const };
 
-    // Get the owner admin's email
-    const { data: adminUser, error: getErr } =
-      await supabaseAdmin.auth.admin.getUserById(ownerId);
-    if (getErr) throw new Error(getErr.message);
-    const email = adminUser.user?.email;
-    if (!email) return { ok: false as const };
+    // Keep only members with admin or gerente role
+    const { data: roleRows, error: rolesErr } = await supabaseAdmin
+      .from("user_roles")
+      .select("user_id, role")
+      .in("user_id", memberIds)
+      .in("role", ["admin", "gerente"]);
+    if (rolesErr) throw new Error(rolesErr.message);
+    const privilegedIds = [...new Set((roleRows ?? []).map((r) => r.user_id))];
+    if (privilegedIds.length === 0) return { ok: false as const };
 
-    // Validate password with a throwaway client (does not affect current session)
+    // Validate the password against each privileged user's account with a
+    // throwaway client (does not affect the current session). Stop at the
+    // first match. Cap attempts to avoid abuse on very large teams.
     const { createClient } = await import("@supabase/supabase-js");
     const temp = createClient(
       process.env.SUPABASE_URL!,
@@ -58,13 +64,22 @@ export const verifyOwnerAdminPassword = createServerFn({ method: "POST" })
         },
       },
     );
-    const { data: signIn, error: signErr } = await temp.auth.signInWithPassword({
-      email,
-      password: data.password,
-    });
-    if (signErr || !signIn.session) return { ok: false as const };
-    // Clean up only the throwaway client state. A global signOut here revokes
-    // the real browser session when the current user is the owner admin.
-    await temp.auth.signOut({ scope: "local" }).catch(() => {});
-    return { ok: true as const };
+
+    for (const uid of privilegedIds.slice(0, 15)) {
+      const { data: u, error: getErr } = await supabaseAdmin.auth.admin.getUserById(uid);
+      if (getErr) continue;
+      const email = u.user?.email;
+      if (!email) continue;
+      const { data: signIn, error: signErr } = await temp.auth.signInWithPassword({
+        email,
+        password: data.password,
+      });
+      if (!signErr && signIn.session) {
+        // Clean up only the throwaway client state. A global signOut here
+        // revokes the real browser session when the signer is the current user.
+        await temp.auth.signOut({ scope: "local" }).catch(() => {});
+        return { ok: true as const };
+      }
+    }
+    return { ok: false as const };
   });
