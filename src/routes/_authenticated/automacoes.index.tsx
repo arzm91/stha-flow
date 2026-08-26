@@ -177,6 +177,8 @@ function AutomacoesIndex() {
           ))}
         </div>
       )}
+
+      <AssistenteFluxo open={assistenteOpen} onOpenChange={setAssistenteOpen} />
     </div>
   );
 }
