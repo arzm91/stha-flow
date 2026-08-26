@@ -152,7 +152,9 @@ function AutomacoesIndex() {
               <CardContent className="flex items-center justify-between">
                 <div className="flex gap-2 text-xs">
                   {flow.trigger_type ? (
-                    <Badge variant="secondary">{flow.trigger_type}</Badge>
+                    <Badge variant="secondary">
+                      {TRIGGER_LABELS[flow.trigger_type] ?? flow.trigger_type}
+                    </Badge>
                   ) : (
                     <Badge variant="outline">sem gatilho</Badge>
                   )}
