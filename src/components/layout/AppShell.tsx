@@ -26,6 +26,32 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { theme, toggle } = useTheme();
   const [profile, setProfile] = useState<{ nome: string; empresa: string | null; email: string | null } | null>(null);
 
+  const { data: activeAlerts = 0 } = useQuery({
+    queryKey: ["active_alerts_count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("alertas_disparos")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "novo");
+      if (error) throw error;
+      return count ?? 0;
+    },
+    refetchInterval: 30_000,
+  });
+
+  useEffect(() => {
+    const ch = supabase
+      .channel("header_alerts_count")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "alertas_disparos" },
+        () => qc.invalidateQueries({ queryKey: ["active_alerts_count"] }),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, [qc]);
 
   useEffect(() => {
     (async () => {
