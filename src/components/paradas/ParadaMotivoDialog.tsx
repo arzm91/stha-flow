@@ -212,7 +212,7 @@ export function ParadaMotivoDialog() {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => setCurrent(null)}>Registrar depois</Button>
+          <Button variant="outline" onClick={adiar}>Registrar depois</Button>
           <Button onClick={salvar} disabled={saving || !motivo}>
             {saving ? "Salvando..." : "Salvar motivo"}
           </Button>
