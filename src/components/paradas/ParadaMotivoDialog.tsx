@@ -44,50 +44,76 @@ export function ParadaMotivoDialog() {
   const [motivo, setMotivo] = useState("");
   const [observacao, setObservacao] = useState("");
   const [saving, setSaving] = useState(false);
+  // Paradas adiadas nesta sessão — não reabrem sozinhas (evita loop de popups)
+  const adiadas = useRef<Set<string>>(new Set());
+  const loading = useRef(false);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  async function load() {
-    const { data } = await supabase
-      .from("paradas_equipamento")
-      .select("id,equipamento_id,ordem_producao_id,inicio_em,fim_em,duracao_seg,tag_nome,status")
-      .eq("status", "aguardando_motivo")
-      .order("fim_em", { ascending: false });
-    const rows = (data ?? []) as Parada[];
-    setPendentes(rows);
+  const load = useCallback(async () => {
+    if (loading.current) return;
+    loading.current = true;
+    try {
+      const { data } = await supabase
+        .from("paradas_equipamento")
+        .select("id,equipamento_id,ordem_producao_id,inicio_em,fim_em,duracao_seg,tag_nome,status")
+        .eq("status", "aguardando_motivo")
+        .order("fim_em", { ascending: false })
+        .limit(20);
+      const rows = (data ?? []) as Parada[];
+      setPendentes((prev) => {
+        const same =
+          prev.length === rows.length && prev.every((p, i) => p.id === rows[i]!.id);
+        return same ? prev : rows;
+      });
 
-    const eqIds = Array.from(new Set(rows.map((r) => r.equipamento_id)));
-    if (eqIds.length > 0) {
-      const { data: eq } = await supabase
-        .from("equipamentos")
-        .select("id,nome,codigo,parada_motivos")
-        .in("id", eqIds);
-      const m: Record<string, Equipamento> = {};
-      (eq ?? []).forEach((e) => { m[e.id] = e as Equipamento; });
-      setEquipMap(m);
+      const eqIds = Array.from(new Set(rows.map((r) => r.equipamento_id)));
+      if (eqIds.length > 0) {
+        const { data: eq } = await supabase
+          .from("equipamentos")
+          .select("id,nome,codigo,parada_motivos")
+          .in("id", eqIds);
+        const m: Record<string, Equipamento> = {};
+        (eq ?? []).forEach((e) => { m[e.id] = e as Equipamento; });
+        setEquipMap((prev) => ({ ...prev, ...m }));
+      }
+    } finally {
+      loading.current = false;
     }
-  }
+  }, []);
+
+  const scheduleLoad = useCallback(() => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => { void load(); }, 800);
+  }, [load]);
 
   useEffect(() => {
-    load();
+    void load();
     const ch = supabase
       .channel("paradas_pendentes")
       .on("postgres_changes",
         { event: "*", schema: "public", table: "paradas_equipamento" },
-        () => load())
+        () => scheduleLoad())
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, []);
+    return () => {
+      if (timer.current) clearTimeout(timer.current);
+      supabase.removeChannel(ch);
+    };
+  }, [load, scheduleLoad]);
 
-  // Abre automaticamente a primeira pendente
+  // Abre automaticamente a primeira pendente não adiada
   useEffect(() => {
-    if (!current && pendentes.length > 0) {
-      setCurrent(pendentes[0]);
-      setMotivo("");
-      setObservacao("");
-    }
-    if (current && !pendentes.find((p) => p.id === current.id)) {
-      setCurrent(null);
-    }
-  }, [pendentes, current]);
+    setCurrent((cur) => {
+      if (cur) return pendentes.some((p) => p.id === cur.id) ? cur : null;
+      const next = pendentes.find((p) => !adiadas.current.has(p.id));
+      return next ?? null;
+    });
+  }, [pendentes]);
+
+  useEffect(() => {
+    setMotivo("");
+    setObservacao("");
+  }, [current?.id]);
+
 
   const eq = current ? equipMap[current.equipamento_id] : null;
   const motivos = useMemo<string[]>(() => {
