@@ -140,13 +140,20 @@ export function ParadaMotivoDialog() {
     setSaving(false);
     if (error) { toast.error(error.message); return; }
     toast.success("Motivo registrado");
+    setPendentes((prev) => prev.filter((p) => p.id !== current.id));
+    setCurrent(null);
+  }
+
+  function adiar() {
+    if (current) adiadas.current.add(current.id);
     setCurrent(null);
   }
 
   if (!current || !eq) return null;
 
   return (
-    <Dialog open={true} onOpenChange={(o) => { if (!o) setCurrent(null); }}>
+    <Dialog open={true} onOpenChange={(o) => { if (!o) adiar(); }}>
+
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
