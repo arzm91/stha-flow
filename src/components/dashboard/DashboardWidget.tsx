@@ -8,7 +8,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { getSource } from "@/lib/dashboard/widget-catalog";
 import { formatInt, formatNumber } from "@/lib/format";
-import { AlertTriangle, Wrench, FlaskConical, Factory, CheckCircle2, Clock, AlertOctagon } from "lucide-react";
+import { AlertTriangle, Wrench, FlaskConical, Factory, CheckCircle2, Clock, AlertOctagon, TrendingUp, TrendingDown } from "lucide-react";
 import { StorageLocationCard, type StorageLocation } from "@/components/StorageLocationCard";
 import { TagSparkline } from "@/components/dashboard/TagSparkline";
 import type { DashboardPeriod } from "@/lib/dashboard/period";
@@ -582,8 +582,8 @@ async function fetchData(fonte: string, config: Record<string, unknown>, period:
       return { kind: "kpi", value: formatInt(count ?? 0), tone: "text-destructive", to: "/alertas" };
     }
     case "chart.alertas.severidade": {
-      const since = daysAgo(6).toISOString();
-      const { data } = await supabase.from("alertas_disparos").select("severidade").gte("created_at", since);
+      const { data, error } = await supabase.from("alertas_disparos").select("severidade").gte("created_at", period.start).lt("created_at", period.end);
+      if (error) throw error;
       const map: Record<string, number> = {};
       for (const r of data ?? []) {
         const s = r.severidade ?? "info";
@@ -911,10 +911,10 @@ function buildDayBuckets(period: DashboardPeriod): Record<string, number> {
   const start = new Date(period.start);
   for (let i = 0; i < period.days; i++) {
     const d = new Date(start.getTime() + i * 86_400_000);
-    out[d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })] = 0;
+    out[d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" })] = 0;
   }
   return out;
 }
 function bucketKey(d: Date) {
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" });
 }

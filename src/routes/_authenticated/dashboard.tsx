@@ -1,5 +1,5 @@
 import { pageHead } from "@/lib/seo";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +20,7 @@ import {
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Pencil, Trash2, LayoutGrid, MoreHorizontal, GripVertical, Maximize2, Minimize2, Lock, Unlock } from "lucide-react";
+import { Plus, Pencil, Trash2, LayoutGrid, MoreHorizontal, GripVertical, Maximize2, Minimize2, Lock, Unlock, CalendarRange, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { WIDGET_SOURCES, getSource, type WidgetSource } from "@/lib/dashboard/widget-catalog";
@@ -28,6 +28,7 @@ import { DashboardWidget } from "@/components/dashboard/DashboardWidget";
 import { Responsive, useContainerWidth, verticalCompactor } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+import { resolveDashboardPeriod, type DashboardPeriod, type DashboardPeriodKey } from "@/lib/dashboard/period";
 
 type LayoutItem = { i: string; x: number; y: number; w: number; h: number; minW?: number; minH?: number };
 
@@ -35,6 +36,13 @@ type LayoutItem = { i: string; x: number; y: number; w: number; h: number; minW?
 
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    periodo: (["today", "yesterday", "7d", "30d", "month", "custom"] as const).includes(search.periodo as DashboardPeriodKey)
+      ? search.periodo as DashboardPeriodKey
+      : "today" as DashboardPeriodKey,
+    inicio: typeof search.inicio === "string" ? search.inicio : undefined,
+    fim: typeof search.fim === "string" ? search.fim : undefined,
+  }),
   head: pageHead({ title: "Dashboard — STHApc", description: "Acesse e gerencie Dashboard no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/dashboard" }),
   component: DashboardPage,
 });
@@ -57,6 +65,9 @@ const FROZEN_STORAGE_KEY = "dashboard:frozen";
 
 function DashboardPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const search = Route.useSearch();
+  const period = useMemo(() => resolveDashboardPeriod(search.periodo, search.inicio, search.fim), [search]);
   const { ref: fsRef, isFullscreen, toggle } = useFullscreen<HTMLDivElement>();
   const [editing, setEditing] = useState<Widget | null>(null);
   const [newOpen, setNewOpen] = useState(false);
@@ -164,6 +175,27 @@ function DashboardPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const duplicate = useMutation({
+    mutationFn: async (widget: Widget) => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) throw new Error("Não autenticado");
+      const { error } = await supabase.from("dashboard_widgets").insert({
+        user_id: auth.user.id,
+        titulo: `${widget.titulo} — cópia`,
+        tipo: widget.tipo,
+        fonte: widget.fonte,
+        config: widget.config as never,
+        layout: { ...widget.layout, y: 10000 } as never,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["dashboard_widgets"] });
+      toast.success("Widget duplicado");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <div ref={fsRef} className={`space-y-5 bg-background ${isFullscreen ? "h-screen overflow-y-auto p-4" : "min-h-full"}`}>
       <PageHeader
@@ -175,6 +207,23 @@ function DashboardPage() {
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               ao vivo
             </Badge>
+            <Select
+              value={search.periodo}
+              onValueChange={(value) => navigate({ search: (prev) => ({ ...prev, periodo: value as DashboardPeriodKey }) })}
+            >
+              <SelectTrigger className="h-8 w-[170px]" aria-label="Período do dashboard">
+                <CalendarRange className="h-3.5 w-3.5" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Hoje</SelectItem>
+                <SelectItem value="yesterday">Ontem</SelectItem>
+                <SelectItem value="7d">Últimos 7 dias</SelectItem>
+                <SelectItem value="30d">Últimos 30 dias</SelectItem>
+                <SelectItem value="month">Mês atual</SelectItem>
+                <SelectItem value="custom">Personalizado</SelectItem>
+              </SelectContent>
+            </Select>
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="text-muted-foreground border-dashed" disabled={frozen}>
@@ -209,6 +258,14 @@ function DashboardPage() {
         }
       />
 
+      {search.periodo === "custom" ? (
+        <div className="flex flex-wrap items-end gap-3 border-y bg-muted/30 px-3 py-2">
+          <div className="space-y-1"><Label htmlFor="dashboard-inicio" className="text-xs">Início</Label><Input id="dashboard-inicio" type="date" value={search.inicio ?? ""} onChange={(e) => navigate({ search: (prev) => ({ ...prev, inicio: e.target.value || undefined }) })} className="h-8 w-40" /></div>
+          <div className="space-y-1"><Label htmlFor="dashboard-fim" className="text-xs">Fim</Label><Input id="dashboard-fim" type="date" value={search.fim ?? ""} onChange={(e) => navigate({ search: (prev) => ({ ...prev, fim: e.target.value || undefined }) })} className="h-8 w-40" /></div>
+          <span className="pb-2 text-xs text-muted-foreground">{period.label}</span>
+        </div>
+      ) : null}
+
 
       {widgets.isLoading ? (
         <div className="text-sm text-muted-foreground">Carregando widgets...</div>
@@ -222,9 +279,11 @@ function DashboardPage() {
       ) : (
         <DashboardGrid
           widgets={widgets.data!}
+          period={period}
           frozen={frozen}
           onEdit={setEditing}
           onDelete={(id) => remove.mutate(id)}
+          onDuplicate={(widget) => duplicate.mutate(widget)}
           onResizePreset={(id, w, h) => {
             const wdg = widgets.data!.find((x) => x.id === id);
             if (wdg) resizePreset.mutate({ id, w, h, layout: wdg.layout });
@@ -255,12 +314,14 @@ const SIZE_PRESETS: Array<{ label: string; w: number; h: number }> = [
 ];
 
 function DashboardGrid({
-  widgets, frozen, onEdit, onDelete, onResizePreset,
+  widgets, frozen, period, onEdit, onDelete, onDuplicate, onResizePreset,
 }: {
   widgets: Widget[];
   frozen: boolean;
+  period: DashboardPeriod;
   onEdit: (w: Widget) => void;
   onDelete: (id: string) => void;
+  onDuplicate: (widget: Widget) => void;
   onResizePreset: (id: string, w: number, h: number) => void;
 }) {
   const qc = useQueryClient();
@@ -367,6 +428,9 @@ function DashboardGrid({
                       <DropdownMenuItem onClick={() => onEdit(w)}>
                         <Pencil className="mr-2 h-3.5 w-3.5" /> Editar
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onDuplicate(w)}>
+                        <Copy className="mr-2 h-3.5 w-3.5" /> Duplicar
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       {SIZE_PRESETS.map((p) => (
                         <DropdownMenuItem
@@ -385,7 +449,7 @@ function DashboardGrid({
                   </DropdownMenu>
                 </CardHeader>
                 <CardContent className="min-h-0 flex-1 p-3">
-                  <DashboardWidget widget={w} />
+                  <DashboardWidget widget={w} period={period} />
                 </CardContent>
               </Card>
             </div>
