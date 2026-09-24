@@ -39,7 +39,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
   validateSearch: (search: Record<string, unknown>) => ({
     periodo: (["today", "yesterday", "7d", "30d", "month", "custom"] as const).includes(search.periodo as DashboardPeriodKey)
       ? search.periodo as DashboardPeriodKey
-      : "today" as DashboardPeriodKey,
+      : undefined,
     inicio: typeof search.inicio === "string" ? search.inicio : undefined,
     fim: typeof search.fim === "string" ? search.fim : undefined,
   }),
@@ -67,7 +67,8 @@ function DashboardPage() {
   const qc = useQueryClient();
   const navigate = useNavigate({ from: Route.fullPath });
   const search = Route.useSearch();
-  const period = useMemo(() => resolveDashboardPeriod(search.periodo, search.inicio, search.fim), [search]);
+  const periodKey = search.periodo ?? "today";
+  const period = useMemo(() => resolveDashboardPeriod(periodKey, search.inicio, search.fim), [periodKey, search.inicio, search.fim]);
   const { ref: fsRef, isFullscreen, toggle } = useFullscreen<HTMLDivElement>();
   const [editing, setEditing] = useState<Widget | null>(null);
   const [newOpen, setNewOpen] = useState(false);
@@ -208,7 +209,7 @@ function DashboardPage() {
               ao vivo
             </Badge>
             <Select
-              value={search.periodo}
+              value={periodKey}
               onValueChange={(value) => navigate({ search: (prev) => ({ ...prev, periodo: value as DashboardPeriodKey }) })}
             >
               <SelectTrigger className="h-8 w-[170px]" aria-label="Período do dashboard">
@@ -258,7 +259,7 @@ function DashboardPage() {
         }
       />
 
-      {search.periodo === "custom" ? (
+      {periodKey === "custom" ? (
         <div className="flex flex-wrap items-end gap-3 border-y bg-muted/30 px-3 py-2">
           <div className="space-y-1"><Label htmlFor="dashboard-inicio" className="text-xs">Início</Label><Input id="dashboard-inicio" type="date" value={search.inicio ?? ""} onChange={(e) => navigate({ search: (prev) => ({ ...prev, inicio: e.target.value || undefined }) })} className="h-8 w-40" /></div>
           <div className="space-y-1"><Label htmlFor="dashboard-fim" className="text-xs">Fim</Label><Input id="dashboard-fim" type="date" value={search.fim ?? ""} onChange={(e) => navigate({ search: (prev) => ({ ...prev, fim: e.target.value || undefined }) })} className="h-8 w-40" /></div>
