@@ -517,6 +517,7 @@ function WidgetDialog({
   const [min, setMin] = useState<string>(String(initial?.config?.min ?? "0"));
   const [max, setMax] = useState<string>(String(initial?.config?.max ?? "100"));
   const [periodo, setPeriodo] = useState<string>(String(initial?.config?.periodo ?? "inherit"));
+  const [sourceSearch, setSourceSearch] = useState("");
 
   const src = getSource(fonte);
 
@@ -526,9 +527,13 @@ function WidgetDialog({
 
   const grouped = useMemo(() => {
     const g: Record<string, WidgetSource[]> = {};
-    for (const s of WIDGET_SOURCES) (g[s.grupo] ??= []).push(s);
+    const term = sourceSearch.trim().toLocaleLowerCase("pt-BR");
+    for (const s of WIDGET_SOURCES) {
+      if (term && !`${s.label} ${s.grupo} ${s.description ?? ""}`.toLocaleLowerCase("pt-BR").includes(term)) continue;
+      (g[s.grupo] ??= []).push(s);
+    }
     return g;
-  }, []);
+  }, [sourceSearch]);
 
   const filteredTags = useMemo(() => {
     const list = lookups?.tags ?? [];
@@ -568,6 +573,7 @@ function WidgetDialog({
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
         <div>
           <Label>Fonte de dados</Label>
+          <Input value={sourceSearch} onChange={(e) => setSourceSearch(e.target.value)} placeholder="Buscar indicador, gráfico ou informação..." className="mb-2" />
           <Select value={fonte} onValueChange={setFonte}>
             <SelectTrigger><SelectValue placeholder="Escolha uma fonte..." /></SelectTrigger>
             <SelectContent className="max-h-[400px]">
@@ -576,8 +582,7 @@ function WidgetDialog({
                   <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{grupo}</div>
                   {items.map((s) => (
                     <SelectItem key={s.key} value={s.key}>
-                      <span className="mr-2 text-[10px] uppercase text-muted-foreground">[{s.tipo}]</span>
-                      {s.label}
+                      <span className="mr-2 text-[10px] uppercase text-muted-foreground">[{s.tipo}]</span>{s.label}
                     </SelectItem>
                   ))}
                 </div>

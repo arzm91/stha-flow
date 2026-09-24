@@ -122,8 +122,8 @@ function WidgetBody({ widget, period, filters }: { widget: WidgetRow; period: Da
           <YAxis tick={{ fontSize: 11 }} />
           <Tooltip contentStyle={{ background: "var(--popover)", borderColor: "var(--border)", borderRadius: 6 }} />
           <Legend iconType="circle" iconSize={7} />
-          <Line type="monotone" dataKey="entrada" name="Entradas" stroke="var(--success)" strokeWidth={2} dot={false} />
-          <Line type="monotone" dataKey="saida" name="Saídas" stroke="var(--destructive)" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="entrada" name={data.labels?.[0] ?? "Entradas"} stroke="var(--success)" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="saida" name={data.labels?.[1] ?? "Saídas"} stroke="var(--destructive)" strokeWidth={2} dot={false} />
         </LineChart>
       </ResponsiveContainer>
     );
@@ -424,7 +424,7 @@ function MiniStat({ icon, label, value, tone }: { icon?: React.ReactNode; label:
 type WidgetData =
   | { kind: "kpi"; value: string; hint?: string; tone?: string; to?: string; delta?: number | null }
   | { kind: "bar"; points: { label: string; value: number }[]; valueLabel?: string }
-  | { kind: "line"; points: { label: string; entrada: number; saida: number }[] }
+  | { kind: "line"; points: { label: string; entrada: number; saida: number }[]; labels?: [string, string] }
   | { kind: "pie"; points: { label: string; value: number }[] }
   | { kind: "list"; items: { title: string; subtitle?: string; value?: string }[] }
   | { kind: "gauge"; value: number; displayValue: number; max: number; unit?: string; tag: string }
@@ -510,6 +510,33 @@ async function fetchData(fonte: string, config: Record<string, unknown>, period:
         totals.set(label, (totals.get(label) ?? 0) + Number(row.qtd_produzida ?? 0));
       }
       return { kind: "bar", valueLabel: "Produção", points: [...totals.entries()].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 10) };
+    }
+    case "chart.producao.paradas": {
+      let productionQuery = supabase.from("ordens_producao").select("fim_em,qtd_produzida")
+        .eq("status", "finalizada").gte("fim_em", period.start).lt("fim_em", period.end);
+      let stopQuery = supabase.from("paradas_equipamento").select("inicio_em,fim_em,duracao_seg")
+        .gte("inicio_em", period.start).lt("inicio_em", period.end);
+      if (filters.equipamentoId) {
+        productionQuery = productionQuery.eq("equipamento_id", filters.equipamentoId);
+        stopQuery = stopQuery.eq("equipamento_id", filters.equipamentoId);
+      }
+      if (filters.produtoId) productionQuery = productionQuery.eq("produto_id", filters.produtoId);
+      const [production, stops] = await Promise.all([productionQuery, stopQuery]);
+      if (production.error) throw production.error;
+      if (stops.error) throw stops.error;
+      const produced = buildDayBuckets(period);
+      const stopped = buildDayBuckets(period);
+      for (const row of production.data ?? []) {
+        if (!row.fim_em) continue;
+        const key = bucketKey(new Date(row.fim_em));
+        if (key in produced) produced[key] += Number(row.qtd_produzida ?? 0);
+      }
+      for (const row of stops.data ?? []) {
+        const key = bucketKey(new Date(row.inicio_em));
+        const seconds = row.duracao_seg ?? (row.fim_em ? (new Date(row.fim_em).getTime() - new Date(row.inicio_em).getTime()) / 1000 : 0);
+        if (key in stopped) stopped[key] += Math.max(0, Number(seconds)) / 60;
+      }
+      return { kind: "line", labels: ["Produção", "Paradas (min)"], points: Object.keys(produced).map((label) => ({ label, entrada: produced[label], saida: Math.round(stopped[label]) })) };
     }
     case "list.producao.abertas": {
       const { data } = await supabase.from("ordens_producao").select("id,numero,produto_id,status,inicio_em")

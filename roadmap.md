@@ -1,9 +1,9 @@
 # Dashboard — evolução segura
 
-- [ ] Corrigir cálculos, erros, fuso horário e consultas volumosas
-- [ ] Diagnosticar e restaurar a explicação do histórico das tags
-- [ ] Adicionar período global e filtros contextuais compatíveis
-- [ ] Adicionar comparações e novos cards analíticos relacionados
-- [ ] Melhorar gráficos, cores, estados, configuração e duplicação
-- [ ] Validar dados, layout preservado e experiência visual
-- [ ] Validar fluxo autenticado (bloqueado: sem sessão disponível na prévia)
+- [x] Corrigir cálculos, erros, fuso horário e consultas volumosas
+- [x] Diagnosticar a ausência recente do histórico das tags sem apagar registros
+- [x] Adicionar período global, período por card e filtros de equipamento/produto
+- [x] Adicionar comparação com período anterior e cards de produção por equipamento, produção × paradas e Pareto
+- [x] Melhorar gráficos, cores, minigráficos, busca de cards e duplicação
+- [x] Validar integração, layout preservado e experiência visual
+- [x] Validar fluxo autenticado na prévia e confirmar os cards individuais existentes
