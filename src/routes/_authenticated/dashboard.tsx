@@ -29,6 +29,8 @@ import { Responsive, useContainerWidth, verticalCompactor } from "react-grid-lay
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { resolveDashboardPeriod, type DashboardPeriod, type DashboardPeriodKey } from "@/lib/dashboard/period";
+import { z } from "zod";
+import { zodValidator } from "@tanstack/zod-adapter";
 
 type LayoutItem = { i: string; x: number; y: number; w: number; h: number; minW?: number; minH?: number };
 
@@ -36,13 +38,11 @@ type LayoutItem = { i: string; x: number; y: number; w: number; h: number; minW?
 
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    periodo: (["today", "yesterday", "7d", "30d", "month", "custom"] as const).includes(search.periodo as DashboardPeriodKey)
-      ? search.periodo as DashboardPeriodKey
-      : undefined,
-    inicio: typeof search.inicio === "string" ? search.inicio : undefined,
-    fim: typeof search.fim === "string" ? search.fim : undefined,
-  }),
+  validateSearch: zodValidator(z.object({
+    periodo: z.enum(["today", "yesterday", "7d", "30d", "month", "custom"]).optional(),
+    inicio: z.string().optional(),
+    fim: z.string().optional(),
+  })),
   head: pageHead({ title: "Dashboard — STHApc", description: "Acesse e gerencie Dashboard no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/dashboard" }),
   component: DashboardPage,
 });
