@@ -3172,6 +3172,14 @@ export type Database = {
         Returns: boolean
       }
       can_manage_users: { Args: { _user: string }; Returns: boolean }
+      dashboard_estoque_resumo: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: Json
+      }
+      dashboard_producao_resumo: {
+        Args: { p_fim: string; p_inicio: string }
+        Returns: Json
+      }
       delete_email: {
         Args: { message_id: number; queue_name: string }
         Returns: boolean
