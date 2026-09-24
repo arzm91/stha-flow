@@ -1,29 +1,43 @@
-# Gestão de Paradas de Equipamentos — status
+# Evolução segura do Dashboard
 
-## Concluído
-- ✅ Migration: coluna nova em `equipamentos` (tag, modo, operador, valor, min, max, tempo_min, alerta_apos_min, motivos)
-- ✅ Tabela `paradas_equipamento` com RLS por `owner_id` + delete só admin/gerente
-- ✅ Trigger `tags_live_paradas_trigger` detecta parada e retorno à operação (com debounce)
-- ✅ Função `dispatch_paradas_alertas` + cron a cada minuto (alerta parada prolongada)
-- ✅ Cadastro: nova seção "Gestão de paradas" no formulário de equipamentos
-- ✅ CrudTable: suporte a `section` (agrupamento visual) e `chips` (lista editável)
-- ✅ Popup global `ParadaMotivoDialog` — abre automaticamente quando há parada aguardando motivo
-- ✅ Aba "Paradas" em `/producao/$id` com KPI de disponibilidade, Pareto de motivos, histórico e edição
+## Objetivo
+Transformar o dashboard em uma visão operacional confiável, rica e personalizável, mantendo os dashboards individuais, posições, tamanhos e configurações já salvas.
 
-## Como funciona
-1. Cadastro do equipamento define a tag de parada e o modo de detecção
-2. Trigger no banco monitora `tags_live` — quando condição é atendida por N segundos, abre parada
-3. Quando tag volta ao normal, fecha parada com status `aguardando_motivo`
-4. Popup aparece para o operador registrar motivo (não bloqueia trabalho durante parada)
-5. Cron dispara alerta se parada exceder o tempo configurado
-6. Aba "Paradas" na produção mostra tudo com KPI de disponibilidade
+## Etapa 1 — Confiabilidade dos dados
+- Corrigir indicadores que podem somar registros incompletos ou considerar ordens fora do estado correto.
+- Padronizar o período “hoje” no fuso de São Paulo.
+- Corrigir medidores com mínimo diferente de zero.
+- Tratar falhas de leitura separadamente de valores realmente zerados.
+- Levar agregações volumosas para consultas próprias no banco, evitando limites silenciosos e recálculos pesados no navegador.
+- Investigar e corrigir a interrupção do histórico das tags, preservando os registros existentes.
 
-## Segurança
-- Aditivo — equipamentos existentes sem `parada_tag_nome` seguem iguais
-- Funções internas com EXECUTE revogado (só o próprio banco as chama via trigger/cron)
-- RLS multi-tenant preservado
+## Etapa 2 — Períodos, filtros e comparações
+- Adicionar período geral: hoje, ontem, 7 dias, 30 dias, mês atual e personalizado.
+- Permitir que cada card siga o período geral ou mantenha um período próprio.
+- Adicionar filtros compatíveis por equipamento, produto, tanque, turno e status.
+- Mostrar comparação com o período anterior, variação percentual e horário da última atualização.
+- Manter o comportamento atual como padrão para cards antigos que não tenham as novas opções.
 
-## Próximos passos (se solicitado)
-- Widget "Disponibilidade" no dashboard customizável
-- Bloco dedicado nos relatórios v2 (impressão A4)
-- Notificação por e-mail/push do alerta de parada prolongada (hoje só entra na fila de alertas do sistema)
+## Etapa 3 — Novas análises relacionadas
+- Criar cards de produção por equipamento/produto, produção versus paradas, produção versus consumo, qualidade por equipamento/produto e alertas ligados à produção.
+- Adicionar tendência temporal, meta versus realizado, Pareto, distribuição e linha do tempo operacional.
+- Oferecer soma, média, mínimo, máximo, contagem e último valor para fontes compatíveis.
+- Incluir minigráficos individuais em cards de uma ou várias tags quando houver histórico.
+
+## Etapa 4 — Experiência visual e configuração
+- Reorganizar a inclusão de cards com pesquisa, categorias e prévia.
+- Aplicar cores semânticas, legendas, unidades, metas e limites aos gráficos.
+- Melhorar tipografia, estados vazios, indisponibilidade e adaptação ao redimensionamento.
+- Manter arrastar, redimensionar, congelar e tela cheia; adicionar duplicação de cards sem alterar os existentes.
+
+## Segurança e compatibilidade
+- Toda leitura continuará restrita à empresa do usuário pelas regras multitenant existentes.
+- Agregações protegidas serão executadas como o usuário autenticado, sem acesso privilegiado desnecessário.
+- Alterações de dados serão aditivas e compatíveis com configurações antigas.
+- Cada etapa será validada separadamente antes da seguinte, incluindo números, erros, tema claro/escuro e tamanhos de tela.
+
+## Validação
+- Conferir indicadores contra consultas diretas no banco para o mesmo período.
+- Confirmar que layouts existentes permanecem idênticos após atualizar e reabrir a página.
+- Testar filtros, comparações, ausência de dados, falhas de leitura e atualização automática.
+- Validar a experiência real autenticada assim que houver uma sessão disponível na prévia.
