@@ -31,6 +31,8 @@ export const WIDGET_SOURCES: WidgetSource[] = [
   { key: "kpi.equipamentos.parados", tipo: "kpi", grupo: "Produção", label: "Equipamentos parados", colSpan: 3, rowSpan: 1, priority: 10 },
   { key: "producao.equipamento", tipo: "producao", grupo: "Produção", label: "Prévia de produção (equipamento)", colSpan: 4, rowSpan: 3, priority: 30, needsEquipamento: true },
   { key: "chart.producao.7dias", tipo: "chart", grupo: "Produção", label: "Produção dos últimos 7 dias", colSpan: 6, rowSpan: 3, priority: 40 },
+  { key: "chart.producao.equipamentos", tipo: "chart", grupo: "Produção", label: "Produção por equipamento", description: "Compara o volume produzido por equipamento no período selecionado", colSpan: 6, rowSpan: 3, priority: 41 },
+  { key: "chart.producao.paradas", tipo: "chart", grupo: "Produção", label: "Produção × paradas", description: "Relaciona o volume produzido ao tempo de parada por dia", colSpan: 6, rowSpan: 3, priority: 42 },
   { key: "list.producao.abertas", tipo: "list", grupo: "Produção", label: "Ordens abertas", colSpan: 4, rowSpan: 3, priority: 60 },
 
   // ===== Estoque =====
@@ -53,6 +55,7 @@ export const WIDGET_SOURCES: WidgetSource[] = [
   { key: "kpi.manutencao.pendentes", tipo: "kpi", grupo: "Manutenção", label: "OS pendentes", colSpan: 3, rowSpan: 1, priority: 13 },
   { key: "kpi.manutencao.atrasadas", tipo: "kpi", grupo: "Manutenção", label: "OS atrasadas", colSpan: 3, rowSpan: 1, priority: 13 },
   { key: "xray.manutencao", tipo: "xray", grupo: "Manutenção", label: "Raio-X de manutenção", colSpan: 6, rowSpan: 3, priority: 50 },
+  { key: "chart.paradas.pareto", tipo: "chart", grupo: "Manutenção", label: "Pareto de paradas", description: "Mostra os motivos com maior tempo de parada no período", colSpan: 6, rowSpan: 3, priority: 52 },
   { key: "list.manutencao.proximas", tipo: "list", grupo: "Manutenção", label: "Próximas manutenções", colSpan: 4, rowSpan: 3, priority: 63 },
 
   // ===== Turnos =====

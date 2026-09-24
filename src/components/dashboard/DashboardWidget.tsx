@@ -3,13 +3,15 @@ import { Link } from "@tanstack/react-router";
 import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, Tooltip, ResponsiveContainer, RadialBarChart, RadialBar, PolarAngleAxis,
+  CartesianGrid, Legend,
 } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
 import { getSource } from "@/lib/dashboard/widget-catalog";
 import { formatInt, formatNumber } from "@/lib/format";
-import { AlertTriangle, Wrench, FlaskConical, Factory, CheckCircle2, Clock, AlertOctagon } from "lucide-react";
+import { AlertTriangle, Wrench, FlaskConical, Factory, CheckCircle2, Clock, AlertOctagon, TrendingUp, TrendingDown } from "lucide-react";
 import { StorageLocationCard, type StorageLocation } from "@/components/StorageLocationCard";
-import { TagSparkline } from "@/components/dashboard/TagSparkline";
+import { TagMiniTrend, TagSparkline } from "@/components/dashboard/TagSparkline";
+import { resolveDashboardPeriod, type DashboardFilters, type DashboardPeriod, type DashboardPeriodKey } from "@/lib/dashboard/period";
 
 
 
@@ -21,21 +23,9 @@ type WidgetRow = {
   config: Record<string, unknown>;
 };
 
-const PIE_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4"];
+const PIE_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 
-function startOfToday() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.toISOString();
-}
-function daysAgo(n: number) {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-export function DashboardWidget({ widget }: { widget: WidgetRow }) {
+export function DashboardWidget({ widget, period, filters }: { widget: WidgetRow; period: DashboardPeriod; filters: DashboardFilters }) {
   const src = getSource(widget.fonte);
   if (!src) {
     return (
@@ -51,10 +41,15 @@ export function DashboardWidget({ widget }: { widget: WidgetRow }) {
   const tagNomes = tagNomesFromWidget(widget);
   return (
     <div className="relative h-full w-full">
-      <WidgetBody widget={widget} />
+      <WidgetBody widget={widget} period={widgetPeriod(widget, period)} filters={filters} />
       {tagNomes.length === 1 ? <TagSparkline tagNome={tagNomes[0]} /> : null}
     </div>
   );
+}
+
+function widgetPeriod(widget: WidgetRow, fallback: DashboardPeriod) {
+  const own = String(widget.config?.periodo ?? "inherit");
+  return own === "inherit" ? fallback : resolveDashboardPeriod(own as DashboardPeriodKey);
 }
 
 function tagNomesFromWidget(w: WidgetRow): string[] {
@@ -71,10 +66,10 @@ function tagNomesFromWidget(w: WidgetRow): string[] {
 }
 
 
-function WidgetBody({ widget }: { widget: WidgetRow }) {
+function WidgetBody({ widget, period, filters }: { widget: WidgetRow; period: DashboardPeriod; filters: DashboardFilters }) {
   const q = useQuery({
-    queryKey: ["dashboard-widget", widget.fonte, widget.config],
-    queryFn: () => fetchData(widget.fonte, widget.config),
+    queryKey: ["dashboard-widget", widget.fonte, widget.config, period.start, period.end, filters],
+    queryFn: () => fetchData(widget.fonte, widget.config, period, filters),
     refetchInterval: 15_000,
   });
 
@@ -93,7 +88,12 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
         <div className={`font-mono text-3xl font-semibold ${data.tone ?? ""}`}>
           {data.value}
         </div>
-        {data.hint ? <div className="mt-1 text-xs text-muted-foreground">{data.hint}</div> : null}
+        {data.delta != null ? (
+          <div className={`mt-1 flex items-center gap-1 text-xs ${data.delta >= 0 ? "text-success" : "text-destructive"}`}>
+            {data.delta >= 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+            <span>{data.delta >= 0 ? "+" : ""}{data.delta.toFixed(1)}% vs. período anterior</span>
+          </div>
+        ) : data.hint ? <div className="mt-1 text-xs text-muted-foreground">{data.hint}</div> : null}
       </div>
     );
     return data.to ? <Link to={data.to} className="block h-full">{inner}</Link> : inner;
@@ -103,10 +103,11 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
     return (
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data.points} margin={{ top: 4, right: 8, left: -10, bottom: 0 }}>
+          <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.6} />
           <XAxis dataKey="label" tick={{ fontSize: 11 }} />
           <YAxis tick={{ fontSize: 11 }} />
-          <Tooltip />
-          <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+          <Tooltip contentStyle={{ background: "var(--popover)", borderColor: "var(--border)", borderRadius: 6 }} formatter={(value) => formatNumber(Number(value))} />
+          <Bar dataKey="value" name={data.valueLabel ?? "Valor"} fill="var(--chart-1)" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     );
@@ -116,11 +117,13 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
     return (
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data.points} margin={{ top: 4, right: 8, left: -10, bottom: 0 }}>
+          <CartesianGrid vertical={false} stroke="var(--border)" strokeOpacity={0.6} />
           <XAxis dataKey="label" tick={{ fontSize: 11 }} />
           <YAxis tick={{ fontSize: 11 }} />
-          <Tooltip />
-          <Line type="monotone" dataKey="entrada" stroke="#10b981" strokeWidth={2} dot={false} />
-          <Line type="monotone" dataKey="saida" stroke="#ef4444" strokeWidth={2} dot={false} />
+          <Tooltip contentStyle={{ background: "var(--popover)", borderColor: "var(--border)", borderRadius: 6 }} />
+          <Legend iconType="circle" iconSize={7} />
+          <Line type="monotone" dataKey="entrada" name={data.labels?.[0] ?? "Entradas"} stroke="var(--success)" strokeWidth={2} dot={false} />
+          <Line type="monotone" dataKey="saida" name={data.labels?.[1] ?? "Saídas"} stroke="var(--destructive)" strokeWidth={2} dot={false} />
         </LineChart>
       </ResponsiveContainer>
     );
@@ -135,7 +138,7 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
               <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
             ))}
           </Pie>
-          <Tooltip />
+          <Tooltip contentStyle={{ background: "var(--popover)", borderColor: "var(--border)", borderRadius: 6 }} />
         </PieChart>
       </ResponsiveContainer>
     );
@@ -171,14 +174,14 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
     return (
       <div className="grid h-full place-items-center">
         <ResponsiveContainer width="100%" height="100%">
-          <RadialBarChart innerRadius="65%" outerRadius="95%" data={[{ name: "v", value: pct, fill: "#3b82f6" }]} startAngle={210} endAngle={-30}>
+          <RadialBarChart innerRadius="65%" outerRadius="95%" data={[{ name: "v", value: pct, fill: "var(--chart-1)" }]} startAngle={210} endAngle={-30}>
             <PolarAngleAxis type="number" domain={[0, 100]} angleAxisId={0} tick={false} />
             <RadialBar background dataKey="value" cornerRadius={6} />
           </RadialBarChart>
         </ResponsiveContainer>
         <div className="-mt-16 text-center">
           <div className="font-mono text-xl font-semibold">
-            {formatNumber(data.value, 2)}
+            {formatNumber(data.displayValue, 2)}
             {data.unit ? <span className="ml-1 text-xs text-muted-foreground">{data.unit}</span> : null}
           </div>
           <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{data.tag}</div>
@@ -341,14 +344,11 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
       <div className="h-full overflow-auto pr-16">
         <ul className="divide-y text-sm">
           {data.items.map((it) => (
-            <li key={it.nome} className="flex items-baseline justify-between gap-2 py-1.5">
+            <li key={it.nome} className="flex items-center justify-between gap-2 py-1.5">
               <span className="min-w-0 truncate text-xs text-muted-foreground" title={it.nome}>
                 {it.nome_amigavel?.trim() || it.nome}
               </span>
-              <span className="shrink-0 font-mono text-sm font-semibold">
-                {it.valor_num != null ? formatNumber(it.valor_num, 2) : (it.valor ?? "—")}
-                {it.unidade ? <span className="ml-1 text-[10px] text-muted-foreground">{it.unidade}</span> : null}
-              </span>
+              <div className="flex items-center gap-2"><TagMiniTrend tagNome={it.nome} /><span className="shrink-0 font-mono text-sm font-semibold">{it.valor_num != null ? formatNumber(it.valor_num, 2) : (it.valor ?? "—")}{it.unidade ? <span className="ml-1 text-[10px] text-muted-foreground">{it.unidade}</span> : null}</span></div>
             </li>
           ))}
         </ul>
@@ -379,6 +379,7 @@ function WidgetBody({ widget }: { widget: WidgetRow }) {
                 {it.valor_num != null ? formatNumber(it.valor_num, 2) : (it.valor ?? "—")}
                 {it.unidade ? <span className="ml-1 text-[10px] font-normal text-muted-foreground">{it.unidade}</span> : null}
               </div>
+              <div className="mt-2"><TagMiniTrend tagNome={it.nome} /></div>
             </div>
           ))}
         </div>
@@ -421,12 +422,12 @@ function MiniStat({ icon, label, value, tone }: { icon?: React.ReactNode; label:
 // ============ Data fetchers ============
 
 type WidgetData =
-  | { kind: "kpi"; value: string; hint?: string; tone?: string; to?: string }
-  | { kind: "bar"; points: { label: string; value: number }[] }
-  | { kind: "line"; points: { label: string; entrada: number; saida: number }[] }
+  | { kind: "kpi"; value: string; hint?: string; tone?: string; to?: string; delta?: number | null }
+  | { kind: "bar"; points: { label: string; value: number }[]; valueLabel?: string }
+  | { kind: "line"; points: { label: string; entrada: number; saida: number }[]; labels?: [string, string] }
   | { kind: "pie"; points: { label: string; value: number }[] }
   | { kind: "list"; items: { title: string; subtitle?: string; value?: string }[] }
-  | { kind: "gauge"; value: number; max: number; unit?: string; tag: string }
+  | { kind: "gauge"; value: number; displayValue: number; max: number; unit?: string; tag: string }
   | { kind: "tank"; loc: StorageLocation; saldo: number; tag: { nome: string; valor_num: number | null; valor: string | null; unidade: string | null } | null; latestAnalise: import("@/components/StorageLocationCard").LatestAnalise | null }
   | { kind: "producao-prev"; equipamento_nome: string; ordem: { id: string; numero: string; status: string; produto_nome: string; qtd_planejada: number; qtd_produzida: number; inicio_em: string | null } | null; tag_total?: { nome: string; valor_num: number | null; unidade: string | null } | null; tag_vel?: { nome: string; valor_num: number | null; unidade: string | null } | null; tag_indices?: Array<{ nome: string; nome_amigavel: string | null; valor_num: number | null; unidade: string | null }> }
   | { kind: "xray-manut"; abertas: number; em_andamento: number; atrasadas: number; concluidas_30d: number; proximas: { numero: string; prioridade: string; data: string }[] }
@@ -436,7 +437,17 @@ type WidgetData =
   | { kind: "tag-stats"; tag: string; unidade: string | null; atual: number | null; min: number | null; max: number | null; avg: number | null };
 
 
-async function fetchData(fonte: string, config: Record<string, unknown>): Promise<WidgetData> {
+function unwrapRpcNumber(value: unknown, key: string) {
+  if (!value || typeof value !== "object") return 0;
+  return Number((value as Record<string, unknown>)[key] ?? 0);
+}
+
+function percentDelta(current: number, previous: number) {
+  if (previous === 0) return current === 0 ? 0 : null;
+  return ((current - previous) / Math.abs(previous)) * 100;
+}
+
+async function fetchData(fonte: string, config: Record<string, unknown>, period: DashboardPeriod, filters: DashboardFilters): Promise<WidgetData> {
   switch (fonte) {
     // ---- Produção ----
     case "kpi.producao.em_andamento": {
@@ -444,14 +455,24 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
       return { kind: "kpi", value: formatInt(count ?? 0), tone: "text-primary", to: "/producao" };
     }
     case "kpi.producao.finalizadas_hoje": {
-      const { count } = await supabase.from("ordens_producao").select("*", { count: "exact", head: true })
-        .eq("status", "finalizada").gte("fim_em", startOfToday());
-      return { kind: "kpi", value: formatInt(count ?? 0), tone: "text-success", to: "/relatorios/producao" };
+      const [current, previous] = await Promise.all([
+        supabase.rpc("dashboard_producao_resumo", { p_inicio: period.start, p_fim: period.end }),
+        supabase.rpc("dashboard_producao_resumo", { p_inicio: period.previousStart, p_fim: period.previousEnd }),
+      ]);
+      if (current.error) throw current.error;
+      if (previous.error) throw previous.error;
+      const value = unwrapRpcNumber(current.data, "ordens");
+      return { kind: "kpi", value: formatInt(value), delta: percentDelta(value, unwrapRpcNumber(previous.data, "ordens")), tone: "text-success", to: "/relatorios/producao" };
     }
     case "kpi.producao.qtd_hoje": {
-      const { data } = await supabase.from("ordens_producao").select("qtd_produzida").gte("fim_em", startOfToday());
-      const total = (data ?? []).reduce((s, r) => s + Number(r.qtd_produzida ?? 0), 0);
-      return { kind: "kpi", value: formatNumber(total), to: "/relatorios/producao" };
+      const [current, previous] = await Promise.all([
+        supabase.rpc("dashboard_producao_resumo", { p_inicio: period.start, p_fim: period.end }),
+        supabase.rpc("dashboard_producao_resumo", { p_inicio: period.previousStart, p_fim: period.previousEnd }),
+      ]);
+      if (current.error) throw current.error;
+      if (previous.error) throw previous.error;
+      const value = unwrapRpcNumber(current.data, "quantidade");
+      return { kind: "kpi", value: formatNumber(value), delta: percentDelta(value, unwrapRpcNumber(previous.data, "quantidade")), to: "/relatorios/producao" };
     }
     case "kpi.equipamentos.operando": {
       const { count } = await supabase.from("equipamentos").select("*", { count: "exact", head: true }).eq("status", "ocupado");
@@ -462,14 +483,60 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
       return { kind: "kpi", value: formatInt(count ?? 0), tone: "text-warning", to: "/cadastros/equipamentos" };
     }
     case "chart.producao.7dias": {
-      const { data } = await supabase.from("ordens_producao").select("fim_em,qtd_produzida")
-        .gte("fim_em", daysAgo(6).toISOString()).not("fim_em", "is", null);
-      const buckets = buildDayBuckets(7);
+      let query = supabase.from("ordens_producao").select("fim_em,qtd_produzida")
+        .eq("status", "finalizada").gte("fim_em", period.start).lt("fim_em", period.end).not("fim_em", "is", null);
+      if (filters.equipamentoId) query = query.eq("equipamento_id", filters.equipamentoId);
+      if (filters.produtoId) query = query.eq("produto_id", filters.produtoId);
+      const { data, error } = await query;
+      if (error) throw error;
+      const buckets = buildDayBuckets(period);
       for (const r of data ?? []) {
         const k = bucketKey(new Date(r.fim_em!));
         if (k in buckets) buckets[k] += Number(r.qtd_produzida ?? 0);
       }
-      return { kind: "bar", points: Object.entries(buckets).map(([label, value]) => ({ label, value })) };
+      return { kind: "bar", valueLabel: "Produção", points: Object.entries(buckets).map(([label, value]) => ({ label, value })) };
+    }
+    case "chart.producao.equipamentos": {
+      let query = supabase.from("ordens_producao").select("qtd_produzida,equipamento:equipamento_id(nome)")
+        .eq("status", "finalizada").gte("fim_em", period.start).lt("fim_em", period.end);
+      if (filters.equipamentoId) query = query.eq("equipamento_id", filters.equipamentoId);
+      if (filters.produtoId) query = query.eq("produto_id", filters.produtoId);
+      const { data, error } = await query;
+      if (error) throw error;
+      const totals = new Map<string, number>();
+      for (const row of data ?? []) {
+        const related = row.equipamento as unknown as { nome?: string } | null;
+        const label = related?.nome ?? "Sem equipamento";
+        totals.set(label, (totals.get(label) ?? 0) + Number(row.qtd_produzida ?? 0));
+      }
+      return { kind: "bar", valueLabel: "Produção", points: [...totals.entries()].map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 10) };
+    }
+    case "chart.producao.paradas": {
+      let productionQuery = supabase.from("ordens_producao").select("fim_em,qtd_produzida")
+        .eq("status", "finalizada").gte("fim_em", period.start).lt("fim_em", period.end);
+      let stopQuery = supabase.from("paradas_equipamento").select("inicio_em,fim_em,duracao_seg")
+        .gte("inicio_em", period.start).lt("inicio_em", period.end);
+      if (filters.equipamentoId) {
+        productionQuery = productionQuery.eq("equipamento_id", filters.equipamentoId);
+        stopQuery = stopQuery.eq("equipamento_id", filters.equipamentoId);
+      }
+      if (filters.produtoId) productionQuery = productionQuery.eq("produto_id", filters.produtoId);
+      const [production, stops] = await Promise.all([productionQuery, stopQuery]);
+      if (production.error) throw production.error;
+      if (stops.error) throw stops.error;
+      const produced = buildDayBuckets(period);
+      const stopped = buildDayBuckets(period);
+      for (const row of production.data ?? []) {
+        if (!row.fim_em) continue;
+        const key = bucketKey(new Date(row.fim_em));
+        if (key in produced) produced[key] += Number(row.qtd_produzida ?? 0);
+      }
+      for (const row of stops.data ?? []) {
+        const key = bucketKey(new Date(row.inicio_em));
+        const seconds = row.duracao_seg ?? (row.fim_em ? (new Date(row.fim_em).getTime() - new Date(row.inicio_em).getTime()) / 1000 : 0);
+        if (key in stopped) stopped[key] += Math.max(0, Number(seconds)) / 60;
+      }
+      return { kind: "line", labels: ["Produção", "Paradas (min)"], points: Object.keys(produced).map((label) => ({ label, entrada: produced[label], saida: Math.round(stopped[label]) })) };
     }
     case "list.producao.abertas": {
       const { data } = await supabase.from("ordens_producao").select("id,numero,produto_id,status,inicio_em")
@@ -486,50 +553,34 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
 
     // ---- Estoque ----
     case "kpi.estoque.saldo": {
-      const [{ data: movs }, { data: ajustes }] = await Promise.all([
-        supabase.from("movimentacoes_estoque").select("tanque_id,tipo,quantidade,ocorrido_em"),
-        supabase.from("tanque_ajustes_saldo").select("tanque_id,saldo,ajustado_em").order("ajustado_em", { ascending: false }),
-      ]);
-      const ultimoAjuste = new Map<string, { saldo: number; ts: number }>();
-      for (const a of ajustes ?? []) {
-        if (!a.tanque_id || ultimoAjuste.has(a.tanque_id)) continue;
-        ultimoAjuste.set(a.tanque_id, { saldo: Number(a.saldo), ts: new Date(a.ajustado_em).getTime() });
-      }
-      const saldos = new Map<string, number>();
-      for (const [tid, aj] of ultimoAjuste) saldos.set(tid, aj.saldo);
-      let semTanque = 0;
-      for (const m of movs ?? []) {
-        const q = (m.tipo === "entrada" ? 1 : -1) * Number(m.quantidade);
-        if (!m.tanque_id) { semTanque += q; continue; }
-        const aj = ultimoAjuste.get(m.tanque_id);
-        if (aj && new Date(m.ocorrido_em).getTime() <= aj.ts) continue;
-        saldos.set(m.tanque_id, (saldos.get(m.tanque_id) ?? 0) + q);
-      }
-      const total = Array.from(saldos.values()).reduce((s, v) => s + v, 0) + semTanque;
+      const { data, error } = await supabase.rpc("dashboard_estoque_resumo", { p_inicio: period.start, p_fim: period.end });
+      if (error) throw error;
+      const total = unwrapRpcNumber(data, "saldo");
       return { kind: "kpi", value: formatNumber(total), tone: "text-primary", to: "/estoque" };
     }
     case "kpi.estoque.entradas_hoje": {
-      const { data } = await supabase.from("movimentacoes_estoque").select("quantidade")
-        .eq("tipo", "entrada").gte("ocorrido_em", startOfToday());
-      const total = (data ?? []).reduce((s, r) => s + Number(r.quantidade), 0);
+      const { data, error } = await supabase.rpc("dashboard_estoque_resumo", { p_inicio: period.start, p_fim: period.end });
+      if (error) throw error;
+      const total = unwrapRpcNumber(data, "entradas");
       return { kind: "kpi", value: formatNumber(total), tone: "text-success", to: "/relatorios/estoque" };
     }
     case "kpi.estoque.saidas_hoje": {
-      const { data } = await supabase.from("movimentacoes_estoque").select("quantidade")
-        .eq("tipo", "saida").gte("ocorrido_em", startOfToday());
-      const total = (data ?? []).reduce((s, r) => s + Number(r.quantidade), 0);
+      const { data, error } = await supabase.rpc("dashboard_estoque_resumo", { p_inicio: period.start, p_fim: period.end });
+      if (error) throw error;
+      const total = unwrapRpcNumber(data, "saidas");
       return { kind: "kpi", value: formatNumber(total), to: "/relatorios/estoque" };
     }
     case "kpi.estoque.movs_hoje": {
-      const { count } = await supabase.from("movimentacoes_estoque").select("*", { count: "exact", head: true })
-        .gte("ocorrido_em", startOfToday());
-      return { kind: "kpi", value: formatInt(count ?? 0), to: "/estoque/movimentacao" };
+      const { data, error } = await supabase.rpc("dashboard_estoque_resumo", { p_inicio: period.start, p_fim: period.end });
+      if (error) throw error;
+      return { kind: "kpi", value: formatInt(unwrapRpcNumber(data, "movimentacoes")), to: "/estoque/movimentacao" };
     }
     case "chart.estoque.7dias": {
-      const { data } = await supabase.from("movimentacoes_estoque").select("ocorrido_em,tipo,quantidade")
-        .gte("ocorrido_em", daysAgo(6).toISOString());
-      const bIn = buildDayBuckets(7);
-      const bOut = buildDayBuckets(7);
+      const { data, error } = await supabase.from("movimentacoes_estoque").select("ocorrido_em,tipo,quantidade")
+        .gte("ocorrido_em", period.start).lt("ocorrido_em", period.end);
+      if (error) throw error;
+      const bIn = buildDayBuckets(period);
+      const bOut = buildDayBuckets(period);
       for (const r of data ?? []) {
         const k = bucketKey(new Date(r.ocorrido_em));
         if (r.tipo === "entrada") bIn[k] += Number(r.quantidade);
@@ -568,8 +619,8 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
       return { kind: "kpi", value: formatInt(count ?? 0), tone: "text-destructive", to: "/alertas" };
     }
     case "chart.alertas.severidade": {
-      const since = daysAgo(6).toISOString();
-      const { data } = await supabase.from("alertas_disparos").select("severidade").gte("created_at", since);
+      const { data, error } = await supabase.from("alertas_disparos").select("severidade").gte("created_at", period.start).lt("created_at", period.end);
+      if (error) throw error;
       const map: Record<string, number> = {};
       for (const r of data ?? []) {
         const s = r.severidade ?? "info";
@@ -617,19 +668,19 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
     // ---- Turnos ----
     case "kpi.turnos.eventos_hoje": {
       const { count } = await supabase.from("relatorio_turno_eventos").select("*", { count: "exact", head: true })
-        .gte("ocorrido_em", startOfToday());
+        .gte("ocorrido_em", period.start).lt("ocorrido_em", period.end);
       return { kind: "kpi", value: formatInt(count ?? 0), to: "/turnos" };
     }
 
     // ---- Qualidade ----
     case "kpi.qualidade.analises_hoje": {
       const { count } = await supabase.from("analises_registradas").select("*", { count: "exact", head: true })
-        .gte("created_at", startOfToday());
+        .gte("created_at", period.start).lt("created_at", period.end);
       return { kind: "kpi", value: formatInt(count ?? 0), to: "/relatorios/qualidade" };
     }
     case "kpi.qualidade.naoconformes_hoje": {
       const [{ data: regs }, { data: refs }] = await Promise.all([
-        supabase.from("analises_registradas").select("resultado,analise_id").gte("created_at", startOfToday()),
+        supabase.from("analises_registradas").select("resultado,analise_id").gte("created_at", period.start).lt("created_at", period.end),
         supabase.from("analises_cadastro").select("id,valor_min,valor_max"),
       ]);
       const refMap = new Map((refs ?? []).map((r) => [r.id, r]));
@@ -665,7 +716,7 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
       if (!nome) return { kind: "kpi", value: "—", hint: "Configure a tag" };
       const { data } = await supabase.from("tags_live").select("valor_num,unidade").eq("nome", nome).maybeSingle();
       const v = data?.valor_num != null ? Number(data.valor_num) : 0;
-      return { kind: "gauge", value: v - min, max: max - min, unit: data?.unidade ?? "", tag: nome };
+      return { kind: "gauge", value: v - min, displayValue: v, max: max - min, unit: data?.unidade ?? "", tag: nome };
     }
 
     case "tag.multi":
@@ -826,10 +877,24 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
         })),
       };
     }
+    case "chart.paradas.pareto": {
+      let query = supabase.from("paradas_equipamento").select("motivo,duracao_seg,inicio_em,fim_em")
+        .gte("inicio_em", period.start).lt("inicio_em", period.end);
+      if (filters.equipamentoId) query = query.eq("equipamento_id", filters.equipamentoId);
+      const { data, error } = await query;
+      if (error) throw error;
+      const totals = new Map<string, number>();
+      for (const row of data ?? []) {
+        const seconds = row.duracao_seg ?? (row.fim_em ? (new Date(row.fim_em).getTime() - new Date(row.inicio_em).getTime()) / 1000 : 0);
+        const label = row.motivo?.trim() || "Sem motivo informado";
+        totals.set(label, (totals.get(label) ?? 0) + Math.max(0, Number(seconds)) / 60);
+      }
+      return { kind: "bar", valueLabel: "Minutos parados", points: [...totals.entries()].map(([label, value]) => ({ label, value: Math.round(value) })).sort((a, b) => b.value - a.value).slice(0, 8) };
+    }
 
     // ---- Raio-X qualidade ----
     case "xray.qualidade": {
-      const since = daysAgo(6).toISOString();
+      const since = period.start;
       const [{ data: regs }, { data: refs }] = await Promise.all([
         supabase.from("analises_registradas").select("id,resultado,analise_id,created_at").gte("created_at", since).order("created_at", { ascending: false }),
         supabase.from("analises_cadastro").select("id,nome,valor_min,valor_max,unidade"),
@@ -879,15 +944,15 @@ async function fetchData(fonte: string, config: Record<string, unknown>): Promis
   }
 }
 
-function buildDayBuckets(days: number): Record<string, number> {
+function buildDayBuckets(period: DashboardPeriod): Record<string, number> {
   const out: Record<string, number> = {};
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    out[d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })] = 0;
+  const start = new Date(period.start);
+  for (let i = 0; i < period.days; i++) {
+    const d = new Date(start.getTime() + i * 86_400_000);
+    out[d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" })] = 0;
   }
   return out;
 }
 function bucketKey(d: Date) {
-  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", timeZone: "America/Sao_Paulo" });
 }

@@ -1,5 +1,5 @@
 import { pageHead } from "@/lib/seo";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +20,7 @@ import {
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Pencil, Trash2, LayoutGrid, MoreHorizontal, GripVertical, Maximize2, Minimize2, Lock, Unlock } from "lucide-react";
+import { Plus, Pencil, Trash2, LayoutGrid, MoreHorizontal, GripVertical, Maximize2, Minimize2, Lock, Unlock, CalendarRange, Copy } from "lucide-react";
 import { toast } from "sonner";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { WIDGET_SOURCES, getSource, type WidgetSource } from "@/lib/dashboard/widget-catalog";
@@ -28,6 +28,9 @@ import { DashboardWidget } from "@/components/dashboard/DashboardWidget";
 import { Responsive, useContainerWidth, verticalCompactor } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
+import { resolveDashboardPeriod, type DashboardFilters, type DashboardPeriod, type DashboardPeriodKey } from "@/lib/dashboard/period";
+import { z } from "zod";
+import { zodValidator } from "@tanstack/zod-adapter";
 
 type LayoutItem = { i: string; x: number; y: number; w: number; h: number; minW?: number; minH?: number };
 
@@ -35,6 +38,13 @@ type LayoutItem = { i: string; x: number; y: number; w: number; h: number; minW?
 
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
+  validateSearch: zodValidator(z.object({
+    periodo: z.enum(["today", "yesterday", "7d", "30d", "month", "custom"]).optional(),
+    inicio: z.string().optional(),
+    fim: z.string().optional(),
+    equipamento: z.string().optional(),
+    produto: z.string().optional(),
+  })),
   head: pageHead({ title: "Dashboard — STHApc", description: "Acesse e gerencie Dashboard no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/dashboard" }),
   component: DashboardPage,
 });
@@ -52,11 +62,16 @@ type TagRow = { nome: string; unidade: string | null };
 type TankRow = { id: string; codigo: string; nome: string };
 type EquipRow = { id: string; codigo: string; nome: string };
 type SheetRow = { id: string; nome: string };
+type ProductRow = { id: string; nome: string; codigo: string };
 
 const FROZEN_STORAGE_KEY = "dashboard:frozen";
 
 function DashboardPage() {
   const qc = useQueryClient();
+  const navigate = useNavigate({ from: Route.fullPath });
+  const search = Route.useSearch();
+  const periodKey = search.periodo ?? "today";
+  const period = useMemo(() => resolveDashboardPeriod(periodKey, search.inicio, search.fim), [periodKey, search.inicio, search.fim]);
   const { ref: fsRef, isFullscreen, toggle } = useFullscreen<HTMLDivElement>();
   const [editing, setEditing] = useState<Widget | null>(null);
   const [newOpen, setNewOpen] = useState(false);
@@ -95,17 +110,19 @@ function DashboardPage() {
   const lookups = useQuery({
     queryKey: ["dashboard-lookups"],
     queryFn: async () => {
-      const [tags, tanks, equips, sheets] = await Promise.all([
+      const [tags, tanks, equips, sheets, products] = await Promise.all([
         supabase.from("tags_live").select("nome,unidade").order("nome"),
         supabase.from("tanques").select("id,codigo,nome").order("nome"),
         supabase.from("equipamentos").select("id,codigo,nome").order("nome"),
         supabase.from("custom_sheets").select("id,nome").order("nome"),
+        supabase.from("produtos").select("id,nome,codigo").order("nome"),
       ]);
       return {
         tags: (tags.data ?? []) as TagRow[],
         tanks: (tanks.data ?? []) as TankRow[],
         equipamentos: (equips.data ?? []) as EquipRow[],
         sheets: (sheets.data ?? []) as SheetRow[],
+        produtos: (products.data ?? []) as ProductRow[],
       };
     },
   });
@@ -164,6 +181,27 @@ function DashboardPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const duplicate = useMutation({
+    mutationFn: async (widget: Widget) => {
+      const { data: auth } = await supabase.auth.getUser();
+      if (!auth.user) throw new Error("Não autenticado");
+      const { error } = await supabase.from("dashboard_widgets").insert({
+        user_id: auth.user.id,
+        titulo: `${widget.titulo} — cópia`,
+        tipo: widget.tipo,
+        fonte: widget.fonte,
+        config: widget.config as never,
+        layout: { ...widget.layout, y: 10000 } as never,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["dashboard_widgets"] });
+      toast.success("Widget duplicado");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   return (
     <div ref={fsRef} className={`space-y-5 bg-background ${isFullscreen ? "h-screen overflow-y-auto p-4" : "min-h-full"}`}>
       <PageHeader
@@ -175,6 +213,31 @@ function DashboardPage() {
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
               ao vivo
             </Badge>
+            <Select
+              value={periodKey}
+              onValueChange={(value) => navigate({ search: (prev) => ({ ...prev, periodo: value as DashboardPeriodKey }) })}
+            >
+              <SelectTrigger className="h-8 w-[170px]" aria-label="Período do dashboard">
+                <CalendarRange className="h-3.5 w-3.5" />
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Hoje</SelectItem>
+                <SelectItem value="yesterday">Ontem</SelectItem>
+                <SelectItem value="7d">Últimos 7 dias</SelectItem>
+                <SelectItem value="30d">Últimos 30 dias</SelectItem>
+                <SelectItem value="month">Mês atual</SelectItem>
+                <SelectItem value="custom">Personalizado</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={search.equipamento ?? "all"} onValueChange={(value) => navigate({ search: (prev) => ({ ...prev, equipamento: value === "all" ? undefined : value }) })}>
+              <SelectTrigger className="h-8 w-[165px]"><SelectValue placeholder="Equipamentos" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">Todos os equipamentos</SelectItem>{(lookups.data?.equipamentos ?? []).map((item) => <SelectItem key={item.id} value={item.id}>{item.nome}</SelectItem>)}</SelectContent>
+            </Select>
+            <Select value={search.produto ?? "all"} onValueChange={(value) => navigate({ search: (prev) => ({ ...prev, produto: value === "all" ? undefined : value }) })}>
+              <SelectTrigger className="h-8 w-[150px]"><SelectValue placeholder="Produtos" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">Todos os produtos</SelectItem>{(lookups.data?.produtos ?? []).map((item) => <SelectItem key={item.id} value={item.id}>{item.nome}</SelectItem>)}</SelectContent>
+            </Select>
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="text-muted-foreground border-dashed" disabled={frozen}>
@@ -209,6 +272,14 @@ function DashboardPage() {
         }
       />
 
+      {periodKey === "custom" ? (
+        <div className="flex flex-wrap items-end gap-3 border-y bg-muted/30 px-3 py-2">
+          <div className="space-y-1"><Label htmlFor="dashboard-inicio" className="text-xs">Início</Label><Input id="dashboard-inicio" type="date" value={search.inicio ?? ""} onChange={(e) => navigate({ search: (prev) => ({ ...prev, inicio: e.target.value || undefined }) })} className="h-8 w-40" /></div>
+          <div className="space-y-1"><Label htmlFor="dashboard-fim" className="text-xs">Fim</Label><Input id="dashboard-fim" type="date" value={search.fim ?? ""} onChange={(e) => navigate({ search: (prev) => ({ ...prev, fim: e.target.value || undefined }) })} className="h-8 w-40" /></div>
+          <span className="pb-2 text-xs text-muted-foreground">{period.label}</span>
+        </div>
+      ) : null}
+
 
       {widgets.isLoading ? (
         <div className="text-sm text-muted-foreground">Carregando widgets...</div>
@@ -222,9 +293,12 @@ function DashboardPage() {
       ) : (
         <DashboardGrid
           widgets={widgets.data!}
+          period={period}
+          filters={{ equipamentoId: search.equipamento, produtoId: search.produto }}
           frozen={frozen}
           onEdit={setEditing}
           onDelete={(id) => remove.mutate(id)}
+          onDuplicate={(widget) => duplicate.mutate(widget)}
           onResizePreset={(id, w, h) => {
             const wdg = widgets.data!.find((x) => x.id === id);
             if (wdg) resizePreset.mutate({ id, w, h, layout: wdg.layout });
@@ -255,12 +329,15 @@ const SIZE_PRESETS: Array<{ label: string; w: number; h: number }> = [
 ];
 
 function DashboardGrid({
-  widgets, frozen, onEdit, onDelete, onResizePreset,
+  widgets, frozen, period, filters, onEdit, onDelete, onDuplicate, onResizePreset,
 }: {
   widgets: Widget[];
   frozen: boolean;
+  period: DashboardPeriod;
+  filters: DashboardFilters;
   onEdit: (w: Widget) => void;
   onDelete: (id: string) => void;
+  onDuplicate: (widget: Widget) => void;
   onResizePreset: (id: string, w: number, h: number) => void;
 }) {
   const qc = useQueryClient();
@@ -367,6 +444,9 @@ function DashboardGrid({
                       <DropdownMenuItem onClick={() => onEdit(w)}>
                         <Pencil className="mr-2 h-3.5 w-3.5" /> Editar
                       </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => onDuplicate(w)}>
+                        <Copy className="mr-2 h-3.5 w-3.5" /> Duplicar
+                      </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       {SIZE_PRESETS.map((p) => (
                         <DropdownMenuItem
@@ -385,7 +465,7 @@ function DashboardGrid({
                   </DropdownMenu>
                 </CardHeader>
                 <CardContent className="min-h-0 flex-1 p-3">
-                  <DashboardWidget widget={w} />
+                  <DashboardWidget widget={w} period={period} filters={filters} />
                 </CardContent>
               </Card>
             </div>
@@ -420,7 +500,7 @@ function WidgetDialog({
   initial, lookups, onSave, loading,
 }: {
   initial?: Widget;
-  lookups: { tags: TagRow[]; tanks: TankRow[]; equipamentos: EquipRow[]; sheets: SheetRow[] } | undefined;
+  lookups: { tags: TagRow[]; tanks: TankRow[]; equipamentos: EquipRow[]; sheets: SheetRow[]; produtos: ProductRow[] } | undefined;
   onSave: (w: Partial<Widget>) => void;
   loading: boolean;
 }) {
@@ -436,6 +516,8 @@ function WidgetDialog({
   const [sheetId, setSheetId] = useState<string>(String(initial?.config?.sheet_id ?? ""));
   const [min, setMin] = useState<string>(String(initial?.config?.min ?? "0"));
   const [max, setMax] = useState<string>(String(initial?.config?.max ?? "100"));
+  const [periodo, setPeriodo] = useState<string>(String(initial?.config?.periodo ?? "inherit"));
+  const [sourceSearch, setSourceSearch] = useState("");
 
   const src = getSource(fonte);
 
@@ -445,9 +527,13 @@ function WidgetDialog({
 
   const grouped = useMemo(() => {
     const g: Record<string, WidgetSource[]> = {};
-    for (const s of WIDGET_SOURCES) (g[s.grupo] ??= []).push(s);
+    const term = sourceSearch.trim().toLocaleLowerCase("pt-BR");
+    for (const s of WIDGET_SOURCES) {
+      if (term && !`${s.label} ${s.grupo} ${s.description ?? ""}`.toLocaleLowerCase("pt-BR").includes(term)) continue;
+      (g[s.grupo] ??= []).push(s);
+    }
     return g;
-  }, []);
+  }, [sourceSearch]);
 
   const filteredTags = useMemo(() => {
     const list = lookups?.tags ?? [];
@@ -473,6 +559,7 @@ function WidgetDialog({
       config.min = Number(min) || 0;
       config.max = Number(max) || 100;
     }
+    if (periodo !== "inherit") config.periodo = periodo;
     const layout = initial?.layout ?? { x: 0, y: 0, w: src.colSpan ?? 3, h: src.rowSpan ?? 2 };
     onSave({ titulo: titulo || src.label, tipo: src.tipo, fonte, config, layout });
   };
@@ -486,6 +573,7 @@ function WidgetDialog({
       <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1">
         <div>
           <Label>Fonte de dados</Label>
+          <Input value={sourceSearch} onChange={(e) => setSourceSearch(e.target.value)} placeholder="Buscar indicador, gráfico ou informação..." className="mb-2" />
           <Select value={fonte} onValueChange={setFonte}>
             <SelectTrigger><SelectValue placeholder="Escolha uma fonte..." /></SelectTrigger>
             <SelectContent className="max-h-[400px]">
@@ -494,12 +582,25 @@ function WidgetDialog({
                   <div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{grupo}</div>
                   {items.map((s) => (
                     <SelectItem key={s.key} value={s.key}>
-                      <span className="mr-2 text-[10px] uppercase text-muted-foreground">[{s.tipo}]</span>
-                      {s.label}
+                      <span className="mr-2 text-[10px] uppercase text-muted-foreground">[{s.tipo}]</span>{s.label}
                     </SelectItem>
                   ))}
                 </div>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Período do widget</Label>
+          <Select value={periodo} onValueChange={setPeriodo}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="inherit">Seguir filtro do dashboard</SelectItem>
+              <SelectItem value="today">Hoje</SelectItem>
+              <SelectItem value="yesterday">Ontem</SelectItem>
+              <SelectItem value="7d">Últimos 7 dias</SelectItem>
+              <SelectItem value="30d">Últimos 30 dias</SelectItem>
+              <SelectItem value="month">Mês atual</SelectItem>
             </SelectContent>
           </Select>
         </div>
