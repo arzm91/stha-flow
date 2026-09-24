@@ -28,7 +28,7 @@ import { DashboardWidget } from "@/components/dashboard/DashboardWidget";
 import { Responsive, useContainerWidth, verticalCompactor } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-import { resolveDashboardPeriod, type DashboardPeriod, type DashboardPeriodKey } from "@/lib/dashboard/period";
+import { resolveDashboardPeriod, type DashboardFilters, type DashboardPeriod, type DashboardPeriodKey } from "@/lib/dashboard/period";
 import { z } from "zod";
 import { zodValidator } from "@tanstack/zod-adapter";
 
@@ -42,6 +42,8 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
     periodo: z.enum(["today", "yesterday", "7d", "30d", "month", "custom"]).optional(),
     inicio: z.string().optional(),
     fim: z.string().optional(),
+    equipamento: z.string().optional(),
+    produto: z.string().optional(),
   })),
   head: pageHead({ title: "Dashboard — STHApc", description: "Acesse e gerencie Dashboard no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/dashboard" }),
   component: DashboardPage,
@@ -60,6 +62,7 @@ type TagRow = { nome: string; unidade: string | null };
 type TankRow = { id: string; codigo: string; nome: string };
 type EquipRow = { id: string; codigo: string; nome: string };
 type SheetRow = { id: string; nome: string };
+type ProductRow = { id: string; nome: string; codigo: string };
 
 const FROZEN_STORAGE_KEY = "dashboard:frozen";
 
@@ -107,17 +110,19 @@ function DashboardPage() {
   const lookups = useQuery({
     queryKey: ["dashboard-lookups"],
     queryFn: async () => {
-      const [tags, tanks, equips, sheets] = await Promise.all([
+      const [tags, tanks, equips, sheets, products] = await Promise.all([
         supabase.from("tags_live").select("nome,unidade").order("nome"),
         supabase.from("tanques").select("id,codigo,nome").order("nome"),
         supabase.from("equipamentos").select("id,codigo,nome").order("nome"),
         supabase.from("custom_sheets").select("id,nome").order("nome"),
+        supabase.from("produtos").select("id,nome,codigo").order("nome"),
       ]);
       return {
         tags: (tags.data ?? []) as TagRow[],
         tanks: (tanks.data ?? []) as TankRow[],
         equipamentos: (equips.data ?? []) as EquipRow[],
         sheets: (sheets.data ?? []) as SheetRow[],
+        produtos: (products.data ?? []) as ProductRow[],
       };
     },
   });
@@ -225,6 +230,14 @@ function DashboardPage() {
                 <SelectItem value="custom">Personalizado</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={search.equipamento ?? "all"} onValueChange={(value) => navigate({ search: (prev) => ({ ...prev, equipamento: value === "all" ? undefined : value }) })}>
+              <SelectTrigger className="h-8 w-[165px]"><SelectValue placeholder="Equipamentos" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">Todos os equipamentos</SelectItem>{(lookups.data?.equipamentos ?? []).map((item) => <SelectItem key={item.id} value={item.id}>{item.nome}</SelectItem>)}</SelectContent>
+            </Select>
+            <Select value={search.produto ?? "all"} onValueChange={(value) => navigate({ search: (prev) => ({ ...prev, produto: value === "all" ? undefined : value }) })}>
+              <SelectTrigger className="h-8 w-[150px]"><SelectValue placeholder="Produtos" /></SelectTrigger>
+              <SelectContent><SelectItem value="all">Todos os produtos</SelectItem>{(lookups.data?.produtos ?? []).map((item) => <SelectItem key={item.id} value={item.id}>{item.nome}</SelectItem>)}</SelectContent>
+            </Select>
             <Dialog open={newOpen} onOpenChange={setNewOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm" className="text-muted-foreground border-dashed" disabled={frozen}>
@@ -281,6 +294,7 @@ function DashboardPage() {
         <DashboardGrid
           widgets={widgets.data!}
           period={period}
+          filters={{ equipamentoId: search.equipamento, produtoId: search.produto }}
           frozen={frozen}
           onEdit={setEditing}
           onDelete={(id) => remove.mutate(id)}
@@ -315,11 +329,12 @@ const SIZE_PRESETS: Array<{ label: string; w: number; h: number }> = [
 ];
 
 function DashboardGrid({
-  widgets, frozen, period, onEdit, onDelete, onDuplicate, onResizePreset,
+  widgets, frozen, period, filters, onEdit, onDelete, onDuplicate, onResizePreset,
 }: {
   widgets: Widget[];
   frozen: boolean;
   period: DashboardPeriod;
+  filters: DashboardFilters;
   onEdit: (w: Widget) => void;
   onDelete: (id: string) => void;
   onDuplicate: (widget: Widget) => void;
@@ -450,7 +465,7 @@ function DashboardGrid({
                   </DropdownMenu>
                 </CardHeader>
                 <CardContent className="min-h-0 flex-1 p-3">
-                  <DashboardWidget widget={w} period={period} />
+                  <DashboardWidget widget={w} period={period} filters={filters} />
                 </CardContent>
               </Card>
             </div>
@@ -485,7 +500,7 @@ function WidgetDialog({
   initial, lookups, onSave, loading,
 }: {
   initial?: Widget;
-  lookups: { tags: TagRow[]; tanks: TankRow[]; equipamentos: EquipRow[]; sheets: SheetRow[] } | undefined;
+  lookups: { tags: TagRow[]; tanks: TankRow[]; equipamentos: EquipRow[]; sheets: SheetRow[]; produtos: ProductRow[] } | undefined;
   onSave: (w: Partial<Widget>) => void;
   loading: boolean;
 }) {
@@ -501,6 +516,7 @@ function WidgetDialog({
   const [sheetId, setSheetId] = useState<string>(String(initial?.config?.sheet_id ?? ""));
   const [min, setMin] = useState<string>(String(initial?.config?.min ?? "0"));
   const [max, setMax] = useState<string>(String(initial?.config?.max ?? "100"));
+  const [periodo, setPeriodo] = useState<string>(String(initial?.config?.periodo ?? "inherit"));
 
   const src = getSource(fonte);
 
@@ -538,6 +554,7 @@ function WidgetDialog({
       config.min = Number(min) || 0;
       config.max = Number(max) || 100;
     }
+    if (periodo !== "inherit") config.periodo = periodo;
     const layout = initial?.layout ?? { x: 0, y: 0, w: src.colSpan ?? 3, h: src.rowSpan ?? 2 };
     onSave({ titulo: titulo || src.label, tipo: src.tipo, fonte, config, layout });
   };
@@ -565,6 +582,20 @@ function WidgetDialog({
                   ))}
                 </div>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label>Período do widget</Label>
+          <Select value={periodo} onValueChange={setPeriodo}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="inherit">Seguir filtro do dashboard</SelectItem>
+              <SelectItem value="today">Hoje</SelectItem>
+              <SelectItem value="yesterday">Ontem</SelectItem>
+              <SelectItem value="7d">Últimos 7 dias</SelectItem>
+              <SelectItem value="30d">Últimos 30 dias</SelectItem>
+              <SelectItem value="month">Mês atual</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -67,3 +67,32 @@ export function TagSparkline({ tagNome, points = 20 }: { tagNome: string; points
     </div>
   );
 }
+
+export function TagMiniTrend({ tagNome }: { tagNome: string }) {
+  const q = useQuery({
+    queryKey: ["tag-mini-trend", tagNome],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("producao_tag_historico")
+        .select("valor_num,registrado_em").eq("tag_nome", tagNome).not("valor_num", "is", null)
+        .order("registrado_em", { ascending: false }).limit(16);
+      if (error) throw error;
+      return (data ?? []).map((r) => ({ v: Number(r.valor_num), t: r.registrado_em })).filter((r) => Number.isFinite(r.v)).reverse();
+    },
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+  const rows = q.data ?? [];
+  if (rows.length < 2) return null;
+  const first = rows[0].v;
+  const last = rows[rows.length - 1].v;
+  const pct = first !== 0 ? ((last - first) / Math.abs(first)) * 100 : (last === 0 ? 0 : 100);
+  const up = pct >= 0;
+  return (
+    <div className={`flex shrink-0 items-center gap-1 text-[10px] font-semibold ${up ? "text-success" : "text-destructive"}`} title={`Variação dos últimos ${rows.length} pontos`}>
+      <div className="h-4 w-10">
+        <ResponsiveContainer width="100%" height="100%"><LineChart data={rows}><Line type="monotone" dataKey="v" stroke={up ? "var(--success)" : "var(--destructive)"} strokeWidth={1.5} dot={false} isAnimationActive={false} /></LineChart></ResponsiveContainer>
+      </div>
+      <span>{pct >= 0 ? "+" : ""}{pct.toFixed(1)}%</span>
+    </div>
+  );
+}

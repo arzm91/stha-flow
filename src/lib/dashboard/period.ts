@@ -10,6 +10,11 @@ export type DashboardPeriod = {
   days: number;
 };
 
+export type DashboardFilters = {
+  equipamentoId?: string;
+  produtoId?: string;
+};
+
 const APP_TIME_ZONE = "America/Sao_Paulo";
 
 function zonedParts(date: Date) {

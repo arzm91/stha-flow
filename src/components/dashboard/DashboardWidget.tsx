@@ -10,8 +10,8 @@ import { getSource } from "@/lib/dashboard/widget-catalog";
 import { formatInt, formatNumber } from "@/lib/format";
 import { AlertTriangle, Wrench, FlaskConical, Factory, CheckCircle2, Clock, AlertOctagon, TrendingUp, TrendingDown } from "lucide-react";
 import { StorageLocationCard, type StorageLocation } from "@/components/StorageLocationCard";
-import { TagSparkline } from "@/components/dashboard/TagSparkline";
-import type { DashboardPeriod } from "@/lib/dashboard/period";
+import { TagMiniTrend, TagSparkline } from "@/components/dashboard/TagSparkline";
+import { resolveDashboardPeriod, type DashboardFilters, type DashboardPeriod, type DashboardPeriodKey } from "@/lib/dashboard/period";
 
 
 
@@ -25,7 +25,7 @@ type WidgetRow = {
 
 const PIE_COLORS = ["var(--chart-1)", "var(--chart-2)", "var(--chart-3)", "var(--chart-4)", "var(--chart-5)"];
 
-export function DashboardWidget({ widget, period }: { widget: WidgetRow; period: DashboardPeriod }) {
+export function DashboardWidget({ widget, period, filters }: { widget: WidgetRow; period: DashboardPeriod; filters: DashboardFilters }) {
   const src = getSource(widget.fonte);
   if (!src) {
     return (
@@ -41,10 +41,15 @@ export function DashboardWidget({ widget, period }: { widget: WidgetRow; period:
   const tagNomes = tagNomesFromWidget(widget);
   return (
     <div className="relative h-full w-full">
-      <WidgetBody widget={widget} period={period} />
+      <WidgetBody widget={widget} period={widgetPeriod(widget, period)} filters={filters} />
       {tagNomes.length === 1 ? <TagSparkline tagNome={tagNomes[0]} /> : null}
     </div>
   );
+}
+
+function widgetPeriod(widget: WidgetRow, fallback: DashboardPeriod) {
+  const own = String(widget.config?.periodo ?? "inherit");
+  return own === "inherit" ? fallback : resolveDashboardPeriod(own as DashboardPeriodKey);
 }
 
 function tagNomesFromWidget(w: WidgetRow): string[] {
@@ -61,10 +66,10 @@ function tagNomesFromWidget(w: WidgetRow): string[] {
 }
 
 
-function WidgetBody({ widget, period }: { widget: WidgetRow; period: DashboardPeriod }) {
+function WidgetBody({ widget, period, filters }: { widget: WidgetRow; period: DashboardPeriod; filters: DashboardFilters }) {
   const q = useQuery({
-    queryKey: ["dashboard-widget", widget.fonte, widget.config, period.start, period.end],
-    queryFn: () => fetchData(widget.fonte, widget.config, period),
+    queryKey: ["dashboard-widget", widget.fonte, widget.config, period.start, period.end, filters],
+    queryFn: () => fetchData(widget.fonte, widget.config, period, filters),
     refetchInterval: 15_000,
   });
 
@@ -339,14 +344,11 @@ function WidgetBody({ widget, period }: { widget: WidgetRow; period: DashboardPe
       <div className="h-full overflow-auto pr-16">
         <ul className="divide-y text-sm">
           {data.items.map((it) => (
-            <li key={it.nome} className="flex items-baseline justify-between gap-2 py-1.5">
+            <li key={it.nome} className="flex items-center justify-between gap-2 py-1.5">
               <span className="min-w-0 truncate text-xs text-muted-foreground" title={it.nome}>
                 {it.nome_amigavel?.trim() || it.nome}
               </span>
-              <span className="shrink-0 font-mono text-sm font-semibold">
-                {it.valor_num != null ? formatNumber(it.valor_num, 2) : (it.valor ?? "—")}
-                {it.unidade ? <span className="ml-1 text-[10px] text-muted-foreground">{it.unidade}</span> : null}
-              </span>
+              <div className="flex items-center gap-2"><TagMiniTrend tagNome={it.nome} /><span className="shrink-0 font-mono text-sm font-semibold">{it.valor_num != null ? formatNumber(it.valor_num, 2) : (it.valor ?? "—")}{it.unidade ? <span className="ml-1 text-[10px] text-muted-foreground">{it.unidade}</span> : null}</span></div>
             </li>
           ))}
         </ul>
@@ -377,6 +379,7 @@ function WidgetBody({ widget, period }: { widget: WidgetRow; period: DashboardPe
                 {it.valor_num != null ? formatNumber(it.valor_num, 2) : (it.valor ?? "—")}
                 {it.unidade ? <span className="ml-1 text-[10px] font-normal text-muted-foreground">{it.unidade}</span> : null}
               </div>
+              <div className="mt-2"><TagMiniTrend tagNome={it.nome} /></div>
             </div>
           ))}
         </div>
@@ -444,7 +447,7 @@ function percentDelta(current: number, previous: number) {
   return ((current - previous) / Math.abs(previous)) * 100;
 }
 
-async function fetchData(fonte: string, config: Record<string, unknown>, period: DashboardPeriod): Promise<WidgetData> {
+async function fetchData(fonte: string, config: Record<string, unknown>, period: DashboardPeriod, filters: DashboardFilters): Promise<WidgetData> {
   switch (fonte) {
     // ---- Produção ----
     case "kpi.producao.em_andamento": {
@@ -480,8 +483,12 @@ async function fetchData(fonte: string, config: Record<string, unknown>, period:
       return { kind: "kpi", value: formatInt(count ?? 0), tone: "text-warning", to: "/cadastros/equipamentos" };
     }
     case "chart.producao.7dias": {
-      const { data } = await supabase.from("ordens_producao").select("fim_em,qtd_produzida")
+      let query = supabase.from("ordens_producao").select("fim_em,qtd_produzida")
         .eq("status", "finalizada").gte("fim_em", period.start).lt("fim_em", period.end).not("fim_em", "is", null);
+      if (filters.equipamentoId) query = query.eq("equipamento_id", filters.equipamentoId);
+      if (filters.produtoId) query = query.eq("produto_id", filters.produtoId);
+      const { data, error } = await query;
+      if (error) throw error;
       const buckets = buildDayBuckets(period);
       for (const r of data ?? []) {
         const k = bucketKey(new Date(r.fim_em!));
@@ -490,9 +497,11 @@ async function fetchData(fonte: string, config: Record<string, unknown>, period:
       return { kind: "bar", valueLabel: "Produção", points: Object.entries(buckets).map(([label, value]) => ({ label, value })) };
     }
     case "chart.producao.equipamentos": {
-      const { data, error } = await supabase.from("ordens_producao")
-        .select("qtd_produzida,equipamento:equipamento_id(nome)")
+      let query = supabase.from("ordens_producao").select("qtd_produzida,equipamento:equipamento_id(nome)")
         .eq("status", "finalizada").gte("fim_em", period.start).lt("fim_em", period.end);
+      if (filters.equipamentoId) query = query.eq("equipamento_id", filters.equipamentoId);
+      if (filters.produtoId) query = query.eq("produto_id", filters.produtoId);
+      const { data, error } = await query;
       if (error) throw error;
       const totals = new Map<string, number>();
       for (const row of data ?? []) {
@@ -540,8 +549,9 @@ async function fetchData(fonte: string, config: Record<string, unknown>, period:
       return { kind: "kpi", value: formatInt(unwrapRpcNumber(data, "movimentacoes")), to: "/estoque/movimentacao" };
     }
     case "chart.estoque.7dias": {
-      const { data } = await supabase.from("movimentacoes_estoque").select("ocorrido_em,tipo,quantidade")
+      const { data, error } = await supabase.from("movimentacoes_estoque").select("ocorrido_em,tipo,quantidade")
         .gte("ocorrido_em", period.start).lt("ocorrido_em", period.end);
+      if (error) throw error;
       const bIn = buildDayBuckets(period);
       const bOut = buildDayBuckets(period);
       for (const r of data ?? []) {
@@ -841,9 +851,10 @@ async function fetchData(fonte: string, config: Record<string, unknown>, period:
       };
     }
     case "chart.paradas.pareto": {
-      const { data, error } = await supabase.from("paradas_equipamento")
-        .select("motivo,duracao_seg,inicio_em,fim_em")
+      let query = supabase.from("paradas_equipamento").select("motivo,duracao_seg,inicio_em,fim_em")
         .gte("inicio_em", period.start).lt("inicio_em", period.end);
+      if (filters.equipamentoId) query = query.eq("equipamento_id", filters.equipamentoId);
+      const { data, error } = await query;
       if (error) throw error;
       const totals = new Map<string, number>();
       for (const row of data ?? []) {
