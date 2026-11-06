@@ -968,6 +968,12 @@ export type Database = {
           tag_producao_total: string | null
           tag_velocidade_producao: string | null
           tipo: string | null
+          troca_auto_ativa: boolean
+          troca_produto_0_id: string | null
+          troca_produto_1_id: string | null
+          troca_qtd_modo: string
+          troca_tag_produto: string | null
+          troca_tag_quantidade: string | null
           updated_at: string
           utilidade_ids: string[]
         }
@@ -1003,6 +1009,12 @@ export type Database = {
           tag_producao_total?: string | null
           tag_velocidade_producao?: string | null
           tipo?: string | null
+          troca_auto_ativa?: boolean
+          troca_produto_0_id?: string | null
+          troca_produto_1_id?: string | null
+          troca_qtd_modo?: string
+          troca_tag_produto?: string | null
+          troca_tag_quantidade?: string | null
           updated_at?: string
           utilidade_ids?: string[]
         }
@@ -1038,10 +1050,31 @@ export type Database = {
           tag_producao_total?: string | null
           tag_velocidade_producao?: string | null
           tipo?: string | null
+          troca_auto_ativa?: boolean
+          troca_produto_0_id?: string | null
+          troca_produto_1_id?: string | null
+          troca_qtd_modo?: string
+          troca_tag_produto?: string | null
+          troca_tag_quantidade?: string | null
           updated_at?: string
           utilidade_ids?: string[]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "equipamentos_troca_produto_0_id_fkey"
+            columns: ["troca_produto_0_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "equipamentos_troca_produto_1_id_fkey"
+            columns: ["troca_produto_1_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       manutencao_atividades: {
         Row: {

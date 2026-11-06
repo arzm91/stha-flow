@@ -56,6 +56,16 @@ function EquipamentosPage() {
     hint: [u.tipo, u.localizacao].filter(Boolean).join(" · "),
   }));
 
+  const produtos = useQuery({
+    queryKey: ["produtos", "troca-opts"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("produtos").select("id,codigo,nome").order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const produtoOptions = (produtos.data ?? []).map((p) => ({ value: p.id, label: `${p.codigo} — ${p.nome}` }));
+
   const fields: FieldDef[] = [
     { key: "codigo", label: "Código", required: true },
     { key: "nome", label: "Nome", required: true },
@@ -111,6 +121,30 @@ function EquipamentosPage() {
       help: "Selecione tags (inclui tags calculadas) para exibir como indicadores de rendimento/eficiência/índice nos cards do dashboard, da página de produção e no acompanhamento da produção. Opcional.",
     },
 
+    // ===== Troca automática de produto =====
+    { key: "troca_auto_ativa", label: "Trocar produto automaticamente pela tag do CLP", type: "checkbox", section: "Troca automática de produto",
+      help: "Com a produção em andamento, quando a tag mudar entre 0 e 1 o sistema registra a troca sozinho (data, hora e quantidade), sem confirmação do operador.",
+    },
+    { key: "troca_tag_produto", label: "Tag do produto em operação (0/1)", type: "select",
+      options: [{ value: "", label: "— nenhuma —" }, ...tagOptions],
+    },
+    { key: "troca_produto_0_id", label: "Produto quando a tag = 0", type: "select",
+      options: [{ value: "", label: "— selecione —" }, ...produtoOptions],
+    },
+    { key: "troca_produto_1_id", label: "Produto quando a tag = 1", type: "select",
+      options: [{ value: "", label: "— selecione —" }, ...produtoOptions],
+    },
+    { key: "troca_tag_quantidade", label: "Tag da quantidade do produto anterior", type: "select",
+      options: [{ value: "", label: "— nenhuma —" }, ...tagOptions],
+    },
+    { key: "troca_qtd_modo", label: "Como ler a quantidade", type: "select",
+      options: [
+        { value: "direto", label: "Valor da tag no momento da troca" },
+        { value: "totalizador", label: "Totalizador da OP (desconta trocas anteriores)" },
+      ],
+      help: "Use 'Totalizador' se a tag acumula a produção desde o início da ordem.",
+    },
+
     // ===== Gestão de paradas =====
     { key: "parada_tag_nome", label: "Tag de parada (opcional)", type: "select", section: "Gestão de paradas",
       options: [{ value: "", label: "— nenhuma (não monitorar paradas) —" }, ...tagOptions],
@@ -163,7 +197,7 @@ function EquipamentosPage() {
       description="Cadastro e gestão dos equipamentos de produção da planta."
       searchKeys={["nome", "codigo", "tipo", "localizacao"]}
       filter={{ categoria: "producao" }}
-      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [], utilidade_ids: [], tag_velocidade_producao: "", tag_producao_total: "", tag_indices: [], capacidade_hora: "", capacidade_dia: "", capacidade_mes: "", capacidade_unidade: "", parada_tag_nome: "", parada_modo: "", parada_operador: "", parada_valor: "", parada_valor_min: "", parada_valor_max: "", parada_tempo_min_seg: 15, parada_alerta_apos_min: "", parada_motivos: ["Falta de energia","Parada programada","Parada não programada","Manutenção","Setup / Troca de produto","Falta de matéria-prima","Falha operacional","Outro"] }}
+      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [], utilidade_ids: [], tag_velocidade_producao: "", tag_producao_total: "", tag_indices: [], troca_auto_ativa: false, troca_tag_produto: "", troca_produto_0_id: "", troca_produto_1_id: "", troca_tag_quantidade: "", troca_qtd_modo: "direto", capacidade_hora: "", capacidade_dia: "", capacidade_mes: "", capacidade_unidade: "", parada_tag_nome: "", parada_modo: "", parada_operador: "", parada_valor: "", parada_valor_min: "", parada_valor_max: "", parada_tempo_min_seg: 15, parada_alerta_apos_min: "", parada_motivos: ["Falta de energia","Parada programada","Parada não programada","Manutenção","Setup / Troca de produto","Falta de matéria-prima","Falha operacional","Outro"] }}
       fields={fields}
 
 
