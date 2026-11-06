@@ -46,6 +46,7 @@ import { Route as AuthenticatedCadastrosParametrosRouteImport } from './routes/_
 import { Route as AuthenticatedCadastrosProdutosRouteImport } from './routes/_authenticated/cadastros.produtos'
 import { Route as AuthenticatedCadastrosTanquesRouteImport } from './routes/_authenticated/cadastros.tanques'
 import { Route as AuthenticatedCadastrosUtilidadesRouteImport } from './routes/_authenticated/cadastros.utilidades'
+import { Route as AuthenticatedDashboardTvRouteImport } from './routes/_authenticated/dashboard_.tv'
 import { Route as AuthenticatedEstoqueIndexRouteImport } from './routes/_authenticated/estoque.index'
 import { Route as AuthenticatedEstoqueCarregamentoRouteImport } from './routes/_authenticated/estoque.carregamento'
 import { Route as AuthenticatedEstoqueMovimentacaoRouteImport } from './routes/_authenticated/estoque.movimentacao'
@@ -283,6 +284,12 @@ const AuthenticatedCadastrosUtilidadesRoute =
     path: '/utilidades',
     getParentRoute: () => AuthenticatedCadastrosRoute,
   } as any)
+const AuthenticatedDashboardTvRoute =
+  AuthenticatedDashboardTvRouteImport.update({
+    id: '/dashboard_/tv',
+    path: '/dashboard/tv',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
 const AuthenticatedEstoqueIndexRoute =
   AuthenticatedEstoqueIndexRouteImport.update({
     id: '/',
@@ -514,6 +521,7 @@ export interface FileRoutesByFullPath {
   '/cadastros/produtos': typeof AuthenticatedCadastrosProdutosRoute
   '/cadastros/tanques': typeof AuthenticatedCadastrosTanquesRoute
   '/cadastros/utilidades': typeof AuthenticatedCadastrosUtilidadesRoute
+  '/dashboard/tv': typeof AuthenticatedDashboardTvRoute
   '/estoque/carregamento': typeof AuthenticatedEstoqueCarregamentoRoute
   '/estoque/movimentacao': typeof AuthenticatedEstoqueMovimentacaoRoute
   '/producao/$id': typeof AuthenticatedProducaoIdRoute
@@ -579,6 +587,7 @@ export interface FileRoutesByTo {
   '/cadastros/produtos': typeof AuthenticatedCadastrosProdutosRoute
   '/cadastros/tanques': typeof AuthenticatedCadastrosTanquesRoute
   '/cadastros/utilidades': typeof AuthenticatedCadastrosUtilidadesRoute
+  '/dashboard/tv': typeof AuthenticatedDashboardTvRoute
   '/estoque/carregamento': typeof AuthenticatedEstoqueCarregamentoRoute
   '/estoque/movimentacao': typeof AuthenticatedEstoqueMovimentacaoRoute
   '/producao/$id': typeof AuthenticatedProducaoIdRoute
@@ -653,6 +662,7 @@ export interface FileRoutesById {
   '/_authenticated/cadastros/produtos': typeof AuthenticatedCadastrosProdutosRoute
   '/_authenticated/cadastros/tanques': typeof AuthenticatedCadastrosTanquesRoute
   '/_authenticated/cadastros/utilidades': typeof AuthenticatedCadastrosUtilidadesRoute
+  '/_authenticated/dashboard_/tv': typeof AuthenticatedDashboardTvRoute
   '/_authenticated/estoque/carregamento': typeof AuthenticatedEstoqueCarregamentoRoute
   '/_authenticated/estoque/movimentacao': typeof AuthenticatedEstoqueMovimentacaoRoute
   '/_authenticated/producao/$id': typeof AuthenticatedProducaoIdRoute
@@ -727,6 +737,7 @@ export interface FileRouteTypes {
     | '/cadastros/produtos'
     | '/cadastros/tanques'
     | '/cadastros/utilidades'
+    | '/dashboard/tv'
     | '/estoque/carregamento'
     | '/estoque/movimentacao'
     | '/producao/$id'
@@ -792,6 +803,7 @@ export interface FileRouteTypes {
     | '/cadastros/produtos'
     | '/cadastros/tanques'
     | '/cadastros/utilidades'
+    | '/dashboard/tv'
     | '/estoque/carregamento'
     | '/estoque/movimentacao'
     | '/producao/$id'
@@ -865,6 +877,7 @@ export interface FileRouteTypes {
     | '/_authenticated/cadastros/produtos'
     | '/_authenticated/cadastros/tanques'
     | '/_authenticated/cadastros/utilidades'
+    | '/_authenticated/dashboard_/tv'
     | '/_authenticated/estoque/carregamento'
     | '/_authenticated/estoque/movimentacao'
     | '/_authenticated/producao/$id'
@@ -1192,6 +1205,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/cadastros/utilidades'
       preLoaderRoute: typeof AuthenticatedCadastrosUtilidadesRouteImport
       parentRoute: typeof AuthenticatedCadastrosRoute
+    }
+    '/_authenticated/dashboard_/tv': {
+      id: '/_authenticated/dashboard_/tv'
+      path: '/dashboard/tv'
+      fullPath: '/dashboard/tv'
+      preLoaderRoute: typeof AuthenticatedDashboardTvRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/estoque/': {
       id: '/_authenticated/estoque/'
@@ -1611,6 +1631,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedTabelasRoute: typeof AuthenticatedTabelasRouteWithChildren
   AuthenticatedTagsRoute: typeof AuthenticatedTagsRouteWithChildren
   AuthenticatedTurnosRoute: typeof AuthenticatedTurnosRoute
+  AuthenticatedDashboardTvRoute: typeof AuthenticatedDashboardTvRoute
   AuthenticatedRelatoriosSlugRoute: typeof AuthenticatedRelatoriosSlugRoute
   AuthenticatedRelatoriosIndexRoute: typeof AuthenticatedRelatoriosIndexRoute
 }
@@ -1630,6 +1651,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedTabelasRoute: AuthenticatedTabelasRouteWithChildren,
   AuthenticatedTagsRoute: AuthenticatedTagsRouteWithChildren,
   AuthenticatedTurnosRoute: AuthenticatedTurnosRoute,
+  AuthenticatedDashboardTvRoute: AuthenticatedDashboardTvRoute,
   AuthenticatedRelatoriosSlugRoute: AuthenticatedRelatoriosSlugRoute,
   AuthenticatedRelatoriosIndexRoute: AuthenticatedRelatoriosIndexRoute,
 }

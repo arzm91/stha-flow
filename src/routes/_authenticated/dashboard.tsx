@@ -1,5 +1,5 @@
 import { pageHead } from "@/lib/seo";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,11 +20,12 @@ import {
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Plus, Pencil, Trash2, LayoutGrid, MoreHorizontal, GripVertical, Maximize2, Minimize2, Lock, Unlock, CalendarRange, Copy } from "lucide-react";
+import { Plus, Pencil, Trash2, LayoutGrid, MoreHorizontal, GripVertical, Maximize2, Minimize2, Lock, Unlock, CalendarRange, Copy, Sparkles, Tv } from "lucide-react";
 import { toast } from "sonner";
 import { useFullscreen } from "@/hooks/useFullscreen";
 import { WIDGET_SOURCES, getSource, type WidgetSource } from "@/lib/dashboard/widget-catalog";
 import { DashboardWidget } from "@/components/dashboard/DashboardWidget";
+import { AssistenteDashboardDialog } from "@/components/dashboard/AssistenteDashboardDialog";
 import { Responsive, useContainerWidth, verticalCompactor } from "react-grid-layout";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
@@ -44,6 +45,7 @@ export const Route = createFileRoute("/_authenticated/dashboard")({
     fim: z.string().optional(),
     equipamento: z.string().optional(),
     produto: z.string().optional(),
+    painel: z.string().optional(),
   })),
   head: pageHead({ title: "Dashboard — STHApc", description: "Acesse e gerencie Dashboard no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/dashboard" }),
   component: DashboardPage,
@@ -56,7 +58,9 @@ type Widget = {
   fonte: string;
   config: Record<string, unknown>;
   layout: { x: number; y: number; w: number; h: number };
+  dashboard_id?: string | null;
 };
+type Painel = { id: string; nome: string; ordem: number; tv_incluir: boolean; tv_rotacao_seg: number };
 
 type TagRow = { nome: string; unidade: string | null };
 type TankRow = { id: string; codigo: string; nome: string };
@@ -92,20 +96,84 @@ function DashboardPage() {
     });
   }, []);
 
-  const widgets = useQuery({
+  const [assistOpen, setAssistOpen] = useState(false);
+  const paineis = useQuery({
+    queryKey: ["dashboards"],
+    queryFn: async () => {
+      const { data: u } = await supabase.auth.getUser();
+      if (!u.user) return [] as Painel[];
+      const { data, error } = await supabase.from("dashboards").select("id,nome,ordem,tv_incluir,tv_rotacao_seg")
+        .eq("user_id", u.user.id).order("ordem").order("created_at");
+      if (error) throw error;
+      if ((data ?? []).length === 0) {
+        const { data: created, error: e2 } = await supabase.from("dashboards")
+          .insert({ user_id: u.user.id, nome: "Principal", ordem: 0 }).select("id,nome,ordem,tv_incluir,tv_rotacao_seg").single();
+        if (e2) throw e2;
+        await supabase.from("dashboard_widgets").update({ dashboard_id: created.id }).eq("user_id", u.user.id).is("dashboard_id", null);
+        return [created] as Painel[];
+      }
+      return data as Painel[];
+    },
+  });
+  const painelAtual = (paineis.data ?? []).find((p) => p.id === search.painel) ?? paineis.data?.[0];
+  const painelPrincipalId = paineis.data?.[0]?.id;
+
+  const criarPainel = async () => {
+    const nome = prompt("Nome do novo painel:")?.trim();
+    if (!nome) return;
+    const { data: u } = await supabase.auth.getUser();
+    if (!u.user) return;
+    const { data, error } = await supabase.from("dashboards")
+      .insert({ user_id: u.user.id, nome, ordem: (paineis.data?.length ?? 0) }).select("id").single();
+    if (error) return toast.error(error.message);
+    await qc.invalidateQueries({ queryKey: ["dashboards"] });
+    navigate({ search: (prev) => ({ ...prev, painel: data.id }) });
+  };
+  const renomearPainel = async () => {
+    if (!painelAtual) return;
+    const nome = prompt("Novo nome do painel:", painelAtual.nome)?.trim();
+    if (!nome) return;
+    const { error } = await supabase.from("dashboards").update({ nome }).eq("id", painelAtual.id);
+    if (error) return toast.error(error.message);
+    qc.invalidateQueries({ queryKey: ["dashboards"] });
+  };
+  const alternarTv = async () => {
+    if (!painelAtual) return;
+    const { error } = await supabase.from("dashboards").update({ tv_incluir: !painelAtual.tv_incluir }).eq("id", painelAtual.id);
+    if (error) return toast.error(error.message);
+    qc.invalidateQueries({ queryKey: ["dashboards"] });
+    toast.success(painelAtual.tv_incluir ? "Painel removido da rotação da TV" : "Painel incluído na rotação da TV");
+  };
+  const excluirPainel = async () => {
+    if (!painelAtual || painelAtual.id === painelPrincipalId) return;
+    if (!confirm(`Excluir o painel "${painelAtual.nome}" e seus cards?`)) return;
+    const { error } = await supabase.from("dashboards").delete().eq("id", painelAtual.id);
+    if (error) return toast.error(error.message);
+    await qc.invalidateQueries({ queryKey: ["dashboards"] });
+    qc.invalidateQueries({ queryKey: ["dashboard_widgets"] });
+    navigate({ search: (prev) => ({ ...prev, painel: undefined }) });
+  };
+
+  const allWidgets = useQuery({
     queryKey: ["dashboard_widgets"],
     queryFn: async () => {
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) return [] as Widget[];
       const { data, error } = await supabase
         .from("dashboard_widgets")
-        .select("id,titulo,tipo,fonte,config,layout")
+        .select("id,titulo,tipo,fonte,config,layout,dashboard_id")
         .eq("user_id", u.user.id)
         .order("created_at");
       if (error) throw error;
       return (data ?? []) as unknown as Widget[];
     },
   });
+
+  const widgets = {
+    ...allWidgets,
+    data: (allWidgets.data ?? []).filter((w) =>
+      painelAtual ? (w.dashboard_id ?? painelPrincipalId) === painelAtual.id : true),
+  };
 
   const lookups = useQuery({
     queryKey: ["dashboard-lookups"],
@@ -140,6 +208,7 @@ function DashboardPage() {
       } else {
         const { error } = await supabase.from("dashboard_widgets").insert({
           user_id: u.user.id,
+          dashboard_id: painelAtual?.id ?? null,
           titulo: w.titulo!, tipo: w.tipo!, fonte: w.fonte!,
           config: (w.config ?? {}) as never,
           // y alto: o compactador encaixa o widget na primeira posição livre abaixo
@@ -187,6 +256,7 @@ function DashboardPage() {
       if (!auth.user) throw new Error("Não autenticado");
       const { error } = await supabase.from("dashboard_widgets").insert({
         user_id: auth.user.id,
+        dashboard_id: painelAtual?.id ?? null,
         titulo: `${widget.titulo} — cópia`,
         tipo: widget.tipo,
         fonte: widget.fonte,
@@ -251,6 +321,12 @@ function DashboardPage() {
                 loading={save.isPending}
               />
             </Dialog>
+            <Button variant="outline" size="sm" onClick={() => setAssistOpen(true)}>
+              <Sparkles className="mr-2 h-4 w-4" />Criar com assistente
+            </Button>
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/dashboard/tv" search={{ painel: painelAtual?.id }}><Tv className="mr-2 h-4 w-4" />Modo TV</Link>
+            </Button>
             <Button
               variant={frozen ? "default" : "outline"}
               size="sm"
@@ -271,6 +347,36 @@ function DashboardPage() {
           </div>
         }
       />
+
+      <div className="flex flex-wrap items-center gap-1 border-b pb-2">
+        {(paineis.data ?? []).map((p) => (
+          <Button key={p.id} size="sm" variant={p.id === painelAtual?.id ? "secondary" : "ghost"} className="h-7"
+            onClick={() => navigate({ search: (prev) => ({ ...prev, painel: p.id }) })}>
+            {p.nome}{p.tv_incluir ? <Tv className="ml-1.5 h-3 w-3 text-muted-foreground" /> : null}
+          </Button>
+        ))}
+        <Button size="sm" variant="ghost" className="h-7 text-muted-foreground" onClick={criarPainel}><Plus className="mr-1 h-3.5 w-3.5" />Painel</Button>
+        {painelAtual && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild><Button size="icon" variant="ghost" className="h-7 w-7" aria-label="Opções do painel"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onClick={renomearPainel}><Pencil className="mr-2 h-4 w-4" />Renomear</DropdownMenuItem>
+              <DropdownMenuItem onClick={alternarTv}><Tv className="mr-2 h-4 w-4" />{painelAtual.tv_incluir ? "Tirar da rotação da TV" : "Incluir na rotação da TV"}</DropdownMenuItem>
+              {painelAtual.id !== painelPrincipalId && (<><DropdownMenuSeparator /><DropdownMenuItem className="text-destructive" onClick={excluirPainel}><Trash2 className="mr-2 h-4 w-4" />Excluir painel</DropdownMenuItem></>)}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+
+      {assistOpen && painelAtual && (
+        <AssistenteDashboardDialog
+          painelId={painelAtual.id}
+          painelNome={painelAtual.nome}
+          temCards={widgets.data.length > 0}
+          onClose={() => setAssistOpen(false)}
+          onDone={() => { setAssistOpen(false); qc.invalidateQueries({ queryKey: ["dashboard_widgets"] }); }}
+        />
+      )}
 
       {periodKey === "custom" ? (
         <div className="flex flex-wrap items-end gap-3 border-y bg-muted/30 px-3 py-2">
@@ -516,6 +622,7 @@ function WidgetDialog({
   const [sheetId, setSheetId] = useState<string>(String(initial?.config?.sheet_id ?? ""));
   const [min, setMin] = useState<string>(String(initial?.config?.min ?? "0"));
   const [max, setMax] = useState<string>(String(initial?.config?.max ?? "100"));
+  const [meta, setMeta] = useState<string>(String(initial?.config?.meta ?? ""));
   const [periodo, setPeriodo] = useState<string>(String(initial?.config?.periodo ?? "inherit"));
   const [sourceSearch, setSourceSearch] = useState("");
 
@@ -559,6 +666,13 @@ function WidgetDialog({
       config.min = Number(min) || 0;
       config.max = Number(max) || 100;
     }
+    if (fonte === "tv.numero" || fonte === "tv.tendencia") {
+      const minV = min === "0" && !initial ? "" : min;
+      const maxV = max === "100" && !initial ? "" : max;
+      if (minV.trim() !== "") config.min = Number(minV);
+      if (maxV.trim() !== "") config.max = Number(maxV);
+    }
+    if (fonte === "tv.meta") config.meta = Number(meta) || 0;
     if (periodo !== "inherit") config.periodo = periodo;
     const layout = initial?.layout ?? { x: 0, y: 0, w: src.colSpan ?? 3, h: src.rowSpan ?? 2 };
     onSave({ titulo: titulo || src.label, tipo: src.tipo, fonte, config, layout });
@@ -699,6 +813,15 @@ function WidgetDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        )}
+        {fonte === "tv.meta" && (
+          <div><Label>Meta de produção no período</Label><Input type="number" value={meta} onChange={(e) => setMeta(e.target.value)} /></div>
+        )}
+        {(fonte === "tv.numero" || fonte === "tv.tendencia") && (
+          <div className="grid grid-cols-2 gap-3">
+            <div><Label>Limite mínimo (opcional)</Label><Input type="number" value={min === "0" && !initial ? "" : min} onChange={(e) => setMin(e.target.value)} /></div>
+            <div><Label>Limite máximo (opcional)</Label><Input type="number" value={max === "100" && !initial ? "" : max} onChange={(e) => setMax(e.target.value)} /></div>
           </div>
         )}
         {fonte === "tag.gauge" && (

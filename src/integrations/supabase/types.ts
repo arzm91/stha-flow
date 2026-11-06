@@ -688,6 +688,7 @@ export type Database = {
         Row: {
           config: Json
           created_at: string
+          dashboard_id: string | null
           fonte: string
           id: string
           layout: Json
@@ -699,6 +700,7 @@ export type Database = {
         Insert: {
           config?: Json
           created_at?: string
+          dashboard_id?: string | null
           fonte: string
           id?: string
           layout?: Json
@@ -710,11 +712,53 @@ export type Database = {
         Update: {
           config?: Json
           created_at?: string
+          dashboard_id?: string | null
           fonte?: string
           id?: string
           layout?: Json
           tipo?: string
           titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dashboard_widgets_dashboard_id_fkey"
+            columns: ["dashboard_id"]
+            isOneToOne: false
+            referencedRelation: "dashboards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      dashboards: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          ordem: number
+          tv_incluir: boolean
+          tv_rotacao_seg: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          tv_incluir?: boolean
+          tv_rotacao_seg?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          tv_incluir?: boolean
+          tv_rotacao_seg?: number
           updated_at?: string
           user_id?: string
         }

@@ -1,3 +1,4 @@
+import { TvWidget } from "@/components/dashboard/TvWidgets";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
@@ -37,6 +38,7 @@ export function DashboardWidget({ widget, period, filters }: { widget: WidgetRow
       </div>
     );
   }
+  if (src.tipo === "tv") return <TvWidget widget={widget} period={widgetPeriod(widget, period)} filters={filters} />;
   // Sparkline overlays em widgets de tag(s)
   const tagNomes = tagNomesFromWidget(widget);
   return (

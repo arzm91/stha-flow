@@ -1,4 +1,4 @@
-export type WidgetTipo = "kpi" | "chart" | "list" | "tag" | "tank" | "producao" | "xray";
+export type WidgetTipo = "kpi" | "chart" | "list" | "tag" | "tank" | "producao" | "xray" | "tv";
 
 export type WidgetSource = {
   key: string;

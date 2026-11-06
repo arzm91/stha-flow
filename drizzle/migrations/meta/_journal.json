@@ -15,6 +15,13 @@
       "when": 1793982611095,
       "tag": "0001_parametros_unidade",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793984022417,
+      "tag": "0002_dashboards_paineis",
+      "breakpoints": true
     }
   ]
 }
