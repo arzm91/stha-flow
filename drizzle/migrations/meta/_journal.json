@@ -8,6 +8,13 @@
       "when": 1793972932983,
       "tag": "0000_troca_produto_automatica",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793982611095,
+      "tag": "0001_parametros_unidade",
+      "breakpoints": true
     }
   ]
 }

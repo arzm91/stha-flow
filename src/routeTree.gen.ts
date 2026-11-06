@@ -27,6 +27,7 @@ import { Route as AuthenticatedEstoqueRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedIndicadoresRouteImport } from './routes/_authenticated/indicadores'
 import { Route as AuthenticatedManutencaoRouteImport } from './routes/_authenticated/manutencao'
 import { Route as AuthenticatedMonitoramentoRouteImport } from './routes/_authenticated/monitoramento'
+import { Route as AuthenticatedParametrosUnidadeRouteImport } from './routes/_authenticated/parametros-unidade'
 import { Route as AuthenticatedProducaoRouteImport } from './routes/_authenticated/producao'
 import { Route as AuthenticatedTabelasRouteImport } from './routes/_authenticated/tabelas'
 import { Route as AuthenticatedTagsRouteImport } from './routes/_authenticated/tags'
@@ -172,6 +173,12 @@ const AuthenticatedMonitoramentoRoute =
   AuthenticatedMonitoramentoRouteImport.update({
     id: '/monitoramento',
     path: '/monitoramento',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedParametrosUnidadeRoute =
+  AuthenticatedParametrosUnidadeRouteImport.update({
+    id: '/parametros-unidade',
+    path: '/parametros-unidade',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedProducaoRoute = AuthenticatedProducaoRouteImport.update({
@@ -490,6 +497,7 @@ export interface FileRoutesByFullPath {
   '/indicadores': typeof AuthenticatedIndicadoresRoute
   '/manutencao': typeof AuthenticatedManutencaoRouteWithChildren
   '/monitoramento': typeof AuthenticatedMonitoramentoRoute
+  '/parametros-unidade': typeof AuthenticatedParametrosUnidadeRoute
   '/producao': typeof AuthenticatedProducaoRouteWithChildren
   '/tabelas': typeof AuthenticatedTabelasRouteWithChildren
   '/tags': typeof AuthenticatedTagsRouteWithChildren
@@ -557,6 +565,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/indicadores': typeof AuthenticatedIndicadoresRoute
   '/monitoramento': typeof AuthenticatedMonitoramentoRoute
+  '/parametros-unidade': typeof AuthenticatedParametrosUnidadeRoute
   '/turnos': typeof AuthenticatedTurnosRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/guias/gestao-da-producao-industrial': typeof GuiasGestaoDaProducaoIndustrialRoute
@@ -627,6 +636,7 @@ export interface FileRoutesById {
   '/_authenticated/indicadores': typeof AuthenticatedIndicadoresRoute
   '/_authenticated/manutencao': typeof AuthenticatedManutencaoRouteWithChildren
   '/_authenticated/monitoramento': typeof AuthenticatedMonitoramentoRoute
+  '/_authenticated/parametros-unidade': typeof AuthenticatedParametrosUnidadeRoute
   '/_authenticated/producao': typeof AuthenticatedProducaoRouteWithChildren
   '/_authenticated/tabelas': typeof AuthenticatedTabelasRouteWithChildren
   '/_authenticated/tags': typeof AuthenticatedTagsRouteWithChildren
@@ -700,6 +710,7 @@ export interface FileRouteTypes {
     | '/indicadores'
     | '/manutencao'
     | '/monitoramento'
+    | '/parametros-unidade'
     | '/producao'
     | '/tabelas'
     | '/tags'
@@ -767,6 +778,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/indicadores'
     | '/monitoramento'
+    | '/parametros-unidade'
     | '/turnos'
     | '/email/unsubscribe'
     | '/guias/gestao-da-producao-industrial'
@@ -836,6 +848,7 @@ export interface FileRouteTypes {
     | '/_authenticated/indicadores'
     | '/_authenticated/manutencao'
     | '/_authenticated/monitoramento'
+    | '/_authenticated/parametros-unidade'
     | '/_authenticated/producao'
     | '/_authenticated/tabelas'
     | '/_authenticated/tags'
@@ -1045,6 +1058,13 @@ declare module '@tanstack/react-router' {
       path: '/monitoramento'
       fullPath: '/monitoramento'
       preLoaderRoute: typeof AuthenticatedMonitoramentoRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/parametros-unidade': {
+      id: '/_authenticated/parametros-unidade'
+      path: '/parametros-unidade'
+      fullPath: '/parametros-unidade'
+      preLoaderRoute: typeof AuthenticatedParametrosUnidadeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/producao': {
@@ -1586,6 +1606,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedIndicadoresRoute: typeof AuthenticatedIndicadoresRoute
   AuthenticatedManutencaoRoute: typeof AuthenticatedManutencaoRouteWithChildren
   AuthenticatedMonitoramentoRoute: typeof AuthenticatedMonitoramentoRoute
+  AuthenticatedParametrosUnidadeRoute: typeof AuthenticatedParametrosUnidadeRoute
   AuthenticatedProducaoRoute: typeof AuthenticatedProducaoRouteWithChildren
   AuthenticatedTabelasRoute: typeof AuthenticatedTabelasRouteWithChildren
   AuthenticatedTagsRoute: typeof AuthenticatedTagsRouteWithChildren
@@ -1604,6 +1625,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedIndicadoresRoute: AuthenticatedIndicadoresRoute,
   AuthenticatedManutencaoRoute: AuthenticatedManutencaoRouteWithChildren,
   AuthenticatedMonitoramentoRoute: AuthenticatedMonitoramentoRoute,
+  AuthenticatedParametrosUnidadeRoute: AuthenticatedParametrosUnidadeRoute,
   AuthenticatedProducaoRoute: AuthenticatedProducaoRouteWithChildren,
   AuthenticatedTabelasRoute: AuthenticatedTabelasRouteWithChildren,
   AuthenticatedTagsRoute: AuthenticatedTagsRouteWithChildren,

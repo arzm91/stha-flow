@@ -1956,6 +1956,96 @@ export type Database = {
           },
         ]
       }
+      parametros_unidade: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          decimais: number
+          equipamento_id: string | null
+          grupo: string | null
+          id: string
+          margem_max: number | null
+          margem_min: number | null
+          margem_modo: string
+          nome: string
+          observacao: string | null
+          ordem: number
+          owner_id: string
+          produto_id: string | null
+          set_formula: string | null
+          set_modo: string
+          set_valor: number | null
+          tag_leitura: string | null
+          tolerancia_ideal: number | null
+          unidade: string | null
+          updated_at: string
+          variaveis: Json
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          decimais?: number
+          equipamento_id?: string | null
+          grupo?: string | null
+          id?: string
+          margem_max?: number | null
+          margem_min?: number | null
+          margem_modo?: string
+          nome: string
+          observacao?: string | null
+          ordem?: number
+          owner_id: string
+          produto_id?: string | null
+          set_formula?: string | null
+          set_modo?: string
+          set_valor?: number | null
+          tag_leitura?: string | null
+          tolerancia_ideal?: number | null
+          unidade?: string | null
+          updated_at?: string
+          variaveis?: Json
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          decimais?: number
+          equipamento_id?: string | null
+          grupo?: string | null
+          id?: string
+          margem_max?: number | null
+          margem_min?: number | null
+          margem_modo?: string
+          nome?: string
+          observacao?: string | null
+          ordem?: number
+          owner_id?: string
+          produto_id?: string | null
+          set_formula?: string | null
+          set_modo?: string
+          set_valor?: number | null
+          tag_leitura?: string | null
+          tolerancia_ideal?: number | null
+          unidade?: string | null
+          updated_at?: string
+          variaveis?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parametros_unidade_equipamento_id_fkey"
+            columns: ["equipamento_id"]
+            isOneToOne: false
+            referencedRelation: "equipamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parametros_unidade_produto_id_fkey"
+            columns: ["produto_id"]
+            isOneToOne: false
+            referencedRelation: "produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       producao_tag_historico: {
         Row: {
           created_at: string

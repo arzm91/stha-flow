@@ -12,6 +12,7 @@ import {
   Table as TableIcon,
   CalendarClock,
   Wrench,
+  Gauge,
 } from "lucide-react";
 
 import sthaLogo from "@/assets/stha_logo.png.asset.json";
@@ -44,6 +45,7 @@ const items: Item[] = [
   { title: "Produção", url: "/producao", icon: Factory, pageKey: "producao" },
   { title: "Estoque", url: "/estoque", icon: Boxes, pageKey: "estoque" },
   { title: "Turnos", url: "/turnos", icon: CalendarClock, pageKey: "turnos" },
+  { title: "Parâmetros", url: "/parametros-unidade", icon: Gauge },
   { title: "Manutenção", url: "/manutencao", icon: Wrench, prefix: "/manutencao", pageKey: "manutencao" },
   { title: "Tags ao Vivo", url: "/tags", icon: Radio, pageKey: "tags" },
   { title: "Tabelas", url: "/tabelas", icon: TableIcon, prefix: "/tabelas", pageKey: "tabelas" },

@@ -177,3 +177,14 @@
 .pd-no-resize .react-grid-item > .react-resizable-handle { display: none; }
 
 
+
+/* Relatório A4 — Parâmetros da Unidade */
+@media print {
+  @page { size: A4 portrait; margin: 12mm; }
+  body:has(.param-page) * { visibility: hidden; }
+  body:has(.param-page) .param-page, body:has(.param-page) .param-page * { visibility: visible; }
+  body:has(.param-page) .param-page { position: absolute; inset: 0; width: 100%; font-size: 10pt; color: #000; }
+  .param-page .print-break-avoid { break-inside: avoid; }
+  .param-page tr.param-bad { background: #fde2e2 !important; font-weight: 700; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .param-page tr.param-bad td:first-child { border-left: 4px solid #c00; }
+}
