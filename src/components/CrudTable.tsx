@@ -93,6 +93,8 @@ export function CrudTable({
         if (payload[k] === "") payload[k] = null;
       }
       if (editing) {
+        // Keep the record's tenant owner; overwriting with the current user breaks RLS for team members.
+        delete payload.owner_id;
         const { error } = await supabase.from(table as never).update(payload as never).eq("id", editing.id);
         if (error) throw error;
       } else {
