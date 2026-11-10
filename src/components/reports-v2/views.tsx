@@ -3,9 +3,16 @@ import { useServerFn } from "@tanstack/react-start";
 import { KpiCard, SectionTitle, DataTable, StatusBadge, SeverityBadge, HBarChart } from "./atoms";
 import { ReportShell } from "./ReportShell";
 import {
-  fetchEstoqueTotal, fetchProdutividadeTotal, fetchProdutividadeEquip,
-  fetchMensal, fetchManutencao24h, fetchOsManutencao, fetchOrdemProducao,
-  fetchAlertas24h, listOsManutencao, listOrdensProducao,
+  fetchEstoqueTotal,
+  fetchProdutividadeTotal,
+  fetchProdutividadeEquip,
+  fetchMensal,
+  fetchManutencao24h,
+  fetchOsManutencao,
+  fetchOrdemProducao,
+  fetchAlertas24h,
+  listOsManutencao,
+  listOrdensProducao,
 } from "@/lib/reports-v2/data.functions";
 import { REPORTS } from "@/lib/reports-v2/registry";
 import { formatDate, formatNumber, formatInt } from "@/lib/format";
@@ -30,26 +37,54 @@ export function EstoqueTotalReport() {
   const fn = useServerFn(fetchEstoqueTotal);
   const { data, isLoading, refetch } = useQuery({ queryKey: ["rep-estoque-total"], queryFn: () => fn() });
   const meta = REPORTS["estoque-total"];
-  if (isLoading || !data) return <ReportShell title={meta.titulo} accent={meta.cor}><div className="p-8 text-center text-slate-500">Carregando…</div></ReportShell>;
-  const criticos = data.linhas.filter((l: any) => l.diasCobertura !== null && l.diasCobertura < 7).sort((a: any, b: any) => a.diasCobertura - b.diasCobertura);
+  if (isLoading || !data)
+    return (
+      <ReportShell title={meta.titulo} accent={meta.cor}>
+        <div className="p-8 text-center text-slate-500">Carregando…</div>
+      </ReportShell>
+    );
+  const criticos = data.linhas
+    .filter((l: any) => l.diasCobertura !== null && l.diasCobertura < 7)
+    .sort((a: any, b: any) => a.diasCobertura - b.diasCobertura);
   return (
-    <ReportShell title={meta.titulo} subtitle={meta.descricao} accent={meta.cor} periodo="Últimos 30 dias" onRefresh={refetch}>
+    <ReportShell
+      title={meta.titulo}
+      subtitle={meta.descricao}
+      accent={meta.cor}
+      periodo="Últimos 30 dias"
+      onRefresh={refetch}
+    >
       <div className="grid grid-cols-4 gap-3 break-avoid">
         <KpiCard label="Produtos ativos" value={ni(data.kpis.totalProdutos)} tone="primary" />
-        <KpiCard label="Entradas 30d" value={nf(data.kpis.totalEntradas30d)} tone="success" hint={`${nf(data.kpis.ent24)} nas últimas 24h`} />
-        <KpiCard label="Saídas 30d" value={nf(data.kpis.totalSaidas30d)} tone="warning" hint={`${nf(data.kpis.sai24)} nas últimas 24h`} />
+        <KpiCard
+          label="Entradas 30d"
+          value={nf(data.kpis.totalEntradas30d)}
+          tone="success"
+          hint={`${nf(data.kpis.ent24)} nas últimas 24h`}
+        />
+        <KpiCard
+          label="Saídas 30d"
+          value={nf(data.kpis.totalSaidas30d)}
+          tone="warning"
+          hint={`${nf(data.kpis.sai24)} nas últimas 24h`}
+        />
         <KpiCard label="Estoque crítico" value={ni(data.kpis.criticos)} tone="danger" hint="Cobertura < 7 dias" />
       </div>
 
       {criticos.length > 0 && (
         <>
           <SectionTitle accent={meta.cor}>Alertas de reposição</SectionTitle>
-          <DataTable rows={criticos.slice(0, 10)}
+          <DataTable
+            rows={criticos.slice(0, 10)}
             columns={[
               { header: "Produto", cell: (r: any) => <span className="font-medium">{r.nome}</span> },
               { header: "Saldo", align: "right", cell: (r: any) => `${nf(r.saldoAtual)} ${r.unidade || ""}` },
               { header: "Consumo/dia", align: "right", cell: (r: any) => nf(r.consumoDiario) },
-              { header: "Dias cobertura", align: "right", cell: (r: any) => <span className="font-bold text-red-700">{r.diasCobertura?.toFixed(1) ?? "—"}</span> },
+              {
+                header: "Dias cobertura",
+                align: "right",
+                cell: (r: any) => <span className="font-bold text-red-700">{r.diasCobertura?.toFixed(1) ?? "—"}</span>,
+              },
               { header: "Projetado 7d", align: "right", cell: (r: any) => nf(r.projetado7d) },
             ]}
           />
@@ -57,7 +92,8 @@ export function EstoqueTotalReport() {
       )}
 
       <SectionTitle accent={meta.cor}>Estoque por produto</SectionTitle>
-      <DataTable rows={data.linhas}
+      <DataTable
+        rows={data.linhas}
         columns={[
           { header: "Código", cell: (r: any) => <span className="font-mono text-[10px]">{r.codigo}</span> },
           { header: "Produto", cell: (r: any) => r.nome },
@@ -65,7 +101,11 @@ export function EstoqueTotalReport() {
           { header: "Entradas 30d", align: "right", cell: (r: any) => nf(r.entradas30d) },
           { header: "Saídas 30d", align: "right", cell: (r: any) => nf(r.saidas30d) },
           { header: "Saldo", align: "right", cell: (r: any) => <span className="font-bold">{nf(r.saldoAtual)}</span> },
-          { header: "Cobertura", align: "right", cell: (r: any) => r.diasCobertura !== null ? `${r.diasCobertura.toFixed(1)}d` : "—" },
+          {
+            header: "Cobertura",
+            align: "right",
+            cell: (r: any) => (r.diasCobertura !== null ? `${r.diasCobertura.toFixed(1)}d` : "—"),
+          },
         ]}
       />
     </ReportShell>
@@ -79,9 +119,20 @@ export function ProdutividadeTotalReport() {
   const fn = useServerFn(fetchProdutividadeTotal);
   const { data, isLoading, refetch } = useQuery({ queryKey: ["rep-prod-total"], queryFn: () => fn() });
   const meta = REPORTS["produtividade-total"];
-  if (isLoading || !data) return <ReportShell title={meta.titulo} accent={meta.cor}><div className="p-8 text-center text-slate-500">Carregando…</div></ReportShell>;
+  if (isLoading || !data)
+    return (
+      <ReportShell title={meta.titulo} accent={meta.cor}>
+        <div className="p-8 text-center text-slate-500">Carregando…</div>
+      </ReportShell>
+    );
   return (
-    <ReportShell title={meta.titulo} subtitle={meta.descricao} accent={meta.cor} periodo={periodoMes()} onRefresh={refetch}>
+    <ReportShell
+      title={meta.titulo}
+      subtitle={meta.descricao}
+      accent={meta.cor}
+      periodo={periodoMes()}
+      onRefresh={refetch}
+    >
       <div className="grid grid-cols-5 gap-3 break-avoid">
         <KpiCard label="Equipamentos ativos" value={ni(data.kpis.totalEquip)} tone="primary" />
         <KpiCard label="Produção do mês" value={nf(data.kpis.producaoMes)} tone="success" />
@@ -103,8 +154,14 @@ export function ProdutividadeTotalReport() {
               <StatusBadge status={e.status} />
             </div>
             <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
-              <div><div className="text-slate-500">Total mês</div><div className="text-lg font-bold text-blue-700">{nf(e.totalMes)}</div></div>
-              <div><div className="text-slate-500">Finalizadas</div><div className="text-lg font-bold text-emerald-700">{e.finalizadasMes}</div></div>
+              <div>
+                <div className="text-slate-500">Total mês</div>
+                <div className="text-lg font-bold text-blue-700">{nf(e.totalMes)}</div>
+              </div>
+              <div>
+                <div className="text-slate-500">Finalizadas</div>
+                <div className="text-lg font-bold text-emerald-700">{e.finalizadasMes}</div>
+              </div>
             </div>
             {e.ultima ? (
               <div className="mt-3 rounded bg-slate-50 p-2 text-[11px]">
@@ -113,16 +170,25 @@ export function ProdutividadeTotalReport() {
                   <StatusBadge status={e.ultima.status} />
                 </div>
                 <div className="text-slate-700">{e.ultima.produto}</div>
-                <div className="mt-1 text-slate-500">Produzida: <span className="font-mono font-semibold text-slate-800">{nf(e.ultima.qtd)} {e.ultima.unidade}</span> / Planejada: {nf(e.ultima.planejada)}</div>
+                <div className="mt-1 text-slate-500">
+                  Produzida:{" "}
+                  <span className="font-mono font-semibold text-slate-800">
+                    {nf(e.ultima.qtd)} {e.ultima.unidade}
+                  </span>{" "}
+                  / Planejada: {nf(e.ultima.planejada)}
+                </div>
                 <div className="text-slate-500">Fim: {fd(e.ultima.fim)}</div>
               </div>
-            ) : <div className="mt-3 text-[11px] italic text-slate-400">Sem produções no mês</div>}
+            ) : (
+              <div className="mt-3 text-[11px] italic text-slate-400">Sem produções no mês</div>
+            )}
           </div>
         ))}
       </div>
 
       <SectionTitle accent={meta.cor}>Estoque atual (top 30)</SectionTitle>
-      <DataTable rows={data.estoque}
+      <DataTable
+        rows={data.estoque}
         columns={[
           { header: "Produto", cell: (r: any) => r.nome },
           { header: "Unidade", cell: (r: any) => r.unidade },
@@ -157,23 +223,50 @@ export function ProdutividadeEquipReport({ equipamentoId, ordemId }: { equipamen
 
   const actions = (
     <Select value={selected} onValueChange={setSelected}>
-      <SelectTrigger className="w-64"><SelectValue placeholder="Selecione o equipamento" /></SelectTrigger>
+      <SelectTrigger className="w-64">
+        <SelectValue placeholder="Selecione o equipamento" />
+      </SelectTrigger>
       <SelectContent>
-        {(equips ?? []).map((e: any) => <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>)}
+        {(equips ?? []).map((e: any) => (
+          <SelectItem key={e.id} value={e.id}>
+            {e.nome}
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );
 
-  if (!selected) return <ReportShell title={meta.titulo} accent={meta.cor} actions={actions}><div className="p-8 text-center text-slate-500">Selecione um equipamento no topo.</div></ReportShell>;
-  if (isLoading || !data) return <ReportShell title={meta.titulo} accent={meta.cor} actions={actions}><div className="p-8 text-center text-slate-500">Carregando…</div></ReportShell>;
+  if (!selected)
+    return (
+      <ReportShell title={meta.titulo} accent={meta.cor} actions={actions}>
+        <div className="p-8 text-center text-slate-500">Selecione um equipamento no topo.</div>
+      </ReportShell>
+    );
+  if (isLoading || !data)
+    return (
+      <ReportShell title={meta.titulo} accent={meta.cor} actions={actions}>
+        <div className="p-8 text-center text-slate-500">Carregando…</div>
+      </ReportShell>
+    );
 
   return (
-    <ReportShell title={meta.titulo} subtitle={data.equip.nome} accent={meta.cor} periodo={periodoMes()} onRefresh={refetch} actions={actions}>
+    <ReportShell
+      title={meta.titulo}
+      subtitle={data.equip.nome}
+      accent={meta.cor}
+      periodo={periodoMes()}
+      onRefresh={refetch}
+      actions={actions}
+    >
       <div className="grid grid-cols-4 gap-3 break-avoid">
         <KpiCard label="Total mês" value={nf(data.kpis.totalMes)} tone="primary" />
         <KpiCard label="Ordens" value={ni(data.kpis.ordensMes)} />
         <KpiCard label="Finalizadas" value={ni(data.kpis.finalizadasMes)} tone="success" />
-        <KpiCard label="Eficiência última" value={data.kpis.eficienciaUltima !== null ? `${data.kpis.eficienciaUltima.toFixed(1)}%` : "—"} tone={data.kpis.eficienciaUltima && data.kpis.eficienciaUltima >= 95 ? "success" : "warning"} />
+        <KpiCard
+          label="Eficiência última"
+          value={data.kpis.eficienciaUltima !== null ? `${data.kpis.eficienciaUltima.toFixed(1)}%` : "—"}
+          tone={data.kpis.eficienciaUltima && data.kpis.eficienciaUltima >= 95 ? "success" : "warning"}
+        />
       </div>
 
       {data.ultima && (
@@ -189,21 +282,54 @@ export function ProdutividadeEquipReport({ equipamentoId, ordemId }: { equipamen
               <StatusBadge status={data.ultima.status} />
             </div>
             <div className="mt-3 grid grid-cols-4 gap-3 text-xs">
-              <div><div className="text-slate-500">Planejada</div><div className="text-lg font-bold">{nf(data.ultima.qtd_planejada)}</div></div>
-              <div><div className="text-slate-500">Produzida</div><div className="text-lg font-bold text-blue-700">{nf(data.ultima.qtd_produzida)}</div></div>
-              <div><div className="text-slate-500">Início</div><div className="text-sm">{fd(data.ultima.inicio_em)}</div></div>
-              <div><div className="text-slate-500">Fim</div><div className="text-sm">{fd(data.ultima.fim_em)}</div></div>
+              <div>
+                <div className="text-slate-500">Planejada</div>
+                <div className="text-lg font-bold">{nf(data.ultima.qtd_planejada)}</div>
+              </div>
+              <div>
+                <div className="text-slate-500">Produzida</div>
+                <div className="text-lg font-bold text-blue-700">{nf(data.ultima.qtd_produzida)}</div>
+              </div>
+              <div>
+                <div className="text-slate-500">Início</div>
+                <div className="text-sm">{fd(data.ultima.inicio_em)}</div>
+              </div>
+              <div>
+                <div className="text-slate-500">Fim</div>
+                <div className="text-sm">{fd(data.ultima.fim_em)}</div>
+              </div>
             </div>
-            {data.ultima.obs_finais && <div className="mt-3 rounded bg-slate-50 p-2 text-xs"><span className="font-semibold">Observações: </span>{data.ultima.obs_finais}</div>}
+            {data.ultima.obs_finais && (
+              <div className="mt-3 rounded bg-slate-50 p-2 text-xs">
+                <span className="font-semibold">Observações: </span>
+                {data.ultima.obs_finais}
+              </div>
+            )}
           </div>
 
           <SectionTitle accent={meta.cor}>Matérias-primas consumidas</SectionTitle>
-          <DataTable rows={data.materiais}
+          <DataTable
+            rows={data.materiais}
             columns={[
-              { header: "Matéria-prima", cell: (r: any) => <><span className="font-mono text-[10px] text-slate-500">{r.codigo}</span> {r.nome}</> },
+              {
+                header: "Matéria-prima",
+                cell: (r: any) => (
+                  <>
+                    <span className="font-mono text-[10px] text-slate-500">{r.codigo}</span> {r.nome}
+                  </>
+                ),
+              },
               { header: "%", align: "right", cell: (r: any) => `${nf(r.percentual, 1)}%` },
               { header: "Prevista", align: "right", cell: (r: any) => `${nf(r.prevista)} ${r.unidade}` },
-              { header: "Consumida", align: "right", cell: (r: any) => <span className="font-bold">{nf(r.consumida)} {r.unidade}</span> },
+              {
+                header: "Consumida",
+                align: "right",
+                cell: (r: any) => (
+                  <span className="font-bold">
+                    {nf(r.consumida)} {r.unidade}
+                  </span>
+                ),
+              },
               { header: "Δ", align: "right", cell: (r: any) => nf(r.consumida - r.prevista) },
             ]}
           />
@@ -211,13 +337,18 @@ export function ProdutividadeEquipReport({ equipamentoId, ordemId }: { equipamen
       )}
 
       <SectionTitle accent={meta.cor}>Histórico do mês</SectionTitle>
-      <DataTable rows={data.historico}
+      <DataTable
+        rows={data.historico}
         columns={[
           { header: "OP", cell: (r: any) => r.numero },
           { header: "Produto", cell: (r: any) => r.produto },
           { header: "Status", cell: (r: any) => <StatusBadge status={r.status} /> },
-          { header: "Planejada", align: "right", cell: (r: any) => nf(r.planejada) },
-          { header: "Produzida", align: "right", cell: (r: any) => <span className="font-semibold">{nf(r.produzida)}</span> },
+          {
+            header: "Produzida",
+            align: "right",
+            cell: (r: any) => <span className="font-semibold">{nf(r.produzida)}</span>,
+          },
+          { header: "Conversão", align: "right", cell: (r: any) => nf(r.planejada) },
           { header: "Fim", cell: (r: any) => fd(r.fim) },
         ]}
       />
@@ -231,44 +362,86 @@ export function ProdutividadeEquipReport({ equipamentoId, ordemId }: { equipamen
 export function MensalReport() {
   const [equip, setEquip] = useState<string | undefined>();
   const fn = useServerFn(fetchMensal);
-  const { data, isLoading, refetch } = useQuery({ queryKey: ["rep-mensal", equip], queryFn: () => fn({ data: { equipamentoId: equip } }) });
+  const { data, isLoading, refetch } = useQuery({
+    queryKey: ["rep-mensal", equip],
+    queryFn: () => fn({ data: { equipamentoId: equip } }),
+  });
   const meta = REPORTS["mensal"];
   const actions = (
     <Select value={equip ?? "all"} onValueChange={(v) => setEquip(v === "all" ? undefined : v)}>
-      <SelectTrigger className="w-56"><SelectValue placeholder="Filtrar por equipamento" /></SelectTrigger>
+      <SelectTrigger className="w-56">
+        <SelectValue placeholder="Filtrar por equipamento" />
+      </SelectTrigger>
       <SelectContent>
         <SelectItem value="all">Todos os equipamentos</SelectItem>
-        {(data?.equipamentos ?? []).map((e: any) => <SelectItem key={e.id} value={e.id}>{e.nome}</SelectItem>)}
+        {(data?.equipamentos ?? []).map((e: any) => (
+          <SelectItem key={e.id} value={e.id}>
+            {e.nome}
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );
-  if (isLoading || !data) return <ReportShell title={meta.titulo} accent={meta.cor} actions={actions}><div className="p-8 text-center">Carregando…</div></ReportShell>;
-  const eficiencia = data.kpis.totalPlanejado > 0 ? (data.kpis.totalProduzido / data.kpis.totalPlanejado * 100) : 0;
+  if (isLoading || !data)
+    return (
+      <ReportShell title={meta.titulo} accent={meta.cor} actions={actions}>
+        <div className="p-8 text-center">Carregando…</div>
+      </ReportShell>
+    );
+  const eficiencia = data.kpis.totalPlanejado > 0 ? (data.kpis.totalProduzido / data.kpis.totalPlanejado) * 100 : 0;
   return (
-    <ReportShell title={meta.titulo} subtitle={meta.descricao} accent={meta.cor} periodo={periodoMes()} onRefresh={refetch} actions={actions}>
+    <ReportShell
+      title={meta.titulo}
+      subtitle={meta.descricao}
+      accent={meta.cor}
+      periodo={periodoMes()}
+      onRefresh={refetch}
+      actions={actions}
+    >
       <div className="grid grid-cols-5 gap-3 break-avoid">
         <KpiCard label="Total ordens" value={ni(data.kpis.totalOrdens)} tone="primary" />
         <KpiCard label="Produzido" value={nf(data.kpis.totalProduzido)} tone="success" />
         <KpiCard label="Planejado" value={nf(data.kpis.totalPlanejado)} />
-        <KpiCard label="Eficiência" value={`${eficiencia.toFixed(1)}%`} tone={eficiencia >= 95 ? "success" : "warning"} />
+        <KpiCard
+          label="Eficiência"
+          value={`${eficiencia.toFixed(1)}%`}
+          tone={eficiencia >= 95 ? "success" : "warning"}
+        />
         <KpiCard label="Em andamento" value={ni(data.kpis.emAndamento)} tone="warning" />
       </div>
 
       {data.grupos.map((g: any, i: number) => (
         <div key={i} className="break-avoid">
-          <SectionTitle accent={meta.cor}>{g.equip.nome}{g.equip.codigo ? ` · ${g.equip.codigo}` : ""}</SectionTitle>
+          <SectionTitle accent={meta.cor}>
+            {g.equip.nome}
+            {g.equip.codigo ? ` · ${g.equip.codigo}` : ""}
+          </SectionTitle>
           <div className="mb-2 grid grid-cols-3 gap-2 text-xs">
-            <div className="rounded border bg-slate-50 p-2"><div className="text-slate-500">Produzido</div><div className="text-lg font-bold text-blue-700">{nf(g.totalMes)}</div></div>
-            <div className="rounded border bg-slate-50 p-2"><div className="text-slate-500">Ordens</div><div className="text-lg font-bold">{g.ordens.length}</div></div>
-            <div className="rounded border bg-slate-50 p-2"><div className="text-slate-500">Finalizadas</div><div className="text-lg font-bold text-emerald-700">{g.finalizadas}</div></div>
+            <div className="rounded border bg-slate-50 p-2">
+              <div className="text-slate-500">Produzido</div>
+              <div className="text-lg font-bold text-blue-700">{nf(g.totalMes)}</div>
+            </div>
+            <div className="rounded border bg-slate-50 p-2">
+              <div className="text-slate-500">Ordens</div>
+              <div className="text-lg font-bold">{g.ordens.length}</div>
+            </div>
+            <div className="rounded border bg-slate-50 p-2">
+              <div className="text-slate-500">Finalizadas</div>
+              <div className="text-lg font-bold text-emerald-700">{g.finalizadas}</div>
+            </div>
           </div>
-          <DataTable rows={g.ordens}
+          <DataTable
+            rows={g.ordens}
             columns={[
               { header: "OP", cell: (r: any) => r.numero },
               { header: "Produto", cell: (r: any) => r.produto },
               { header: "Status", cell: (r: any) => <StatusBadge status={r.status} /> },
               { header: "Plan.", align: "right", cell: (r: any) => nf(r.planejada) },
-              { header: "Prod.", align: "right", cell: (r: any) => <span className="font-semibold">{nf(r.produzida)}</span> },
+              {
+                header: "Prod.",
+                align: "right",
+                cell: (r: any) => <span className="font-semibold">{nf(r.produzida)}</span>,
+              },
               { header: "Fim", cell: (r: any) => fd(r.fim) },
             ]}
           />
@@ -285,9 +458,20 @@ export function Manutencao24hReport() {
   const fn = useServerFn(fetchManutencao24h);
   const { data, isLoading, refetch } = useQuery({ queryKey: ["rep-man-24h"], queryFn: () => fn() });
   const meta = REPORTS["manutencao-24h"];
-  if (isLoading || !data) return <ReportShell title={meta.titulo} accent={meta.cor}><div className="p-8 text-center">Carregando…</div></ReportShell>;
+  if (isLoading || !data)
+    return (
+      <ReportShell title={meta.titulo} accent={meta.cor}>
+        <div className="p-8 text-center">Carregando…</div>
+      </ReportShell>
+    );
   return (
-    <ReportShell title={meta.titulo} subtitle={meta.descricao} accent={meta.cor} periodo="Últimas 24h" onRefresh={refetch}>
+    <ReportShell
+      title={meta.titulo}
+      subtitle={meta.descricao}
+      accent={meta.cor}
+      periodo="Últimas 24h"
+      onRefresh={refetch}
+    >
       <div className="grid grid-cols-4 gap-3 break-avoid">
         <KpiCard label="Realizadas 24h" value={ni(data.kpis.realizadas24h)} tone="success" />
         <KpiCard label="Programadas" value={ni(data.kpis.programadas)} tone="primary" />
@@ -296,7 +480,9 @@ export function Manutencao24hReport() {
       </div>
 
       <SectionTitle accent={meta.cor}>Realizadas nas últimas 24h</SectionTitle>
-      <DataTable rows={data.realizadas} empty="Nenhuma manutenção realizada nas últimas 24h"
+      <DataTable
+        rows={data.realizadas}
+        empty="Nenhuma manutenção realizada nas últimas 24h"
         columns={[
           { header: "OS", cell: (r: any) => <span className="font-mono">{r.numero}</span> },
           { header: "Equipamento", cell: (r: any) => r.equipamento },
@@ -309,12 +495,21 @@ export function Manutencao24hReport() {
       />
 
       <SectionTitle accent={meta.cor}>Programadas</SectionTitle>
-      <DataTable rows={data.programadas} empty="Sem manutenções programadas"
+      <DataTable
+        rows={data.programadas}
+        empty="Sem manutenções programadas"
         columns={[
           { header: "OS", cell: (r: any) => <span className="font-mono">{r.numero}</span> },
           { header: "Equipamento", cell: (r: any) => r.equipamento },
           { header: "Tipo", cell: (r: any) => r.tipo },
-          { header: "Prioridade", cell: (r: any) => <span className={r.prioridade === "alta" || r.prioridade === "critica" ? "font-bold text-red-700" : ""}>{r.prioridade}</span> },
+          {
+            header: "Prioridade",
+            cell: (r: any) => (
+              <span className={r.prioridade === "alta" || r.prioridade === "critica" ? "font-bold text-red-700" : ""}>
+                {r.prioridade}
+              </span>
+            ),
+          },
           { header: "Agendada", cell: (r: any) => fd(r.agendada_para) },
           { header: "Status", cell: (r: any) => <StatusBadge status={r.status} /> },
         ]}
@@ -333,24 +528,52 @@ export function OsManutencaoReport({ id }: { id?: string }) {
   const { data: lista } = useQuery({ queryKey: ["os-man-list"], queryFn: () => listFn() });
   const fn = useServerFn(fetchOsManutencao);
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["rep-os-man", selected], queryFn: () => fn({ data: { id: selected! } }), enabled: !!selected,
+    queryKey: ["rep-os-man", selected],
+    queryFn: () => fn({ data: { id: selected! } }),
+    enabled: !!selected,
   });
   const actions = (
     <Select value={selected} onValueChange={setSelected}>
-      <SelectTrigger className="w-64"><SelectValue placeholder="Selecione a OS" /></SelectTrigger>
+      <SelectTrigger className="w-64">
+        <SelectValue placeholder="Selecione a OS" />
+      </SelectTrigger>
       <SelectContent>
-        {(lista ?? []).map((o: any) => <SelectItem key={o.id} value={o.id}>{o.numero} · {o.status}</SelectItem>)}
+        {(lista ?? []).map((o: any) => (
+          <SelectItem key={o.id} value={o.id}>
+            {o.numero} · {o.status}
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );
-  if (!selected) return <ReportShell title={meta.titulo} accent={meta.cor} actions={actions}><div className="p-8 text-center text-slate-500">Selecione uma ordem de serviço.</div></ReportShell>;
-  if (isLoading || !data) return <ReportShell title={meta.titulo} accent={meta.cor} actions={actions}><div className="p-8 text-center">Carregando…</div></ReportShell>;
+  if (!selected)
+    return (
+      <ReportShell title={meta.titulo} accent={meta.cor} actions={actions}>
+        <div className="p-8 text-center text-slate-500">Selecione uma ordem de serviço.</div>
+      </ReportShell>
+    );
+  if (isLoading || !data)
+    return (
+      <ReportShell title={meta.titulo} accent={meta.cor} actions={actions}>
+        <div className="p-8 text-center">Carregando…</div>
+      </ReportShell>
+    );
   const os = data.os;
   return (
-    <ReportShell title={`OS ${os.numero}`} subtitle={data.equipamento?.nome ?? "—"} accent={meta.cor} onRefresh={refetch} actions={actions}>
+    <ReportShell
+      title={`OS ${os.numero}`}
+      subtitle={data.equipamento?.nome ?? "—"}
+      accent={meta.cor}
+      onRefresh={refetch}
+      actions={actions}
+    >
       <div className="grid grid-cols-4 gap-3 break-avoid">
         <KpiCard label="Tipo" value={os.tipo} />
-        <KpiCard label="Prioridade" value={os.prioridade} tone={os.prioridade === "alta" || os.prioridade === "critica" ? "danger" : "default"} />
+        <KpiCard
+          label="Prioridade"
+          value={os.prioridade}
+          tone={os.prioridade === "alta" || os.prioridade === "critica" ? "danger" : "default"}
+        />
         <KpiCard label="Status" value={<StatusBadge status={os.status} />} />
         <KpiCard label="Custo" value={`R$ ${nf(os.custo)}`} />
       </div>
@@ -358,20 +581,47 @@ export function OsManutencaoReport({ id }: { id?: string }) {
       <SectionTitle accent={meta.cor}>Equipamento</SectionTitle>
       <div className="rounded-lg border bg-slate-50 p-4 text-sm">
         <div className="grid grid-cols-2 gap-3">
-          <div><span className="text-slate-500">Código: </span><span className="font-mono font-semibold">{data.equipamento?.codigo ?? "—"}</span></div>
-          <div><span className="text-slate-500">Nome: </span><span className="font-semibold">{data.equipamento?.nome ?? "—"}</span></div>
-          <div><span className="text-slate-500">Tipo: </span>{data.equipamento?.tipo ?? "—"}</div>
-          <div><span className="text-slate-500">Localização: </span>{data.equipamento?.localizacao ?? "—"}</div>
+          <div>
+            <span className="text-slate-500">Código: </span>
+            <span className="font-mono font-semibold">{data.equipamento?.codigo ?? "—"}</span>
+          </div>
+          <div>
+            <span className="text-slate-500">Nome: </span>
+            <span className="font-semibold">{data.equipamento?.nome ?? "—"}</span>
+          </div>
+          <div>
+            <span className="text-slate-500">Tipo: </span>
+            {data.equipamento?.tipo ?? "—"}
+          </div>
+          <div>
+            <span className="text-slate-500">Localização: </span>
+            {data.equipamento?.localizacao ?? "—"}
+          </div>
         </div>
       </div>
 
       <SectionTitle accent={meta.cor}>Dados da OS</SectionTitle>
       <div className="grid grid-cols-2 gap-3 text-sm">
-        <div className="rounded border p-3"><div className="text-xs text-slate-500">Abertura</div><div className="font-semibold">{fd(os.data_abertura)}</div></div>
-        <div className="rounded border p-3"><div className="text-xs text-slate-500">Agendada para</div><div className="font-semibold">{fd(os.agendada_para)}</div></div>
-        <div className="rounded border p-3"><div className="text-xs text-slate-500">Início</div><div className="font-semibold">{fd(os.data_inicio)}</div></div>
-        <div className="rounded border p-3"><div className="text-xs text-slate-500">Conclusão</div><div className="font-semibold">{fd(os.data_conclusao)}</div></div>
-        <div className="rounded border p-3"><div className="text-xs text-slate-500">Responsável</div><div className="font-semibold">{os.responsavel ?? "—"}</div></div>
+        <div className="rounded border p-3">
+          <div className="text-xs text-slate-500">Abertura</div>
+          <div className="font-semibold">{fd(os.data_abertura)}</div>
+        </div>
+        <div className="rounded border p-3">
+          <div className="text-xs text-slate-500">Agendada para</div>
+          <div className="font-semibold">{fd(os.agendada_para)}</div>
+        </div>
+        <div className="rounded border p-3">
+          <div className="text-xs text-slate-500">Início</div>
+          <div className="font-semibold">{fd(os.data_inicio)}</div>
+        </div>
+        <div className="rounded border p-3">
+          <div className="text-xs text-slate-500">Conclusão</div>
+          <div className="font-semibold">{fd(os.data_conclusao)}</div>
+        </div>
+        <div className="rounded border p-3">
+          <div className="text-xs text-slate-500">Responsável</div>
+          <div className="font-semibold">{os.responsavel ?? "—"}</div>
+        </div>
       </div>
 
       {os.descricao_problema && (
@@ -384,11 +634,12 @@ export function OsManutencaoReport({ id }: { id?: string }) {
       {data.atividades.length > 0 && (
         <>
           <SectionTitle accent={meta.cor}>Checklist de atividades</SectionTitle>
-          <DataTable rows={data.atividades}
+          <DataTable
+            rows={data.atividades}
             columns={[
               { header: "#", cell: (r: any) => r.ordem_seq },
               { header: "Atividade", cell: (r: any) => r.descricao },
-              { header: "Realizada", align: "center", cell: (r: any) => r.realizada ? "☑" : "☐" },
+              { header: "Realizada", align: "center", cell: (r: any) => (r.realizada ? "☑" : "☐") },
               { header: "Observação", cell: (r: any) => r.observacao ?? "" },
             ]}
           />
@@ -427,21 +678,45 @@ export function OrdemProducaoReport({ id }: { id?: string }) {
   const { data: lista } = useQuery({ queryKey: ["op-list"], queryFn: () => listFn() });
   const fn = useServerFn(fetchOrdemProducao);
   const { data, isLoading, refetch } = useQuery({
-    queryKey: ["rep-op", selected], queryFn: () => fn({ data: { id: selected! } }), enabled: !!selected,
+    queryKey: ["rep-op", selected],
+    queryFn: () => fn({ data: { id: selected! } }),
+    enabled: !!selected,
   });
   const actions = (
     <Select value={selected} onValueChange={setSelected}>
-      <SelectTrigger className="w-64"><SelectValue placeholder="Selecione a OP" /></SelectTrigger>
+      <SelectTrigger className="w-64">
+        <SelectValue placeholder="Selecione a OP" />
+      </SelectTrigger>
       <SelectContent>
-        {(lista ?? []).map((o: any) => <SelectItem key={o.id} value={o.id}>{o.numero} · {o.status}</SelectItem>)}
+        {(lista ?? []).map((o: any) => (
+          <SelectItem key={o.id} value={o.id}>
+            {o.numero} · {o.status}
+          </SelectItem>
+        ))}
       </SelectContent>
     </Select>
   );
-  if (!selected) return <ReportShell title={meta.titulo} accent={meta.cor} actions={actions}><div className="p-8 text-center text-slate-500">Selecione uma ordem de produção.</div></ReportShell>;
-  if (isLoading || !data) return <ReportShell title={meta.titulo} accent={meta.cor} actions={actions}><div className="p-8 text-center">Carregando…</div></ReportShell>;
+  if (!selected)
+    return (
+      <ReportShell title={meta.titulo} accent={meta.cor} actions={actions}>
+        <div className="p-8 text-center text-slate-500">Selecione uma ordem de produção.</div>
+      </ReportShell>
+    );
+  if (isLoading || !data)
+    return (
+      <ReportShell title={meta.titulo} accent={meta.cor} actions={actions}>
+        <div className="p-8 text-center">Carregando…</div>
+      </ReportShell>
+    );
   const op = data.op;
   return (
-    <ReportShell title={`OP ${op.numero}`} subtitle={data.produto?.nome ?? "—"} accent={meta.cor} onRefresh={refetch} actions={actions}>
+    <ReportShell
+      title={`OP ${op.numero}`}
+      subtitle={data.produto?.nome ?? "—"}
+      accent={meta.cor}
+      onRefresh={refetch}
+      actions={actions}
+    >
       <div className="grid grid-cols-4 gap-3 break-avoid">
         <KpiCard label="Status" value={<StatusBadge status={op.status} />} />
         <KpiCard label="Planejada" value={`${nf(op.qtd_planejada)} ${data.produto?.unidade ?? ""}`} />
@@ -451,22 +726,57 @@ export function OrdemProducaoReport({ id }: { id?: string }) {
 
       <SectionTitle accent={meta.cor}>Identificação</SectionTitle>
       <div className="grid grid-cols-2 gap-3 text-sm">
-        <div className="rounded border p-3"><div className="text-xs text-slate-500">Equipamento</div><div className="font-semibold">{data.equipamento?.codigo} · {data.equipamento?.nome}</div></div>
-        <div className="rounded border p-3"><div className="text-xs text-slate-500">Produto</div><div className="font-semibold">{data.produto?.codigo} · {data.produto?.nome}</div></div>
-        <div className="rounded border p-3"><div className="text-xs text-slate-500">Início previsto</div><div className="font-semibold">{fd(op.inicio_previsto)}</div></div>
-        <div className="rounded border p-3"><div className="text-xs text-slate-500">Início real</div><div className="font-semibold">{fd(op.inicio_em)}</div></div>
-        <div className="rounded border p-3"><div className="text-xs text-slate-500">Fim real</div><div className="font-semibold">{fd(op.fim_em)}</div></div>
-        <div className="rounded border p-3"><div className="text-xs text-slate-500">Duração estimada</div><div className="font-semibold">{op.duracao_estimada_min ? `${op.duracao_estimada_min} min` : "—"}</div></div>
+        <div className="rounded border p-3">
+          <div className="text-xs text-slate-500">Equipamento</div>
+          <div className="font-semibold">
+            {data.equipamento?.codigo} · {data.equipamento?.nome}
+          </div>
+        </div>
+        <div className="rounded border p-3">
+          <div className="text-xs text-slate-500">Produto</div>
+          <div className="font-semibold">
+            {data.produto?.codigo} · {data.produto?.nome}
+          </div>
+        </div>
+        <div className="rounded border p-3">
+          <div className="text-xs text-slate-500">Início previsto</div>
+          <div className="font-semibold">{fd(op.inicio_previsto)}</div>
+        </div>
+        <div className="rounded border p-3">
+          <div className="text-xs text-slate-500">Início real</div>
+          <div className="font-semibold">{fd(op.inicio_em)}</div>
+        </div>
+        <div className="rounded border p-3">
+          <div className="text-xs text-slate-500">Fim real</div>
+          <div className="font-semibold">{fd(op.fim_em)}</div>
+        </div>
+        <div className="rounded border p-3">
+          <div className="text-xs text-slate-500">Duração estimada</div>
+          <div className="font-semibold">{op.duracao_estimada_min ? `${op.duracao_estimada_min} min` : "—"}</div>
+        </div>
       </div>
 
-      {op.obs_iniciais && (<><SectionTitle accent={meta.cor}>Observações iniciais</SectionTitle><div className="rounded border bg-white p-3 text-sm whitespace-pre-wrap">{op.obs_iniciais}</div></>)}
+      {op.obs_iniciais && (
+        <>
+          <SectionTitle accent={meta.cor}>Observações iniciais</SectionTitle>
+          <div className="rounded border bg-white p-3 text-sm whitespace-pre-wrap">{op.obs_iniciais}</div>
+        </>
+      )}
 
       {data.materiais.length > 0 && (
         <>
           <SectionTitle accent={meta.cor}>Receita / Materiais</SectionTitle>
-          <DataTable rows={data.materiais}
+          <DataTable
+            rows={data.materiais}
             columns={[
-              { header: "Matéria-prima", cell: (r: any) => <><span className="font-mono text-[10px] text-slate-500">{r.codigo}</span> {r.nome}</> },
+              {
+                header: "Matéria-prima",
+                cell: (r: any) => (
+                  <>
+                    <span className="font-mono text-[10px] text-slate-500">{r.codigo}</span> {r.nome}
+                  </>
+                ),
+              },
               { header: "%", align: "right", cell: (r: any) => `${nf(r.percentual, 1)}%` },
               { header: "Prevista", align: "right", cell: (r: any) => `${nf(r.prevista)} ${r.unidade}` },
               { header: "Consumida", align: "right", cell: (r: any) => `${nf(r.consumida)} ${r.unidade}` },
@@ -478,7 +788,8 @@ export function OrdemProducaoReport({ id }: { id?: string }) {
       {data.etapas.length > 0 && (
         <>
           <SectionTitle accent={meta.cor}>Etapas do processo</SectionTitle>
-          <DataTable rows={data.etapas}
+          <DataTable
+            rows={data.etapas}
             columns={[
               { header: "#", cell: (r: any) => r.ordem_seq },
               { header: "Etapa", cell: (r: any) => r.nome },
@@ -490,7 +801,12 @@ export function OrdemProducaoReport({ id }: { id?: string }) {
         </>
       )}
 
-      {op.obs_finais && (<><SectionTitle accent={meta.cor}>Observações finais</SectionTitle><div className="rounded border bg-white p-3 text-sm whitespace-pre-wrap">{op.obs_finais}</div></>)}
+      {op.obs_finais && (
+        <>
+          <SectionTitle accent={meta.cor}>Observações finais</SectionTitle>
+          <div className="rounded border bg-white p-3 text-sm whitespace-pre-wrap">{op.obs_finais}</div>
+        </>
+      )}
 
       <div className="mt-8 grid grid-cols-2 gap-8 break-avoid">
         <div className="border-t-2 border-slate-400 pt-1 text-center text-xs">Operador</div>
@@ -507,10 +823,21 @@ export function Alertas24hReport() {
   const fn = useServerFn(fetchAlertas24h);
   const { data, isLoading, refetch } = useQuery({ queryKey: ["rep-alertas-24h"], queryFn: () => fn() });
   const meta = REPORTS["alertas-24h"];
-  if (isLoading || !data) return <ReportShell title={meta.titulo} accent={meta.cor}><div className="p-8 text-center">Carregando…</div></ReportShell>;
+  if (isLoading || !data)
+    return (
+      <ReportShell title={meta.titulo} accent={meta.cor}>
+        <div className="p-8 text-center">Carregando…</div>
+      </ReportShell>
+    );
   const sevData = Object.entries(data.porSeveridade).map(([label, value]) => ({ label, value }));
   return (
-    <ReportShell title={meta.titulo} subtitle={meta.descricao} accent={meta.cor} periodo="Últimas 24h" onRefresh={refetch}>
+    <ReportShell
+      title={meta.titulo}
+      subtitle={meta.descricao}
+      accent={meta.cor}
+      periodo="Últimas 24h"
+      onRefresh={refetch}
+    >
       <div className="grid grid-cols-4 gap-3 break-avoid">
         <KpiCard label="Total disparos" value={ni(data.kpis.total)} tone="primary" />
         <KpiCard label="Críticos" value={ni(data.kpis.criticos)} tone="danger" />
@@ -525,12 +852,17 @@ export function Alertas24hReport() {
         </div>
         <div className="rounded-lg border bg-white p-4">
           <div className="mb-2 text-sm font-semibold text-slate-700">Top causas (por alerta)</div>
-          <HBarChart data={data.topCausas.map((c: any) => ({ label: c.nome, value: c.qtd }))} color={meta.cor} max={6} />
+          <HBarChart
+            data={data.topCausas.map((c: any) => ({ label: c.nome, value: c.qtd }))}
+            color={meta.cor}
+            max={6}
+          />
         </div>
       </div>
 
       <SectionTitle accent={meta.cor}>Disparos detalhados</SectionTitle>
-      <DataTable rows={data.disparos}
+      <DataTable
+        rows={data.disparos}
         columns={[
           { header: "Hora", cell: (r: any) => fd(r.created_at) },
           { header: "Severidade", cell: (r: any) => <SeverityBadge sev={r.severidade} /> },
@@ -549,14 +881,23 @@ export function Alertas24hReport() {
 // ================================================
 export function ReportBySlug({ slug, params }: { slug: ReportSlug; params?: Record<string, string> }) {
   switch (slug) {
-    case "estoque-total": return <EstoqueTotalReport />;
-    case "produtividade-total": return <ProdutividadeTotalReport />;
-    case "produtividade-equipamento": return <ProdutividadeEquipReport equipamentoId={params?.equipamento} ordemId={params?.ordem} />;
-    case "mensal": return <MensalReport />;
-    case "manutencao-24h": return <Manutencao24hReport />;
-    case "os-manutencao": return <OsManutencaoReport id={params?.id} />;
-    case "ordem-producao": return <OrdemProducaoReport id={params?.id} />;
-    case "alertas-24h": return <Alertas24hReport />;
-    default: return <div className="p-8">Relatório não encontrado</div>;
+    case "estoque-total":
+      return <EstoqueTotalReport />;
+    case "produtividade-total":
+      return <ProdutividadeTotalReport />;
+    case "produtividade-equipamento":
+      return <ProdutividadeEquipReport equipamentoId={params?.equipamento} ordemId={params?.ordem} />;
+    case "mensal":
+      return <MensalReport />;
+    case "manutencao-24h":
+      return <Manutencao24hReport />;
+    case "os-manutencao":
+      return <OsManutencaoReport id={params?.id} />;
+    case "ordem-producao":
+      return <OrdemProducaoReport id={params?.id} />;
+    case "alertas-24h":
+      return <Alertas24hReport />;
+    default:
+      return <div className="p-8">Relatório não encontrado</div>;
   }
 }
