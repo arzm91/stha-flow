@@ -263,7 +263,7 @@ export function ProdutividadeEquipReport({ equipamentoId, ordemId }: { equipamen
         <KpiCard label="Ordens" value={ni(data.kpis.ordensMes)} />
         <KpiCard label="Finalizadas" value={ni(data.kpis.finalizadasMes)} tone="success" />
         <KpiCard
-          label="Eficiência última"
+          label="CONVERSÃO"
           value={data.kpis.eficienciaUltima !== null ? `${data.kpis.eficienciaUltima.toFixed(1)}%` : "—"}
           tone={data.kpis.eficienciaUltima && data.kpis.eficienciaUltima >= 95 ? "success" : "warning"}
         />
