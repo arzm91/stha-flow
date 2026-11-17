@@ -1,3 +1,5 @@
+import { useProdutosAtivos } from "@/lib/producao/produto-ativo";
+import { calcularIndice, parseIndices } from "@/lib/indices/calc";
 import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
@@ -28,7 +30,7 @@ export const Route = createFileRoute("/_authenticated/producao/")({
   component: ProducaoPage,
 });
 
-type Equip = { id: string; codigo: string; nome: string; status: string; localizacao: string | null; tipo: string | null; ativo: boolean; tag_producao_total: string | null; tag_velocidade_producao: string | null; tag_indices: string[] | null };
+type Equip = { id: string; codigo: string; nome: string; status: string; localizacao: string | null; tipo: string | null; ativo: boolean; tag_producao_total: string | null; tag_velocidade_producao: string | null; tag_indices: string[] | null; indices_config?: unknown };
 
 function ProducaoPage() {
   const [novaOpen, setNovaOpen] = useState(false);
@@ -57,6 +59,8 @@ function ProducaoPage() {
   });
 
   const opByEquip = new Map((opsAtivas.data ?? []).map((o) => [o.equipamento_id, o]));
+  const ativosQ = useProdutosAtivos((opsAtivas.data ?? []).map((o) => o.equipamento_id as string).filter(Boolean));
+  const cfgOf = (e: Equip) => parseIndices(e.indices_config).filter((c) => c.tag || c.formula);
 
   // Tags de produção total ativas + tags de índice/rendimento
   const tagsAvanco = Array.from(new Set(
@@ -64,7 +68,8 @@ function ProducaoPage() {
       .filter((e) => opByEquip.has(e.id))
       .flatMap((e) => [
         e.tag_producao_total,
-        ...((e.tag_indices ?? []) as string[]),
+        ...(cfgOf(e).length > 0 ? [] : ((e.tag_indices ?? []) as string[])),
+        ...cfgOf(e).flatMap((c) => [c.tag, ...((c.formula || "").match(/[A-Za-z_][A-Za-z0-9_.]*/g) ?? [])]).filter((v) => v !== "VALOR" && v !== "CONC_PROD"),
       ].filter(Boolean) as string[])
   ));
   const tagsQuery = useQuery({
@@ -134,7 +139,7 @@ function ProducaoPage() {
                     <div className="mt-3 rounded-md border border-primary/30 bg-primary/5 p-2 text-sm">
                       <div className="font-medium">OP {op.numero}</div>
                       <div className="text-xs text-muted-foreground">
-                        {(op.produto as { nome: string } | null)?.nome ?? ""}{op.inicio_em ? ` · há ${durationFromNow(op.inicio_em)}` : ""}
+                        {ativosQ.data?.[e.id]?.nome ?? (op.produto as { nome: string } | null)?.nome ?? ""}{op.inicio_em ? ` · há ${durationFromNow(op.inicio_em)}` : ""}
                       </div>
                       {(() => {
                         if (!e.tag_producao_total) return null;
@@ -158,7 +163,26 @@ function ProducaoPage() {
                           </div>
                         );
                       })()}
-                      {((e.tag_indices ?? []) as string[]).length > 0 ? (
+                      {cfgOf(e).length > 0 ? (
+                        <div className="mt-2 border-t border-primary/20 pt-2">
+                          <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Rendimento / índice</div>
+                          <div className="grid grid-cols-2 gap-1 text-[11px]">
+                            {cfgOf(e).map((c, i) => {
+                              const conc = ativosQ.data?.[e.id]?.concentracao ?? null;
+                              const v = calcularIndice(c, (n) => tagMap.get(n)?.valor_num ?? null, conc);
+                              return (
+                                <div key={i} className="flex items-baseline justify-between gap-1 rounded bg-background/70 px-1.5 py-0.5">
+                                  <span className="truncate text-muted-foreground" title={c.formula || c.tag}>{c.nome || c.tag}</span>
+                                  <span className="font-mono font-semibold">
+                                    {v != null ? v.toLocaleString("pt-BR", { minimumFractionDigits: c.decimais, maximumFractionDigits: c.decimais }) : "—"}
+                                    {c.unidade ? ` ${c.unidade}` : ""}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : ((e.tag_indices ?? []) as string[]).length > 0 ? (
                         <div className="mt-2 border-t border-primary/20 pt-2">
                           <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Rendimento / índice</div>
                           <div className="grid grid-cols-2 gap-1 text-[11px]">

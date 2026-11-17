@@ -22,6 +22,7 @@ import { UtilidadesLive, UtilidadesStrip } from "@/components/producao/Utilidade
 import { gerarRelatorioProducaoPdf } from "@/lib/producao-pdf";
 import { gerarRelatorioProducaoXlsx } from "@/lib/producao-xlsx";
 import type { SheetColumn as SheetCol } from "@/lib/tabelas/types";
+import { useProdutosAtivos } from "@/lib/producao/produto-ativo";
 import { calcularIndice, parseIndices, type IndiceConfig } from "@/lib/indices/calc";
 import { ParadasSection } from "@/components/paradas/ParadasSection";
 
@@ -97,6 +98,23 @@ function OPPage() {
     },
   });
 
+  const equipIdOp = (op.data?.equipamento_id as string | undefined) ?? null;
+  const ativosQ = useProdutosAtivos(equipIdOp ? [equipIdOp] : []);
+  const prodAtivo = equipIdOp ? ativosQ.data?.[equipIdOp] ?? null : null;
+  // Sincroniza o produto da OP em andamento com o produto indicado pela tag do CLP.
+  const syncingRef = useRef(false);
+  useEffect(() => {
+    if (!op.data || op.data.status !== "em_andamento" || !prodAtivo) return;
+    if (op.data.produto_id === prodAtivo.id || syncingRef.current) return;
+    syncingRef.current = true;
+    supabase.from("ordens_producao").update({ produto_id: prodAtivo.id }).eq("id", op.data.id)
+      .then(({ error }) => {
+        syncingRef.current = false;
+        if (error) toast.error("Não foi possível atualizar o produto: " + error.message);
+        else qc.invalidateQueries({ queryKey: ["op", id] });
+      });
+  }, [op.data, prodAtivo, id, qc]);
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFs, setIsFs] = useState(false);
   useEffect(() => {
@@ -169,7 +187,8 @@ function OPPage() {
   const tagTotal = equip?.tag_producao_total || null;
   const tagIndices = (equip?.tag_indices ?? []) as string[];
   const indicesCfg = parseIndices((equip as { indices_config?: unknown } | null)?.indices_config).filter((c) => c.tag || c.formula);
-  const concProd = (op.data.produto as { concentracao?: number | null } | null)?.concentracao ?? null;
+  const concProdRaw = !isFinal && prodAtivo ? prodAtivo.concentracao : (op.data.produto as { concentracao?: number | null } | null)?.concentracao ?? null;
+  const concProd = concProdRaw != null ? Number(concProdRaw) : null;
   const qtdPlanejada = Number(op.data.qtd_planejada ?? 0);
   const produtoNome = (op.data.produto as { nome?: string } | null)?.nome ?? null;
 
