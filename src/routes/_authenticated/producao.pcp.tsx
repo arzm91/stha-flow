@@ -1098,6 +1098,8 @@ function RegistrarProducaoManualDialog({
   const [obsIniciais, setObsIniciais] = useState("");
   const [obsFinais, setObsFinais] = useState("");
   const [lancarEstoque, setLancarEstoque] = useState(true);
+  const [responsavel, setResponsavel] = useState("");
+  const [mats, setMats] = useState<Array<{ mp_id: string; nome: string; unidade: string; percentual: number | null; tag: string | null; qtd: string; tanque_id: string }>>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -1108,6 +1110,7 @@ function RegistrarProducaoManualDialog({
     setInicio(toLocalDateTimeInput(oneHourAgo.toISOString()));
     setFim(toLocalDateTimeInput(now.toISOString()));
     setTanqueId(""); setObsIniciais(""); setObsFinais(""); setLancarEstoque(true);
+    setResponsavel(""); setMats([]);
     fetchNextOpNumero().then((n) => setNumero((cur) => cur || n)).catch(() => {});
   }, [open]);
 
@@ -1128,9 +1131,40 @@ function RegistrarProducaoManualDialog({
     },
   });
 
+  // Receita do produto -> matérias-primas
+  useEffect(() => {
+    if (!produtoId) { setMats([]); return; }
+    (async () => {
+      const { data: rec } = await supabase.from("produto_receita")
+        .select("materia_prima_id, percentual, tag_consumo_nome, mp:materia_prima_id(nome,unidade)")
+        .eq("produto_id", produtoId).order("ordem");
+      setMats(((rec ?? []) as any[]).map((r) => ({
+        mp_id: r.materia_prima_id, nome: r.mp?.nome ?? "—", unidade: r.mp?.unidade ?? "",
+        percentual: r.percentual, tag: r.tag_consumo_nome, qtd: "", tanque_id: "",
+      })));
+    })();
+  }, [produtoId]);
+
+  // Sugestão de consumo pelo percentual da receita
+  useEffect(() => {
+    if (qtdProduzida === "") return;
+    setMats((prev) => prev.map((m) => m.qtd === ""
+      ? { ...m, qtd: m.percentual != null ? String(+(Number(qtdProduzida) * m.percentual / 100).toFixed(3)) : m.qtd }
+      : m));
+  }, [qtdProduzida]);
+
+  const tanquesMp = useQuery({
+    queryKey: ["pcp-tanques-mp"],
+    enabled: open,
+    queryFn: async () => {
+      const { data } = await supabase.from("tanques").select("id,codigo,nome,produto_id").order("codigo");
+      return (data ?? []) as Array<{ id: string; codigo: string; nome: string; produto_id: string | null }>;
+    },
+  });
+
   const save = useMutation({
     mutationFn: async () => {
-      if (!numero || !produtoId || !equipamentoId || qtdPlanejada === "" || qtdProduzida === "" || !inicio || !fim) {
+      if (!numero || !produtoId || !equipamentoId || qtdProduzida === "" || !inicio || !fim || !responsavel.trim()) {
         throw new Error("Preencha todos os campos obrigatórios");
       }
       const inicioIso = new Date(inicio).toISOString();
@@ -1146,7 +1180,9 @@ function RegistrarProducaoManualDialog({
         numero,
         produto_id: produtoId,
         equipamento_id: equipamentoId,
-        qtd_planejada: Number(qtdPlanejada),
+        qtd_planejada: qtdPlanejada === "" ? Number(qtdProduzida) : Number(qtdPlanejada),
+        responsavel_fechamento: responsavel.trim(),
+        finalizado_por: u.user.id,
         qtd_produzida: Number(qtdProduzida),
         status: "finalizada",
         inicio_em: inicioIso,
@@ -1173,6 +1209,30 @@ function RegistrarProducaoManualDialog({
           ocorrido_em: fimIso,
         });
         if (e2) throw e2;
+      }
+      // Matérias-primas consumidas + baixa no estoque
+      for (const m of mats) {
+        const q = Number(m.qtd);
+        if (!q || q <= 0) continue;
+        const { error: em } = await supabase.from("ordem_materiais").insert({
+          owner_id: u.user.id, ordem_id: inserted!.id, materia_prima_id: m.mp_id,
+          percentual: m.percentual, quantidade_prevista: q, quantidade_consumida: q,
+          tag_consumo_nome: m.tag, tanque_id: m.tanque_id || null, consumida: true,
+        });
+        if (em) throw em;
+        if (m.tanque_id) {
+          const { error: es } = await supabase.from("movimentacoes_estoque").insert({
+            owner_id: u.user.id, produto_id: m.mp_id, tanque_id: m.tanque_id, tipo: "saida",
+            quantidade: q, origem: `Consumo MP — OP ${numero} (manual)`, ordem_id: inserted!.id, ocorrido_em: fimIso,
+          });
+          if (es) throw es;
+        }
+      }
+      try {
+        const { gerarRelatorioProducaoPdf } = await import("@/lib/producao-pdf");
+        await gerarRelatorioProducaoPdf(inserted!.id);
+      } catch (pdfErr) {
+        toast.error("Falha ao gerar PDF: " + (pdfErr as Error).message);
       }
       return inserted!.id as string;
     },
@@ -1216,9 +1276,9 @@ function RegistrarProducaoManualDialog({
               </select>
             </div>
             <div className="space-y-1.5">
-              <Label>Quantidade planejada</Label>
-              <Input type="number" step="any" value={qtdPlanejada}
-                onChange={(e) => setQtdPlanejada(e.target.value === "" ? "" : Number(e.target.value))} required />
+              <Label>Quantidade planejada (opcional)</Label>
+              <Input type="number" step="any" value={qtdPlanejada} placeholder="= produzida"
+                onChange={(e) => setQtdPlanejada(e.target.value === "" ? "" : Number(e.target.value))} />
             </div>
             <div className="space-y-1.5">
               <Label>Quantidade produzida</Label>
@@ -1251,6 +1311,32 @@ function RegistrarProducaoManualDialog({
                 <Switch checked={lancarEstoque} onCheckedChange={setLancarEstoque} />
               </div>
             ) : null}
+            <div className="space-y-2 sm:col-span-2 rounded-md border p-2">
+              <div>
+                <Label className="text-sm">Matérias-primas consumidas</Label>
+                <div className="text-[11px] text-muted-foreground">Sugestão pelo percentual da receita. Com tanque selecionado, dá baixa no estoque.</div>
+              </div>
+              {!produtoId ? <div className="text-xs text-muted-foreground">Selecione o produto.</div>
+                : mats.length === 0 ? <div className="text-xs text-muted-foreground">Produto sem receita cadastrada.</div>
+                : mats.map((m, i) => (
+                  <div key={m.mp_id} className="grid gap-2 sm:grid-cols-[1fr_120px_1fr] items-center">
+                    <div className="text-sm">{m.nome}{m.percentual != null ? <span className="text-xs text-muted-foreground"> · {m.percentual}%</span> : null}</div>
+                    <Input type="number" step="any" value={m.qtd} placeholder={m.unidade || "qtd"}
+                      onChange={(e) => setMats((prev) => prev.map((x, j) => j === i ? { ...x, qtd: e.target.value } : x))} />
+                    <select value={m.tanque_id}
+                      onChange={(e) => setMats((prev) => prev.map((x, j) => j === i ? { ...x, tanque_id: e.target.value } : x))}
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm">
+                      <option value="">— sem baixa —</option>
+                      {(tanquesMp.data ?? []).filter((t) => !t.produto_id || t.produto_id === m.mp_id)
+                        .map((t) => <option key={t.id} value={t.id}>{t.codigo} — {t.nome}</option>)}
+                    </select>
+                  </div>
+                ))}
+            </div>
+            <div className="space-y-1.5 sm:col-span-2">
+              <Label>Responsável pelo fechamento</Label>
+              <Input value={responsavel} onChange={(e) => setResponsavel(e.target.value)} required />
+            </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Observações iniciais</Label>
               <textarea value={obsIniciais} onChange={(e) => setObsIniciais(e.target.value)}
