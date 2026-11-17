@@ -273,6 +273,26 @@ function OPPage() {
 
       {vis.utilidadesStrip && op.data.equipamento_id ? <UtilidadesStrip equipamentoId={op.data.equipamento_id as string} /> : null}
 
+      {vis.info ? (
+        <Card className="mb-3">
+          <CardContent className="grid grid-cols-2 gap-x-4 gap-y-2 p-3 sm:grid-cols-3 lg:grid-cols-6">
+            <Info label="Produto" value={produtoNome ?? "—"} />
+            <Info label="Início" value={op.data.inicio_em ? formatDate(op.data.inicio_em) : "—"} />
+            <Info label={op.data.fim_em ? "Fim" : "Em produção há"} value={op.data.fim_em ? formatDate(op.data.fim_em) : (op.data.inicio_em ? durationFromNow(op.data.inicio_em) : "—")} />
+            <Info label="Produzido" value={op.data.qtd_produzida != null ? formatNumber(Number(op.data.qtd_produzida)) : "—"} />
+            <Info label="Operador" value={operador.data?.nome ?? "—"} />
+            <Info label="Equipamento" value={equip?.nome ?? "—"} />
+            {vis.observacoes && (op.data.obs_iniciais || op.data.obs_finais) ? (
+              <div className="col-span-full border-t border-border pt-2 text-xs text-muted-foreground">
+                {op.data.obs_iniciais ? <span><b className="text-foreground">Obs. iniciais:</b> {op.data.obs_iniciais}</span> : null}
+                {op.data.obs_finais ? <span className="ml-4"><b className="text-foreground">Obs. finais:</b> {op.data.obs_finais}</span> : null}
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      <div className="mb-3 grid gap-3 lg:grid-cols-3 [&>*]:mb-0">
       {vis.avanco && op.data.equipamento_id ? (
         <AvancoDiaCard
           equipamentoId={op.data.equipamento_id as string}
@@ -283,11 +303,12 @@ function OPPage() {
           unidade={equip?.capacidade_unidade ?? ((op.data.produto as { unidade?: string } | null)?.unidade ?? "")}
         />
       ) : null}
-
       {vis.avanco && (tagVel || tagTotal || tagIndices.length > 0 || indicesCfg.length > 0) ? (
-        <AvancoProducaoHeader ordemId={id} tagVel={tagVel} tagTotal={tagTotal} tagIndices={tagIndices} qtdPlanejada={qtdPlanejada} indicesCfg={indicesCfg} concProd={concProd} />
+        <div className="lg:col-span-2 [&>*]:mb-0 [&>*]:h-full"><AvancoProducaoHeader ordemId={id} tagVel={tagVel} tagTotal={tagTotal} tagIndices={tagIndices} qtdPlanejada={qtdPlanejada} indicesCfg={indicesCfg} concProd={concProd} /></div>
       ) : null}
+      </div>
 
+      <div className="mb-3 grid gap-3 lg:grid-cols-3 [&>*]:mb-0 [&>*:first-child]:lg:col-span-2">
       {vis.capacidade && equip && (equip.capacidade_hora || equip.capacidade_dia || equip.capacidade_mes) && op.data.inicio_em ? (
         <CapacidadeNominalCard
           equipamentoId={op.data.equipamento_id as string}
@@ -302,29 +323,30 @@ function OPPage() {
           unidade={equip.capacidade_unidade ?? ((op.data.produto as { unidade?: string } | null)?.unidade ?? "")}
         />
       ) : null}
-
       {vis.tempo && op.data.inicio_em && !isFinal ? (
         <TempoProducaoHeader
           inicioEm={op.data.inicio_em as string}
           duracaoEstimadaMin={(op.data as any).duracao_estimada_min ?? null}
         />
       ) : null}
+      </div>
 
-      {vis.info ? (
-        <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6">
-          <Info label="Início" value={op.data.inicio_em ? formatDate(op.data.inicio_em) : "—"} />
-          <Info label="Fim" value={op.data.fim_em ? formatDate(op.data.fim_em) : "—"} />
-          <Info label="Duração total" value={op.data.inicio_em ? (op.data.fim_em ? durationBetween(op.data.inicio_em, op.data.fim_em) : durationFromNow(op.data.inicio_em)) : "—"} />
-          <Info label="Qtd. planejada / produzida" value={`${formatNumber(Number(op.data.qtd_planejada))} / ${op.data.qtd_produzida != null ? formatNumber(Number(op.data.qtd_produzida)) : "—"}`} />
-          <Info label="Operador" value={operador.data?.nome ?? "—"} />
-          <Info label="Equipamento" value={equip?.nome ?? "—"} />
-        </div>
-      ) : null}
+      {vis.abas ? (
+      <Tabs defaultValue="monitoramento">
+        <TabsList className="h-auto flex-wrap justify-start">
+          <TabsTrigger value="monitoramento"><Activity className="mr-1 h-4 w-4" />Monitoramento</TabsTrigger>
+          <TabsTrigger value="sinotico"><Gauge className="mr-1 h-4 w-4" />Sinóptico e utilidades</TabsTrigger>
+          <TabsTrigger value="processos"><ListChecks className="mr-1 h-4 w-4" />Processos</TabsTrigger>
+          <TabsTrigger value="parametros"><Gauge className="mr-1 h-4 w-4" />Parâmetros</TabsTrigger>
+          <TabsTrigger value="analises"><FlaskConical className="mr-1 h-4 w-4" />Análises</TabsTrigger>
+          <TabsTrigger value="observacoes"><MessageSquare className="mr-1 h-4 w-4" />Turnos</TabsTrigger>
+          <TabsTrigger value="tabelas"><TableIcon className="mr-1 h-4 w-4" />Tabelas</TabsTrigger>
+          <TabsTrigger value="paradas"><AlertOctagon className="mr-1 h-4 w-4" />Paradas</TabsTrigger>
+          <TabsTrigger value="historico"><History className="mr-1 h-4 w-4" />Histórico</TabsTrigger>
+        </TabsList>
 
-      {vis.scada && op.data.equipamento_id ? <ScadaViewer equipamentoId={op.data.equipamento_id as string} /> : null}
 
-      {vis.utilidadesLive && op.data.equipamento_id ? <UtilidadesLive equipamentoId={op.data.equipamento_id as string} /> : null}
-
+        <TabsContent value="monitoramento" className="space-y-3 [&>*]:mb-0">
       {vis.tagsMonitoramento ? (
         <TagsMonitoramento
           ordemId={id}
@@ -335,41 +357,13 @@ function OPPage() {
           fimEm={(op.data as any).fim_em ?? null}
         />
       ) : null}
-
-      {vis.observacoes && (op.data.obs_iniciais || op.data.obs_finais) ? (
-        <Card className="mb-4">
-          <CardContent className="grid gap-3 p-4 md:grid-cols-2">
-            {op.data.obs_iniciais ? (
-              <div>
-                <div className="text-xs uppercase tracking-wider text-muted-foreground">Observações iniciais</div>
-                <div className="mt-1 whitespace-pre-wrap text-sm">{op.data.obs_iniciais}</div>
-              </div>
-            ) : null}
-            {op.data.obs_finais ? (
-              <div>
-                <div className="text-xs uppercase tracking-wider text-muted-foreground">Observações finais</div>
-                <div className="mt-1 whitespace-pre-wrap text-sm">{op.data.obs_finais}</div>
-              </div>
-            ) : null}
-          </CardContent>
-        </Card>
-      ) : null}
-
       {vis.tagsEquipamento ? <TagsDoEquipamento tagNomes={tagNomes} ordemId={id} disabled={isFinal} /> : null}
+        </TabsContent>
 
-
-      {vis.abas ? (
-      <Tabs defaultValue="processos">
-        <TabsList>
-          <TabsTrigger value="processos"><ListChecks className="mr-1 h-4 w-4" />Processos</TabsTrigger>
-          <TabsTrigger value="parametros"><Gauge className="mr-1 h-4 w-4" />Parâmetros</TabsTrigger>
-          <TabsTrigger value="analises"><FlaskConical className="mr-1 h-4 w-4" />Análises</TabsTrigger>
-          <TabsTrigger value="observacoes"><MessageSquare className="mr-1 h-4 w-4" />Turnos</TabsTrigger>
-          <TabsTrigger value="tabelas"><TableIcon className="mr-1 h-4 w-4" />Tabelas</TabsTrigger>
-          <TabsTrigger value="paradas"><AlertOctagon className="mr-1 h-4 w-4" />Paradas</TabsTrigger>
-          <TabsTrigger value="historico"><History className="mr-1 h-4 w-4" />Histórico</TabsTrigger>
-        </TabsList>
-
+        <TabsContent value="sinotico" className="space-y-3 [&>*]:mb-0">
+      {vis.scada && op.data.equipamento_id ? <ScadaViewer equipamentoId={op.data.equipamento_id as string} /> : null}
+      {vis.utilidadesLive && op.data.equipamento_id ? <UtilidadesLive equipamentoId={op.data.equipamento_id as string} /> : null}
+        </TabsContent>
 
         <TabsContent value="processos">
           <ProcessosSection ordemId={id} equipamentoId={(op.data as any).equipamento_id ?? null} />
@@ -674,10 +668,10 @@ function TimelineUnificada({ ordemId }: { ordemId: string }) {
 
 function Info({ label, value }: { label: string; value: string }) {
   return (
-    <Card><CardContent className="p-4">
-      <div className="text-xs uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="mt-1 font-mono text-sm font-semibold">{value}</div>
-    </CardContent></Card>
+    <div className="min-w-0">
+      <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="truncate text-sm font-semibold" title={value}>{value}</div>
+    </div>
   );
 }
 
