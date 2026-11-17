@@ -29,6 +29,13 @@
       "when": 1794916777092,
       "tag": "0003_produto_tag_concentracao_indices",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1794918583509,
+      "tag": "0004_producao_fechamento_analises",
+      "breakpoints": true
     }
   ]
 }

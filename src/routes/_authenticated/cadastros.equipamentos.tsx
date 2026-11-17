@@ -115,6 +115,10 @@ function EquipamentosPage() {
       options: [{ value: "", label: "— nenhuma —" }, ...tagOptions],
       help: "Tag exibida como velocidade instantânea no acompanhamento.",
     },
+    { key: "tag_velocidade_consumo", label: "Tag de velocidade de consumo (opcional)", type: "select",
+      options: [{ value: "", label: "— nenhuma —" }, ...tagOptions],
+      help: "Usada para a média de velocidade de consumo no relatório de fechamento.",
+    },
     { key: "tag_producao_total", label: "Tag de produção total (opcional)", type: "select",
       options: [{ value: "", label: "— nenhuma —" }, ...tagOptions],
       help: "Tag usada para calcular o % de avanço vs. a quantidade planejada.",
@@ -227,7 +231,7 @@ function EquipamentosPage() {
       description="Cadastro e gestão dos equipamentos de produção da planta."
       searchKeys={["nome", "codigo", "tipo", "localizacao"]}
       filter={{ categoria: "producao" }}
-      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [], utilidade_ids: [], tag_velocidade_producao: "", tag_producao_total: "", tag_indices: [], troca_auto_ativa: false, indices_config: [], troca_tag_quantidade: "", troca_qtd_modo: "direto", capacidade_hora: "", capacidade_dia: "", capacidade_mes: "", capacidade_unidade: "", parada_tag_nome: "", parada_modo: "", parada_operador: "", parada_valor: "", parada_valor_min: "", parada_valor_max: "", parada_tempo_min_seg: 15, parada_alerta_apos_min: "", parada_motivos: ["Falta de energia","Parada programada","Parada não programada","Manutenção","Setup / Troca de produto","Falta de matéria-prima","Falha operacional","Outro"] }}
+      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [], utilidade_ids: [],  tag_velocidade_producao: "", tag_velocidade_consumo: "", tag_producao_total: "", tag_indices: [], troca_auto_ativa: false, indices_config: [], troca_tag_quantidade: "", troca_qtd_modo: "direto", capacidade_hora: "", capacidade_dia: "", capacidade_mes: "", capacidade_unidade: "", parada_tag_nome: "", parada_modo: "", parada_operador: "", parada_valor: "", parada_valor_min: "", parada_valor_max: "", parada_tempo_min_seg: 15, parada_alerta_apos_min: "", parada_motivos: ["Falta de energia","Parada programada","Parada não programada","Manutenção","Setup / Troca de produto","Falta de matéria-prima","Falha operacional","Outro"] }}
       fields={fields}
 
 

@@ -658,6 +658,7 @@ export type Database = {
           id: string
           nome: string
           owner_id: string
+          tabela_analise: boolean
           updated_at: string
         }
         Insert: {
@@ -669,6 +670,7 @@ export type Database = {
           id?: string
           nome: string
           owner_id: string
+          tabela_analise?: boolean
           updated_at?: string
         }
         Update: {
@@ -680,6 +682,7 @@ export type Database = {
           id?: string
           nome?: string
           owner_id?: string
+          tabela_analise?: boolean
           updated_at?: string
         }
         Relationships: []
@@ -1011,6 +1014,7 @@ export type Database = {
           tag_indices: string[]
           tag_nomes: string[]
           tag_producao_total: string | null
+          tag_velocidade_consumo: string | null
           tag_velocidade_producao: string | null
           tipo: string | null
           troca_auto_ativa: boolean
@@ -1053,6 +1057,7 @@ export type Database = {
           tag_indices?: string[]
           tag_nomes?: string[]
           tag_producao_total?: string | null
+          tag_velocidade_consumo?: string | null
           tag_velocidade_producao?: string | null
           tipo?: string | null
           troca_auto_ativa?: boolean
@@ -1095,6 +1100,7 @@ export type Database = {
           tag_indices?: string[]
           tag_nomes?: string[]
           tag_producao_total?: string | null
+          tag_velocidade_consumo?: string | null
           tag_velocidade_producao?: string | null
           tipo?: string | null
           troca_auto_ativa?: boolean
@@ -1758,6 +1764,7 @@ export type Database = {
           equipamento_id: string
           fila_posicao: number | null
           fim_em: string | null
+          finalizado_por: string | null
           id: string
           inicio_em: string | null
           inicio_previsto: string | null
@@ -1769,6 +1776,7 @@ export type Database = {
           produto_id: string | null
           qtd_planejada: number
           qtd_produzida: number | null
+          responsavel_fechamento: string | null
           status: string
           tanque_destino_id: string | null
           updated_at: string
@@ -1780,6 +1788,7 @@ export type Database = {
           equipamento_id: string
           fila_posicao?: number | null
           fim_em?: string | null
+          finalizado_por?: string | null
           id?: string
           inicio_em?: string | null
           inicio_previsto?: string | null
@@ -1791,6 +1800,7 @@ export type Database = {
           produto_id?: string | null
           qtd_planejada: number
           qtd_produzida?: number | null
+          responsavel_fechamento?: string | null
           status?: string
           tanque_destino_id?: string | null
           updated_at?: string
@@ -1802,6 +1812,7 @@ export type Database = {
           equipamento_id?: string
           fila_posicao?: number | null
           fim_em?: string | null
+          finalizado_por?: string | null
           id?: string
           inicio_em?: string | null
           inicio_previsto?: string | null
@@ -1813,6 +1824,7 @@ export type Database = {
           produto_id?: string | null
           qtd_planejada?: number
           qtd_produzida?: number | null
+          responsavel_fechamento?: string | null
           status?: string
           tanque_destino_id?: string | null
           updated_at?: string

@@ -53,6 +53,7 @@ type SheetRow = {
   columns: SheetColumn[];
   equipamento_ids: string[] | null;
   auto_on_producao_finish?: boolean | null;
+  tabela_analise?: boolean | null;
   updated_at: string;
 };
 
@@ -83,7 +84,7 @@ function TabelasIndex() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("custom_sheets")
-        .select("id, nome, descricao, columns, equipamento_ids, auto_on_producao_finish, updated_at")
+        .select("id, nome, descricao, columns, equipamento_ids, auto_on_producao_finish, tabela_analise, updated_at")
         .order("updated_at", { ascending: false });
       if (error) throw error;
       return data as unknown as SheetRow[];
@@ -336,6 +337,7 @@ function SheetFormDialog({
   );
   const [equipIds, setEquipIds] = useState<string[]>(initial?.equipamento_ids ?? []);
   const [autoFinish, setAutoFinish] = useState<boolean>(!!initial?.auto_on_producao_finish);
+  const [isAnalise, setIsAnalise] = useState<boolean>(!!initial?.tabela_analise);
   const [expandedCol, setExpandedCol] = useState<number | null>(null);
 
   const equipamentosQ = useQuery({
@@ -401,6 +403,7 @@ function SheetFormDialog({
           columns: cleaned as never,
           equipamento_ids: equipIds as never,
           auto_on_producao_finish: autoFinish,
+          tabela_analise: isAnalise,
           owner_id: u.user.id,
         } as never);
         if (error) throw error;
@@ -413,6 +416,7 @@ function SheetFormDialog({
             columns: cleaned as never,
             equipamento_ids: equipIds as never,
             auto_on_producao_finish: autoFinish,
+          tabela_analise: isAnalise,
           } as never)
           .eq("id", initial.id);
         if (error) throw error;
@@ -496,6 +500,19 @@ function SheetFormDialog({
                 </p>
               </div>
               <Switch checked={autoFinish} onCheckedChange={setAutoFinish} />
+            </div>
+          </div>
+
+          <div className="rounded-md border border-border p-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label className="text-sm">Tabela de análises do equipamento</Label>
+                <p className="text-xs text-muted-foreground">
+                  Os registros de análises do acompanhamento de produção dos equipamentos associados passam a ser
+                  feitos nesta tabela e aparecem no relatório de fechamento.
+                </p>
+              </div>
+              <Switch checked={isAnalise} onCheckedChange={setIsAnalise} />
             </div>
           </div>
 
