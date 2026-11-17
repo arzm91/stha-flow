@@ -6,7 +6,8 @@ export type ReportSlug =
   | "manutencao-24h"
   | "os-manutencao"
   | "ordem-producao"
-  | "alertas-24h";
+  | "alertas-24h"
+  | "producao-periodo";
 
 export interface ReportMeta {
   slug: ReportSlug;
@@ -15,5 +16,6 @@ export interface ReportMeta {
   categoria: "estoque" | "producao" | "manutencao" | "alertas";
   cor: string; // hex principal do cabeçalho
   icone: string; // lucide name
+  oculto?: boolean;
   precisaParam?: "equipamento" | "ordem-producao" | "os-manutencao";
 }

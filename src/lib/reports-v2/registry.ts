@@ -1,6 +1,14 @@
 import type { ReportMeta, ReportSlug } from "./types";
 
 export const REPORTS: Record<ReportSlug, ReportMeta> = {
+  "producao-periodo": {
+    slug: "producao-periodo",
+    titulo: "Relatório de Produção por Período",
+    descricao: "Produzido, consumido, índice, produções individuais, paradas e OEE no período escolhido.",
+    categoria: "producao",
+    cor: "#2563eb",
+    icone: "Factory",
+  },
   "estoque-total": {
     slug: "estoque-total",
     titulo: "Estoque Total",
@@ -11,6 +19,7 @@ export const REPORTS: Record<ReportSlug, ReportMeta> = {
   },
   "produtividade-total": {
     slug: "produtividade-total",
+    oculto: true,
     titulo: "Produtividade — Todos os Equipamentos",
     descricao: "Última produção e total do mês por equipamento, com estoque atual.",
     categoria: "producao",
@@ -19,6 +28,7 @@ export const REPORTS: Record<ReportSlug, ReportMeta> = {
   },
   "produtividade-equipamento": {
     slug: "produtividade-equipamento",
+    oculto: true,
     titulo: "Produtividade por Equipamento",
     descricao: "Foco na última produção do equipamento, matérias-primas consumidas e acumulado do mês.",
     categoria: "producao",
@@ -28,6 +38,7 @@ export const REPORTS: Record<ReportSlug, ReportMeta> = {
   },
   "mensal": {
     slug: "mensal",
+    oculto: true,
     titulo: "Relatório Mensal Consolidado",
     descricao: "Todas as produções do mês com mini-dashboards por equipamento.",
     categoria: "producao",
@@ -53,6 +64,7 @@ export const REPORTS: Record<ReportSlug, ReportMeta> = {
   },
   "ordem-producao": {
     slug: "ordem-producao",
+    oculto: true,
     titulo: "Ordem de Produção",
     descricao: "Ficha completa da OP com receita, materiais e cronograma.",
     categoria: "producao",
@@ -70,4 +82,4 @@ export const REPORTS: Record<ReportSlug, ReportMeta> = {
   },
 };
 
-export const REPORT_LIST: ReportMeta[] = Object.values(REPORTS);
+export const REPORT_LIST: ReportMeta[] = Object.values(REPORTS).filter((r) => !r.oculto);

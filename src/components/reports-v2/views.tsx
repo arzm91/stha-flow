@@ -20,6 +20,7 @@ import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import type { ReportSlug } from "@/lib/reports-v2/types";
+import { ProducaoPeriodoReport } from "./ProducaoPeriodoReport";
 
 // -------- utils --------
 const nf = (n: any, d = 2) => formatNumber(Number(n ?? 0), d);
@@ -897,6 +898,8 @@ export function ReportBySlug({ slug, params }: { slug: ReportSlug; params?: Reco
       return <OrdemProducaoReport id={params?.id} />;
     case "alertas-24h":
       return <Alertas24hReport />;
+    case "producao-periodo":
+      return <ProducaoPeriodoReport />;
     default:
       return <div className="p-8">Relatório não encontrado</div>;
   }
