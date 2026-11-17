@@ -50,15 +50,6 @@ function OPPage() {
     refetchInterval: 10_000,
   });
 
-  const operador = useQuery({
-    queryKey: ["operador", op.data?.owner_id],
-    enabled: !!op.data?.owner_id,
-    queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("nome,email").eq("id", op.data!.owner_id).maybeSingle();
-      return data;
-    },
-  });
-
   const parametros = useQuery({
     queryKey: ["params", id],
     queryFn: async () => {
@@ -168,7 +159,7 @@ function OPPage() {
     avanco: "Avanço de produção",
     capacidade: "Capacidade nominal vs. real",
     tempo: "Tempo de produção",
-    info: "Resumo (início, fim, operador...)",
+    info: "Resumo (produto, equipamento, início, fim...)",
     scada: "Sinóptico SCADA",
     utilidadesLive: "Utilidades ao vivo",
     tagsMonitoramento: "Monitoramento de tags",
@@ -181,7 +172,7 @@ function OPPage() {
   if (!op.data) return <div className="text-sm text-muted-foreground">Ordem não encontrada.</div>;
 
   const isFinal = op.data.status === "finalizada";
-  const equip = op.data.equipamento as { tag_nomes?: string[]; tag_velocidade_producao?: string | null; tag_producao_total?: string | null; tag_indices?: string[] | null; nome?: string; capacidade_hora?: number | null; capacidade_dia?: number | null; capacidade_mes?: number | null; capacidade_unidade?: string | null } | null;
+  const equip = op.data.equipamento as { tag_nomes?: string[]; tag_velocidade_producao?: string | null; tag_producao_total?: string | null; tag_indices?: string[] | null; codigo?: string | null; nome?: string; capacidade_hora?: number | null; capacidade_dia?: number | null; capacidade_mes?: number | null; capacidade_unidade?: string | null } | null;
   const tagNomes = (equip?.tag_nomes ?? []) as string[];
   const tagVel = equip?.tag_velocidade_producao || null;
   const tagTotal = equip?.tag_producao_total || null;
@@ -191,6 +182,17 @@ function OPPage() {
   const concProd = concProdRaw != null ? Number(concProdRaw) : null;
   const qtdPlanejada = Number(op.data.qtd_planejada ?? 0);
   const produtoNome = (op.data.produto as { nome?: string } | null)?.nome ?? null;
+  const produtoUnidade = (op.data.produto as { unidade?: string | null } | null)?.unidade ?? null;
+  const unidadeProduzido = equip?.capacidade_unidade ?? produtoUnidade ?? "";
+  const produtoInfo = produtoNome
+    ? concProd != null
+      ? `${produtoNome} · ${concProd}%`
+      : produtoNome
+    : "—";
+  const equipamentoInfo = equip?.codigo ?? equip?.nome ?? "—";
+  const produzidoInfo = op.data.qtd_produzida != null
+    ? `${formatNumber(Number(op.data.qtd_produzida))}${unidadeProduzido ? ` ${unidadeProduzido}` : ""}`
+    : "—";
 
   return (
     <div ref={containerRef} className={isFs ? "h-screen w-screen overflow-auto bg-background p-6" : undefined}>
@@ -201,7 +203,7 @@ function OPPage() {
         title={`OP ${op.data.numero}`}
         description={`${produtoNome ?? "Sem produto"} · ${equip?.nome ?? ""}`}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Badge variant="outline" className={isFinal ? "bg-success/20 text-success border-success/30" : "bg-primary/20 text-primary border-primary/30"}>
               {isFinal ? "Finalizada" : "Em andamento"}
             </Badge>
@@ -275,15 +277,14 @@ function OPPage() {
 
       {vis.info ? (
         <Card className="mb-3">
-          <CardContent className="grid grid-cols-2 gap-x-4 gap-y-2 p-3 sm:grid-cols-3 lg:grid-cols-6">
-            <Info label="Produto" value={produtoNome ?? "—"} />
+          <CardContent className="flex flex-wrap items-start gap-x-3 gap-y-1 p-3">
+            <Info label="Produto" value={produtoInfo} />
             <Info label="Início" value={op.data.inicio_em ? formatDate(op.data.inicio_em) : "—"} />
             <Info label={op.data.fim_em ? "Fim" : "Em produção há"} value={op.data.fim_em ? formatDate(op.data.fim_em) : (op.data.inicio_em ? durationFromNow(op.data.inicio_em) : "—")} />
-            <Info label="Produzido" value={op.data.qtd_produzida != null ? formatNumber(Number(op.data.qtd_produzida)) : "—"} />
-            <Info label="Operador" value={operador.data?.nome ?? "—"} />
-            <Info label="Equipamento" value={equip?.nome ?? "—"} />
+            <Info label="Produzido" value={produzidoInfo} />
+            <Info label="Equipamento" value={equipamentoInfo} />
             {vis.observacoes && (op.data.obs_iniciais || op.data.obs_finais) ? (
-              <div className="col-span-full border-t border-border pt-2 text-xs text-muted-foreground">
+              <div className="w-full border-t border-border pt-2 text-xs text-muted-foreground">
                 {op.data.obs_iniciais ? <span><b className="text-foreground">Obs. iniciais:</b> {op.data.obs_iniciais}</span> : null}
                 {op.data.obs_finais ? <span className="ml-4"><b className="text-foreground">Obs. finais:</b> {op.data.obs_finais}</span> : null}
               </div>
