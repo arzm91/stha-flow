@@ -1759,6 +1759,7 @@ export type Database = {
       ordens_producao: {
         Row: {
           auto_iniciar: boolean
+          concentracao_media: number | null
           created_at: string
           duracao_estimada_min: number | null
           equipamento_id: string
@@ -1766,6 +1767,7 @@ export type Database = {
           fim_em: string | null
           finalizado_por: string | null
           id: string
+          indice_conversao: number | null
           inicio_em: string | null
           inicio_previsto: string | null
           numero: string
@@ -1783,6 +1785,7 @@ export type Database = {
         }
         Insert: {
           auto_iniciar?: boolean
+          concentracao_media?: number | null
           created_at?: string
           duracao_estimada_min?: number | null
           equipamento_id: string
@@ -1790,6 +1793,7 @@ export type Database = {
           fim_em?: string | null
           finalizado_por?: string | null
           id?: string
+          indice_conversao?: number | null
           inicio_em?: string | null
           inicio_previsto?: string | null
           numero: string
@@ -1807,6 +1811,7 @@ export type Database = {
         }
         Update: {
           auto_iniciar?: boolean
+          concentracao_media?: number | null
           created_at?: string
           duracao_estimada_min?: number | null
           equipamento_id?: string
@@ -1814,6 +1819,7 @@ export type Database = {
           fim_em?: string | null
           finalizado_por?: string | null
           id?: string
+          indice_conversao?: number | null
           inicio_em?: string | null
           inicio_previsto?: string | null
           numero?: string

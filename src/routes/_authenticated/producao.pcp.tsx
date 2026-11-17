@@ -1,3 +1,4 @@
+import { indiceCorrigido } from "@/lib/reports-v2/producao-periodo";
 import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
@@ -85,7 +86,7 @@ type Ordem = {
 };
 
 type Equip = { id: string; codigo: string; nome: string; status: string };
-type Prod = { id: string; codigo: string; nome: string };
+type Prod = { id: string; codigo: string; nome: string; concentracao?: number | null };
 
 const PRIO_LABEL: Record<Prioridade, string> = { alta: "Alta", media: "Média", baixa: "Baixa" };
 const PRIO_CLS: Record<Prioridade, string> = {
@@ -677,7 +678,7 @@ function ProgramarOrdemDialog({
   const produtos = useQuery({
     queryKey: ["pcp-produtos"],
     queryFn: async () => {
-      const { data } = await supabase.from("produtos").select("id,codigo,nome").eq("ativo", true).order("nome");
+      const { data } = await supabase.from("produtos").select("id,codigo,nome,concentracao").eq("ativo", true).order("nome");
       return (data ?? []) as Prod[];
     },
   });
@@ -1099,6 +1100,7 @@ function RegistrarProducaoManualDialog({
   const [obsFinais, setObsFinais] = useState("");
   const [lancarEstoque, setLancarEstoque] = useState(true);
   const [responsavel, setResponsavel] = useState("");
+  const [concMedia, setConcMedia] = useState<string>("");
   const [mats, setMats] = useState<Array<{ mp_id: string; nome: string; unidade: string; percentual: number | null; tag: string | null; qtd: string; tanque_id: string }>>([]);
 
   useEffect(() => {
@@ -1130,6 +1132,12 @@ function RegistrarProducaoManualDialog({
       return (data ?? []).filter((t: any) => !t.produto_id || t.produto_id === produtoId);
     },
   });
+
+  const concCad = (produtos.data ?? []).find((p) => p.id === produtoId)?.concentracao ?? null;
+  useEffect(() => { setConcMedia(concCad != null ? String(concCad) : ""); }, [produtoId, concCad]);
+  const indicePrev = qtdProduzida === "" ? null : indiceCorrigido(
+    mats.reduce((s, m) => s + (Number(m.qtd) || 0), 0), Number(qtdProduzida),
+    concCad, concMedia === "" ? null : Number(concMedia));
 
   // Receita do produto -> matérias-primas
   useEffect(() => {
@@ -1183,6 +1191,8 @@ function RegistrarProducaoManualDialog({
         qtd_planejada: qtdPlanejada === "" ? Number(qtdProduzida) : Number(qtdPlanejada),
         responsavel_fechamento: responsavel.trim(),
         finalizado_por: u.user.id,
+        concentracao_media: concMedia === "" ? null : Number(concMedia),
+        indice_conversao: indicePrev,
         qtd_produzida: Number(qtdProduzida),
         status: "finalizada",
         inicio_em: inicioIso,
@@ -1332,6 +1342,16 @@ function RegistrarProducaoManualDialog({
                     </select>
                   </div>
                 ))}
+            </div>
+            <div className="space-y-1.5">
+              <Label>Concentração média do período (%)</Label>
+              <Input type="number" step="any" value={concMedia} onChange={(e) => setConcMedia(e.target.value)} placeholder={concCad != null ? String(concCad) : "ex.: 52"} />
+              <p className="text-[11px] text-muted-foreground">Cadastrada no produto: {concCad != null ? `${concCad}%` : "—"}</p>
+            </div>
+            <div className="rounded-md border border-border bg-muted/30 p-2">
+              <div className="text-[11px] text-muted-foreground">Índice de conversão (prévia)</div>
+              <div className="text-xl font-semibold tabular-nums">{indicePrev != null ? indicePrev.toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : "—"}</div>
+              <div className="text-[10px] text-muted-foreground">(consumido ÷ produzido) × conc. cad. ÷ conc. média</div>
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Responsável pelo fechamento</Label>

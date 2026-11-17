@@ -5,7 +5,7 @@ import { ReportShell } from "./ReportShell";
 import { KpiCard, SectionTitle, DataTable, StatusBadge } from "./atoms";
 import { REPORTS } from "@/lib/reports-v2/registry";
 import { formatDate, formatNumber } from "@/lib/format";
-import { indiceConversao, sobreposicaoSeg, disponibilidade } from "@/lib/reports-v2/producao-periodo";
+import { indiceCorrigido, indiceConversao, sobreposicaoSeg, disponibilidade } from "@/lib/reports-v2/producao-periodo";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -54,7 +54,7 @@ export function ProducaoPeriodoReport() {
     queryKey: ["rep-pp", iniISO, fimISO, equip],
     queryFn: async () => {
       let oq = supabase.from("ordens_producao")
-        .select("id,numero,status,inicio_em,fim_em,qtd_produzida,responsavel_fechamento,equipamento_id,produto:produto_id(nome,unidade,concentracao),equipamento:equipamento_id(nome,codigo)")
+        .select("id,numero,status,inicio_em,fim_em,qtd_produzida,responsavel_fechamento,concentracao_media,indice_conversao,equipamento_id,produto:produto_id(nome,unidade,concentracao),equipamento:equipamento_id(nome,codigo)")
         .not("inicio_em", "is", null).lte("inicio_em", fimISO).or(`fim_em.is.null,fim_em.gte.${iniISO}`)
         .order("inicio_em");
       if (equip !== "all") oq = oq.eq("equipamento_id", equip);
@@ -89,7 +89,8 @@ export function ProducaoPeriodoReport() {
       const prod = Number(o.qtd_produzida ?? 0);
       const cons = consPorOp.get(o.id) ?? 0;
       const dur = ((o.fim_em ? new Date(o.fim_em).getTime() : Date.now()) - new Date(o.inicio_em).getTime()) / 1000;
-      return { ...o, prod, cons, dur, indice: indiceConversao(cons, prod) };
+      const indice = o.indice_conversao != null ? Number(o.indice_conversao) : indiceCorrigido(cons, prod, o.produto?.concentracao, o.concentracao_media);
+      return { ...o, prod, cons, dur, indice };
     });
     const totalProd = linhas.reduce((s, l) => s + l.prod, 0);
     const totalCons = linhas.reduce((s, l) => s + l.cons, 0);
@@ -107,7 +108,11 @@ export function ProducaoPeriodoReport() {
     }, 0);
     const mps = [...mpMap.values()].sort((x, y) => y.qtd - x.qtd);
     return {
-      linhas, totalProd, totalCons, indice: indiceConversao(totalCons, totalProd),
+      linhas, totalProd, totalCons, indice: (() => {
+        const v = linhas.filter((l) => l.indice != null && l.prod > 0);
+        const p = v.reduce((s, l) => s + l.prod, 0);
+        return p > 0 ? v.reduce((s, l) => s + (l.indice as number) * l.prod, 0) / p : indiceConversao(totalCons, totalProd);
+      })(),
       paradas, paradoSeg, totalSeg, prodSeg, disp: disponibilidade(totalSeg, paradoSeg), mps,
     };
   }, [q.data, iniISO, fimISO, equip, equipsQ.data]);
@@ -149,7 +154,7 @@ export function ProducaoPeriodoReport() {
           <div className="grid grid-cols-3 gap-3 break-avoid">
             <KpiCard label="Total produzido" value={nf(calc.totalProd)} hint={`${calc.linhas.length} produções`} tone="success" />
             <KpiCard label="Total consumido (MP)" value={nf(calc.totalCons)} tone="primary" />
-            <KpiCard label="Índice de conversão" value={nf(calc.indice, 3)} hint="consumido ÷ produzido" />
+            <KpiCard label="Índice de conversão" value={nf(calc.indice, 3)} hint="consumido ÷ produzido × conc. cad. ÷ conc. média (média ponderada)" />
             <KpiCard label="Tempo em produção" value={fmtDur(calc.prodSeg)} />
             <KpiCard label="Paradas" value={`${calc.paradas.length} · ${fmtDur(calc.paradoSeg)}`} tone={calc.paradas.length ? "warning" : "default"} />
             <KpiCard label="OEE · Disponibilidade" value={calc.disp == null ? "—" : `${calc.disp.toFixed(1)}%`}
@@ -166,6 +171,7 @@ export function ProducaoPeriodoReport() {
             { header: "Duração", cell: (r: any) => fmtDur(r.dur), align: "right" },
             { header: "Produzido", cell: (r: any) => nf(r.prod), align: "right" },
             { header: "Consumido", cell: (r: any) => nf(r.cons), align: "right" },
+            { header: "Conc. média", cell: (r: any) => r.concentracao_media != null ? `${r.concentracao_media}%` : "—", align: "right" },
             { header: "Índice", cell: (r: any) => <b>{nf(r.indice, 3)}</b>, align: "right" },
           ]} />
 

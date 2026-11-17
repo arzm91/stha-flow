@@ -1,3 +1,4 @@
+import { indiceCorrigido } from "@/lib/reports-v2/producao-periodo";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { supabase } from "@/integrations/supabase/client";
@@ -96,7 +97,9 @@ export async function gerarRelatorioProducaoPdf(ordemId: string) {
   // Produção / consumo
   const produzida = Number(op.qtd_produzida ?? 0);
   const consumoTotal = mats.reduce((s, m) => s + Number(m.quantidade_consumida ?? 0), 0);
-  const conversao = consumoTotal > 0 ? produzida / consumoTotal : null;
+  const concMedia = op.concentracao_media != null ? Number(op.concentracao_media) : null;
+  const concCad = op.produto?.concentracao != null ? Number(op.produto.concentracao) : null;
+  const conversao = op.indice_conversao != null ? Number(op.indice_conversao) : indiceCorrigido(consumoTotal, produzida, concCad, concMedia);
 
   // Tags no período
   const byTag = new Map<string, { unidade: string | null; values: number[] }>();
@@ -222,7 +225,8 @@ export async function gerarRelatorioProducaoPdf(ordemId: string) {
 
   section("Índices de conversão e velocidades médias");
   const idxBody: string[][] = [
-    ["Conversão (produzido ÷ consumido)", "—", conversao != null ? conversao.toLocaleString("pt-BR", { maximumFractionDigits: 3, minimumFractionDigits: 3 }) : "—", "—", ""],
+    ["Concentração média do período", concCad != null ? `${concCad}% (cadastro)` : "—", concMedia != null ? `${concMedia}%` : "—", "—", ""],
+    ["Índice de conversão (consumido ÷ produzido × conc. cad. ÷ conc. média)", "—", conversao != null ? conversao.toLocaleString("pt-BR", { maximumFractionDigits: 3, minimumFractionDigits: 3 }) : "—", "—", ""],
     ...indicesRows,
     ["Velocidade média de produção", equip.tag_velocidade_producao ?? "produzido ÷ horas operando", velProd != null ? formatNumber(velProd) : "—", "—", velProdTag != null ? "" : `${velUn}/h`],
     ["Velocidade média de consumo", equip.tag_velocidade_consumo ?? "consumido ÷ horas operando", velCons != null ? formatNumber(velCons) : "—", "—", velConsTag != null ? "" : "/h"],

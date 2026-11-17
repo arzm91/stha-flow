@@ -1,0 +1,1 @@
+ALTER TABLE public.ordens_producao ADD COLUMN IF NOT EXISTS concentracao_media numeric, ADD COLUMN IF NOT EXISTS indice_conversao numeric;

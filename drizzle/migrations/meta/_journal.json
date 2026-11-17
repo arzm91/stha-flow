@@ -36,6 +36,13 @@
       "when": 1794918583509,
       "tag": "0004_producao_fechamento_analises",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1794923780309,
+      "tag": "0005_ordens_concentracao_indice",
+      "breakpoints": true
     }
   ]
 }

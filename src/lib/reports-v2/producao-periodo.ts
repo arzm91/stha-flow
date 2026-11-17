@@ -13,3 +13,18 @@ export function disponibilidade(totalSeg: number, paradoSeg: number): number | n
   if (totalSeg <= 0) return null;
   return Math.max(0, Math.min(100, ((totalSeg - paradoSeg) / totalSeg) * 100));
 }
+
+/**
+ * Índice de conversão corrigido pela concentração:
+ * (consumido / produzido) × (conc. cadastrada no produto / conc. média do período).
+ * Sem alguma das concentrações, retorna o índice direto.
+ */
+export function indiceCorrigido(
+  consumido: number, produzido: number,
+  concProduto: number | null | undefined, concMedia: number | null | undefined,
+): number | null {
+  const base = indiceConversao(consumido, produzido);
+  if (base == null) return null;
+  if (concProduto == null || concMedia == null || !(Number(concMedia) > 0) || !(Number(concProduto) > 0)) return base;
+  return base * (Number(concProduto) / Number(concMedia));
+}

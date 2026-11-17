@@ -1,3 +1,4 @@
+import { indiceCorrigido } from "@/lib/reports-v2/producao-periodo";
 import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useRef, type ReactNode } from "react";
@@ -1239,6 +1240,8 @@ function FinalizarDialog({
   const [tanqueId, setTanqueId] = useState("");
   const [loading, setLoading] = useState(false);
   const [responsavel, setResponsavel] = useState("");
+  const [concMedia, setConcMedia] = useState<string>("");
+  const concCad = op.produto?.concentracao != null ? Number(op.produto.concentracao) : null;
   const [trocas, setTrocas] = useState<Array<{ ocorrido_em: string; qtd: number; de: string; para: string }>>([]);
   type MatRow = {
     id: string;
@@ -1257,7 +1260,7 @@ function FinalizarDialog({
 
   useEffect(() => {
     if (!open) return;
-    setQtd(""); setObs(""); setTanqueId(""); setMats([]); setMatsLoaded(false); setTrocas([]);
+    setQtd(""); setObs(""); setTanqueId(""); setMats([]); setConcMedia(concCad != null ? String(concCad) : ""); setMatsLoaded(false); setTrocas([]);
     (async () => {
       const { data: tr } = await supabase
         .from("ordem_trocas_produto")
@@ -1312,6 +1315,8 @@ function FinalizarDialog({
   const updateMat = (i: number, patch: Partial<MatRow>) =>
     setMats((prev) => prev.map((m, idx) => (idx === i ? { ...m, ...patch } : m)));
 
+  const consTotal = mats.reduce((s, m) => s + (Number(m.quantidade_consumida) || 0), 0);
+  const indicePrev = qtd === "" ? null : indiceCorrigido(consTotal, Number(qtd), concCad, concMedia === "" ? null : Number(concMedia));
   const handle = async () => {
     if (qtd === "" || Number(qtd) <= 0) return toast.error("Informe quantidade produzida");
     if (!responsavel.trim()) return toast.error("Informe o responsável pelo fechamento");
@@ -1328,6 +1333,8 @@ function FinalizarDialog({
         fim_em: fimEm,
         responsavel_fechamento: responsavel.trim(),
         finalizado_por: u.user.id,
+        concentracao_media: concMedia === "" ? null : Number(concMedia),
+        indice_conversao: indicePrev,
       }).eq("id", op.id);
       if (e1) throw e1;
       const { error: e2 } = await supabase.from("equipamentos").update({ status: "disponivel" }).eq("id", op.equipamento_id);
@@ -1430,6 +1437,18 @@ function FinalizarDialog({
           <div className="space-y-1.5">
             <Label>Quantidade produzida (total)</Label>
             <Input type="number" step="any" value={qtd} onChange={(e) => setQtd(e.target.value === "" ? "" : Number(e.target.value))} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Concentração média do período (%)</Label>
+              <Input type="number" step="any" value={concMedia} onChange={(e) => setConcMedia(e.target.value)} placeholder={concCad != null ? String(concCad) : "ex.: 52"} />
+              <p className="text-[11px] text-muted-foreground">Cadastrada no produto: {concCad != null ? `${concCad}%` : "—"}</p>
+            </div>
+            <div className="rounded-md border border-border bg-muted/30 p-2">
+              <div className="text-[11px] text-muted-foreground">Índice de conversão (prévia)</div>
+              <div className="text-xl font-semibold tabular-nums">{indicePrev != null ? indicePrev.toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : "—"}</div>
+              <div className="text-[10px] text-muted-foreground">(consumido ÷ produzido) × conc. cad. ÷ conc. média</div>
+            </div>
           </div>
           <div className="space-y-1.5">
             <Label>Tanque de destino (opcional)</Label>

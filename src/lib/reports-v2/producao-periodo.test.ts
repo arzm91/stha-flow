@@ -13,3 +13,16 @@ describe("relatório de produção por período", () => {
     expect(disponibilidade(36000, 3600)).toBeCloseTo(90);
   });
 });
+
+import { indiceCorrigido } from "./producao-periodo";
+describe("indiceCorrigido", () => {
+  it("consumido/produzido × conc_prod/conc_média", () => {
+    expect(indiceCorrigido(630, 1000, 50, 52)).toBeCloseTo(0.6058, 4);
+  });
+  it("sem concentração média usa índice direto", () => {
+    expect(indiceCorrigido(630, 1000, 50, null)).toBeCloseTo(0.63);
+  });
+  it("produção zero retorna nulo", () => {
+    expect(indiceCorrigido(630, 0, 50, 52)).toBeNull();
+  });
+});
