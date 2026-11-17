@@ -991,6 +991,7 @@ export type Database = {
           created_at: string
           descricao: string | null
           id: string
+          indices_config: Json
           localizacao: string | null
           nome: string
           owner_id: string
@@ -1032,6 +1033,7 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           id?: string
+          indices_config?: Json
           localizacao?: string | null
           nome: string
           owner_id: string
@@ -1073,6 +1075,7 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           id?: string
+          indices_config?: Json
           localizacao?: string | null
           nome?: string
           owner_id?: string
@@ -2323,12 +2326,16 @@ export type Database = {
           ativo: boolean
           categoria: string | null
           codigo: string
+          concentracao: number | null
           created_at: string
           descricao: string | null
           disponivel_como_materia_prima: boolean
+          equipamento_id: string | null
           id: string
           nome: string
           owner_id: string
+          tag_clp: string | null
+          tag_valor_ativacao: number | null
           unidade: string
           updated_at: string
         }
@@ -2336,12 +2343,16 @@ export type Database = {
           ativo?: boolean
           categoria?: string | null
           codigo: string
+          concentracao?: number | null
           created_at?: string
           descricao?: string | null
           disponivel_como_materia_prima?: boolean
+          equipamento_id?: string | null
           id?: string
           nome: string
           owner_id: string
+          tag_clp?: string | null
+          tag_valor_ativacao?: number | null
           unidade: string
           updated_at?: string
         }
@@ -2349,16 +2360,28 @@ export type Database = {
           ativo?: boolean
           categoria?: string | null
           codigo?: string
+          concentracao?: number | null
           created_at?: string
           descricao?: string | null
           disponivel_como_materia_prima?: boolean
+          equipamento_id?: string | null
           id?: string
           nome?: string
           owner_id?: string
+          tag_clp?: string | null
+          tag_valor_ativacao?: number | null
           unidade?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "produtos_equipamento_id_fkey"
+            columns: ["equipamento_id"]
+            isOneToOne: false
+            referencedRelation: "equipamentos"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {

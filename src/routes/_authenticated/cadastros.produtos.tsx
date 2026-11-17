@@ -31,9 +31,13 @@ type Produto = {
   unidade: string;
   categoria: string | null;
   ativo: boolean;
+  concentracao: number | null;
+  equipamento_id: string | null;
+  tag_clp: string | null;
+  tag_valor_ativacao: number | null;
 };
 
-const emptyProduto = { codigo: "", nome: "", descricao: "", unidade: "", categoria: "", ativo: true };
+const emptyProduto = { codigo: "", nome: "", descricao: "", unidade: "", categoria: "", ativo: true, concentracao: "", equipamento_id: "", tag_clp: "", tag_valor_ativacao: "" };
 
 function ProdutosPage() {
   const qc = useQueryClient();
@@ -66,6 +70,15 @@ function ProdutosPage() {
     },
   });
 
+
+  const equipList = useQuery({
+    queryKey: ["equipamentos", "produto-vinculo"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("equipamentos").select("id, codigo, nome").eq("categoria", "producao").order("nome");
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
 
   const resPerms = useResourcePermissions();
   const visible = resPerms.filter("produto", list.data).filter((p) => p.categoria !== "materia_prima");
@@ -105,6 +118,10 @@ function ProdutosPage() {
       unidade: r.unidade,
       categoria: r.categoria ?? "",
       ativo: r.ativo,
+      concentracao: r.concentracao == null ? "" : String(r.concentracao),
+      equipamento_id: r.equipamento_id ?? "",
+      tag_clp: r.tag_clp ?? "",
+      tag_valor_ativacao: r.tag_valor_ativacao == null ? "" : String(r.tag_valor_ativacao),
     });
 
     // Load recipe
@@ -130,12 +147,20 @@ function ProdutosPage() {
         ...form,
         descricao: form.descricao || null,
         categoria: form.categoria || null,
+        concentracao: form.concentracao === "" ? null : Number(form.concentracao),
+        equipamento_id: form.equipamento_id || null,
+        tag_clp: form.tag_clp || null,
+        tag_valor_ativacao: form.tag_valor_ativacao === "" ? null : Number(form.tag_valor_ativacao),
         owner_id: ownerId,
       };
+      if (payload.tag_clp && (payload.tag_valor_ativacao == null || !payload.equipamento_id)) {
+        throw new Error("Para vincular a tag do CLP, escolha o equipamento e o valor (0 ou 1).");
+      }
 
       let produtoId = editing?.id;
       if (editing) {
-        const { error } = await supabase.from("produtos").update(payload).eq("id", editing.id);
+        const { owner_id: _o, ...upd } = payload;
+        const { error } = await supabase.from("produtos").update(upd).eq("id", editing.id);
         if (error) throw error;
       } else {
         const { data, error } = await supabase.from("produtos").insert(payload).select("id").single();
@@ -251,6 +276,36 @@ function ProdutosPage() {
                   <Field label="Categoria">
                     <Input value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })} />
                   </Field>
+                  <Field label="Concentração / parâmetro (%)">
+                    <Input type="number" step="0.01" min="0" max="100" placeholder="ex.: 50" value={form.concentracao} onChange={(e) => setForm({ ...form, concentracao: e.target.value })} />
+                  </Field>
+                  <div className="sm:col-span-2 space-y-2 rounded-md border border-border bg-muted/30 p-3">
+                    <div>
+                      <h3 className="text-sm font-semibold">Identificação pela tag do CLP</h3>
+                      <p className="text-xs text-muted-foreground">Este produto está em produção no equipamento quando a tag tiver o valor escolhido. Ex.: tag X = 1 → este produto.</p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                      <Field label="Equipamento">
+                        <select value={form.equipamento_id} onChange={(e) => setForm({ ...form, equipamento_id: e.target.value })} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+                          <option value="">— nenhum —</option>
+                          {(equipList.data ?? []).map((q) => <option key={q.id} value={q.id}>{q.codigo} — {q.nome}</option>)}
+                        </select>
+                      </Field>
+                      <Field label="Tag do CLP (0/1)">
+                        <select value={form.tag_clp} onChange={(e) => setForm({ ...form, tag_clp: e.target.value })} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+                          <option value="">— nenhuma —</option>
+                          {(tagsList.data ?? []).map((t) => <option key={t.nome} value={t.nome}>{t.nome_amigavel || t.nome}</option>)}
+                        </select>
+                      </Field>
+                      <Field label="Produto quando a tag for">
+                        <select value={form.tag_valor_ativacao} onChange={(e) => setForm({ ...form, tag_valor_ativacao: e.target.value })} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+                          <option value="">— selecione —</option>
+                          <option value="0">0</option>
+                          <option value="1">1</option>
+                        </select>
+                      </Field>
+                    </div>
+                  </div>
                   <div className="sm:col-span-2">
                     <Field label="Descrição">
                       <textarea
@@ -367,6 +422,8 @@ function ProdutosPage() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Unidade</TableHead>
                 <TableHead>Categoria</TableHead>
+                <TableHead>Concentração</TableHead>
+                <TableHead>Tag CLP</TableHead>
                 <TableHead>Ativo</TableHead>
                 <TableHead className="text-right">Ações</TableHead>
               </TableRow>
@@ -378,6 +435,8 @@ function ProdutosPage() {
                   <TableCell>{r.nome}</TableCell>
                   <TableCell>{r.unidade}</TableCell>
                   <TableCell>{r.categoria ?? "—"}</TableCell>
+                  <TableCell>{r.concentracao != null ? `${r.concentracao}%` : "—"}</TableCell>
+                  <TableCell className="font-mono text-xs">{r.tag_clp ? `${r.tag_clp} = ${r.tag_valor_ativacao ?? "?"}` : "—"}</TableCell>
                   <TableCell>{r.ativo ? "Sim" : "Não"}</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-1">

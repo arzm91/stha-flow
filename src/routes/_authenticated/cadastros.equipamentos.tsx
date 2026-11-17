@@ -6,6 +6,7 @@ import { CrudTable, type FieldDef } from "@/components/CrudTable";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { History, ListChecks, Workflow } from "lucide-react";
+import { IndicesConfigEditor } from "@/components/equipamentos/IndicesConfigEditor";
 
 export const Route = createFileRoute("/_authenticated/cadastros/equipamentos")({
   head: pageHead({ title: "Cadastros · Equipamentos — STHApc", description: "Acesse e gerencie Cadastros · Equipamentos no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/cadastros/equipamentos" }),
@@ -18,7 +19,7 @@ function EquipamentosPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("tags_live")
-        .select("nome,nome_amigavel,unidade,grupo,valor")
+        .select("nome,nome_amigavel,unidade,grupo,valor,valor_num")
         .order("nome");
       if (error) throw error;
       return data ?? [];
@@ -59,12 +60,25 @@ function EquipamentosPage() {
   const produtos = useQuery({
     queryKey: ["produtos", "troca-opts"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("produtos").select("id,codigo,nome").order("nome");
+      const { data, error } = await supabase.from("produtos").select("id,codigo,nome,concentracao,equipamento_id,tag_clp,tag_valor_ativacao,ativo").order("nome");
       if (error) throw error;
       return data ?? [];
     },
   });
   const produtoOptions = (produtos.data ?? []).map((p) => ({ value: p.id, label: `${p.codigo} — ${p.nome}` }));
+
+  const tagVal = (n: string) => {
+    const v = (tags.data ?? []).find((t) => t.nome === n)?.valor_num;
+    return v == null ? null : Number(v);
+  };
+  const prodsDoEquip = (id: unknown) => (produtos.data ?? []).filter((p) => id && p.equipamento_id === id && p.tag_clp);
+  const produtoAtivo = (id: unknown) => {
+    for (const p of prodsDoEquip(id)) {
+      const v = tagVal(p.tag_clp!);
+      if (v != null && Math.round(v) === p.tag_valor_ativacao) return p;
+    }
+    return null;
+  };
 
   const fields: FieldDef[] = [
     { key: "codigo", label: "Código", required: true },
@@ -120,19 +134,35 @@ function EquipamentosPage() {
       section: "Rendimento / Eficiência / Índice",
       help: "Selecione tags (inclui tags calculadas) para exibir como indicadores de rendimento/eficiência/índice nos cards do dashboard, da página de produção e no acompanhamento da produção. Opcional.",
     },
+    { key: "indices_config", label: "Índices com correção por concentração", type: "custom",
+      render: (v, onChange, form) => {
+        const ativo = produtoAtivo(form.id);
+        const conc = ativo?.concentracao ?? prodsDoEquip(form.id).find((p) => p.concentracao != null)?.concentracao ?? null;
+        return <IndicesConfigEditor value={v} onChange={onChange} tagOptions={tagOptions} tagValue={tagVal} concExemplo={conc == null ? null : Number(conc)} />;
+      },
+    },
 
     // ===== Troca automática de produto =====
     { key: "troca_auto_ativa", label: "Trocar produto automaticamente pela tag do CLP", type: "checkbox", section: "Troca automática de produto",
       help: "Com a produção em andamento, quando a tag mudar entre 0 e 1 o sistema registra a troca sozinho (data, hora e quantidade), sem confirmação do operador.",
     },
-    { key: "troca_tag_produto", label: "Tag do produto em operação (0/1)", type: "select",
-      options: [{ value: "", label: "— nenhuma —" }, ...tagOptions],
-    },
-    { key: "troca_produto_0_id", label: "Produto quando a tag = 0", type: "select",
-      options: [{ value: "", label: "— selecione —" }, ...produtoOptions],
-    },
-    { key: "troca_produto_1_id", label: "Produto quando a tag = 1", type: "select",
-      options: [{ value: "", label: "— selecione —" }, ...produtoOptions],
+    { key: "troca_produtos_resumo", label: "Produtos vinculados (definidos em Cadastros > Produtos)", type: "custom", virtual: true,
+      render: (_v, _c, form) => {
+        const ps = prodsDoEquip(form.id);
+        if (!form.id) return <p className="text-xs text-muted-foreground">Salve o equipamento e depois vincule os produtos a ele em Cadastros &gt; Produtos.</p>;
+        if (ps.length === 0) return <p className="rounded border border-dashed border-border p-2 text-xs text-muted-foreground">Nenhum produto vinculado. Em Cadastros &gt; Produtos, escolha este equipamento, a tag do CLP e o valor (0 ou 1).</p>;
+        const ativo = produtoAtivo(form.id);
+        return (
+          <div className="space-y-1 rounded-md border border-border bg-muted/30 p-2 text-xs">
+            {ps.map((p) => (
+              <div key={p.id} className="flex items-center justify-between gap-2">
+                <span><span className="font-mono">{p.tag_clp} = {p.tag_valor_ativacao ?? "?"}</span> → {p.nome}{p.concentracao != null ? ` (${p.concentracao}%)` : ""}</span>
+                {ativo?.id === p.id ? <Badge>Em operação</Badge> : null}
+              </div>
+            ))}
+          </div>
+        );
+      },
     },
     { key: "troca_tag_quantidade", label: "Tag da quantidade do produto anterior", type: "select",
       options: [{ value: "", label: "— nenhuma —" }, ...tagOptions],
@@ -197,7 +227,7 @@ function EquipamentosPage() {
       description="Cadastro e gestão dos equipamentos de produção da planta."
       searchKeys={["nome", "codigo", "tipo", "localizacao"]}
       filter={{ categoria: "producao" }}
-      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [], utilidade_ids: [], tag_velocidade_producao: "", tag_producao_total: "", tag_indices: [], troca_auto_ativa: false, troca_tag_produto: "", troca_produto_0_id: "", troca_produto_1_id: "", troca_tag_quantidade: "", troca_qtd_modo: "direto", capacidade_hora: "", capacidade_dia: "", capacidade_mes: "", capacidade_unidade: "", parada_tag_nome: "", parada_modo: "", parada_operador: "", parada_valor: "", parada_valor_min: "", parada_valor_max: "", parada_tempo_min_seg: 15, parada_alerta_apos_min: "", parada_motivos: ["Falta de energia","Parada programada","Parada não programada","Manutenção","Setup / Troca de produto","Falta de matéria-prima","Falha operacional","Outro"] }}
+      initialValues={{ codigo: "", nome: "", descricao: "", tipo: "", localizacao: "", status: "disponivel", ativo: true, tag_nomes: [], utilidade_ids: [], tag_velocidade_producao: "", tag_producao_total: "", tag_indices: [], troca_auto_ativa: false, indices_config: [], troca_tag_quantidade: "", troca_qtd_modo: "direto", capacidade_hora: "", capacidade_dia: "", capacidade_mes: "", capacidade_unidade: "", parada_tag_nome: "", parada_modo: "", parada_operador: "", parada_valor: "", parada_valor_min: "", parada_valor_max: "", parada_tempo_min_seg: 15, parada_alerta_apos_min: "", parada_motivos: ["Falta de energia","Parada programada","Parada não programada","Manutenção","Setup / Troca de produto","Falta de matéria-prima","Falha operacional","Outro"] }}
       fields={fields}
 
 

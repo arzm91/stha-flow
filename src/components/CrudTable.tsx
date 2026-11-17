@@ -19,7 +19,11 @@ import { useResourcePermissions, type ResourceType } from "@/hooks/useResourcePe
 export type FieldDef = {
   key: string;
   label: string;
-  type?: "text" | "number" | "checkbox" | "select" | "textarea" | "multiselect" | "chips";
+  type?: "text" | "number" | "checkbox" | "select" | "textarea" | "multiselect" | "chips" | "custom";
+  /** type "custom": renders arbitrary editor. */
+  /** Not a database column: never sent on save. */
+  virtual?: boolean;
+  render?: (value: unknown, onChange: (v: unknown) => void, form: Record<string, unknown>) => ReactNode;
   required?: boolean;
   options?: { value: string; label: string; hint?: string }[];
   step?: string;
@@ -88,6 +92,7 @@ export function CrudTable({
       const { data: u } = await supabase.auth.getUser();
       if (!u.user) throw new Error("Não autenticado");
       const payload: Record<string, unknown> = { ...values, ...(filter ?? {}), owner_id: u.user.id };
+      for (const f of fields) if (f.virtual) delete payload[f.key];
       // Normalize empties
       for (const k of Object.keys(payload)) {
         if (payload[k] === "") payload[k] = null;
@@ -185,6 +190,8 @@ export function CrudTable({
                         options={f.options ?? []}
                         placeholder={f.placeholder ?? "Selecione..."}
                       />
+                    ) : f.type === "custom" && f.render ? (
+                      f.render(form[f.key], (v) => setForm({ ...form, [f.key]: v }), { ...form, id: editing?.id })
                     ) : f.type === "chips" ? (
                       <ChipsField
                         value={Array.isArray(form[f.key]) ? (form[f.key] as string[]) : []}

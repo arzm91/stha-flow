@@ -86,7 +86,7 @@ function ParametrosPage() {
   const produtos = useQuery({
     queryKey: ["parametros-unidade-produtos"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("produtos").select("id,nome").order("nome");
+      const { data, error } = await supabase.from("produtos").select("id,nome,equipamento_id,tag_clp,tag_valor_ativacao").order("nome");
       if (error) throw error;
       return data ?? [];
     },
@@ -99,13 +99,20 @@ function ParametrosPage() {
   // Produto ativo por equipamento (tag 0/1 configurada na troca automática).
   const produtoAtivo = useMemo(() => {
     const m = new Map<string, string | null>();
+    for (const p of produtos.data ?? []) {
+      if (!p.equipamento_id || !p.tag_clp || p.tag_valor_ativacao == null) continue;
+      const v = tagMap.get(p.tag_clp)?.valor_num;
+      if (v == null) { if (!m.has(p.equipamento_id)) m.set(p.equipamento_id, null); continue; }
+      if (Math.round(Number(v)) === p.tag_valor_ativacao) m.set(p.equipamento_id, p.id);
+      else if (!m.has(p.equipamento_id)) m.set(p.equipamento_id, null);
+    }
     for (const e of equips.data ?? []) {
-      if (!e.troca_tag_produto) continue;
+      if (!e.troca_tag_produto || m.get(e.id)) continue;
       const v = tagMap.get(e.troca_tag_produto)?.valor_num;
       m.set(e.id, v === null || v === undefined ? null : Number(v) >= 0.5 ? e.troca_produto_1_id : e.troca_produto_0_id);
     }
     return m;
-  }, [equips.data, tagMap]);
+  }, [equips.data, produtos.data, tagMap]);
 
   const rows = useMemo(() => {
     return (params.data ?? []).filter((p) => p.ativo).filter((p) => {
