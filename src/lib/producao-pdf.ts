@@ -292,6 +292,15 @@ export async function gerarRelatorioProducaoPdf(ordemId: string) {
     ]));
   }
 
+  const { data: turnosData } = await supabase.from("relatorio_turno_eventos")
+    .select("ocorrido_em,categoria,titulo,descricao,responsavel").gte("ocorrido_em", ini).lte("ocorrido_em", fim).order("ocorrido_em").limit(500);
+  const turnos = (turnosData ?? []) as any[];
+  section("Turnos");
+  if (turnos.length === 0) empty("Nenhum registro de turno no período.");
+  else table(["Data/Hora", "Categoria", "Registro", "Responsável"], turnos.map((t) => [
+    formatDate(t.ocorrido_em), t.categoria ?? "—", [t.titulo, t.descricao].filter(Boolean).join(" — ") || "—", t.responsavel ?? "—",
+  ]), { columnStyles: { 0: { cellWidth: 95 }, 1: { cellWidth: 80 } } });
+
   section("Observações");
   const obsBody: string[][] = [
     ...(op.obs_iniciais ? [["Iniciais", op.obs_iniciais]] : []),

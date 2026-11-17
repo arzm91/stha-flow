@@ -364,7 +364,7 @@ function OPPage() {
           <TabsTrigger value="processos"><ListChecks className="mr-1 h-4 w-4" />Processos</TabsTrigger>
           <TabsTrigger value="parametros"><Gauge className="mr-1 h-4 w-4" />Parâmetros</TabsTrigger>
           <TabsTrigger value="analises"><FlaskConical className="mr-1 h-4 w-4" />Análises</TabsTrigger>
-          <TabsTrigger value="observacoes"><MessageSquare className="mr-1 h-4 w-4" />Observações</TabsTrigger>
+          <TabsTrigger value="observacoes"><MessageSquare className="mr-1 h-4 w-4" />Turnos</TabsTrigger>
           <TabsTrigger value="tabelas"><TableIcon className="mr-1 h-4 w-4" />Tabelas</TabsTrigger>
           <TabsTrigger value="paradas"><AlertOctagon className="mr-1 h-4 w-4" />Paradas</TabsTrigger>
           <TabsTrigger value="historico"><History className="mr-1 h-4 w-4" />Histórico</TabsTrigger>
@@ -421,19 +421,7 @@ function OPPage() {
         </TabsContent>
 
         <TabsContent value="observacoes">
-          <ObservacoesSection
-            disabled={isFinal}
-            rows={observacoes.data ?? []}
-            onAdd={async (texto) => {
-              const { data: u } = await supabase.auth.getUser();
-              if (!u.user) throw new Error("Não autenticado");
-              const { error } = await supabase.from("observacoes_producao").insert({
-                owner_id: u.user.id, ordem_id: id, texto,
-              });
-              if (error) throw error;
-              qc.invalidateQueries({ queryKey: ["obs", id] });
-            }}
-          />
+          <TurnosSection inicioEm={(op.data as any).inicio_em ?? null} fimEm={(op.data as any).fim_em ?? null} />
         </TabsContent>
 
         <TabsContent value="tabelas">
@@ -2029,6 +2017,53 @@ function AvancoDiaCard({ equipamentoId, ordemId, tagTotal, ativa, capacidadeDia,
             <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct}%` }} />
           </div>
         ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function TurnosSection({ inicioEm, fimEm }: { inicioEm: string | null; fimEm: string | null }) {
+  const q = useQuery({
+    queryKey: ["op-turnos", inicioEm, fimEm],
+    enabled: !!inicioEm,
+    refetchInterval: 30_000,
+    queryFn: async () => {
+      let qq = supabase.from("relatorio_turno_eventos")
+        .select("id,ocorrido_em,categoria,titulo,descricao,responsavel")
+        .gte("ocorrido_em", inicioEm!).order("ocorrido_em", { ascending: false }).limit(500);
+      if (fimEm) qq = qq.lte("ocorrido_em", fimEm);
+      const { data, error } = await qq;
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+  const rows = q.data ?? [];
+  return (
+    <Card className="mt-4">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0">
+        <CardTitle className="text-base">Registros de turno no período da produção <Badge variant="secondary">{rows.length}</Badge></CardTitle>
+        <Button asChild variant="outline" size="sm"><Link to="/turnos">Abrir turnos</Link></Button>
+      </CardHeader>
+      <CardContent>
+        {q.isLoading ? <p className="text-sm text-muted-foreground">Carregando...</p> : rows.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nenhum registro de turno no período desta produção.</p>
+        ) : (
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead className="w-[160px]">Data/Hora</TableHead><TableHead>Categoria</TableHead><TableHead>Registro</TableHead><TableHead>Responsável</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {rows.map((r) => (
+                <TableRow key={r.id}>
+                  <TableCell className="text-xs text-muted-foreground">{formatDate(r.ocorrido_em)}</TableCell>
+                  <TableCell><Badge variant="outline">{r.categoria}</Badge></TableCell>
+                  <TableCell className="text-sm"><div className="font-medium">{r.titulo ?? ""}</div><div className="whitespace-pre-wrap text-muted-foreground">{r.descricao ?? ""}</div></TableCell>
+                  <TableCell className="text-sm">{r.responsavel ?? "—"}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </CardContent>
     </Card>
   );
