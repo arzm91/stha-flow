@@ -1447,6 +1447,47 @@ export type Database = {
         }
         Relationships: []
       }
+      ordem_edicoes: {
+        Row: {
+          alteracoes: Json
+          created_at: string
+          id: string
+          motivo: string | null
+          ordem_id: string
+          owner_id: string
+          user_id: string
+          user_nome: string | null
+        }
+        Insert: {
+          alteracoes?: Json
+          created_at?: string
+          id?: string
+          motivo?: string | null
+          ordem_id: string
+          owner_id?: string
+          user_id?: string
+          user_nome?: string | null
+        }
+        Update: {
+          alteracoes?: Json
+          created_at?: string
+          id?: string
+          motivo?: string | null
+          ordem_id?: string
+          owner_id?: string
+          user_id?: string
+          user_nome?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordem_edicoes_ordem_id_fkey"
+            columns: ["ordem_id"]
+            isOneToOne: false
+            referencedRelation: "ordens_producao"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ordem_etapas: {
         Row: {
           atividade_descricao: string | null
@@ -1774,6 +1815,9 @@ export type Database = {
           concentracao_media: number | null
           created_at: string
           duracao_estimada_min: number | null
+          editado_em: string | null
+          editado_por: string | null
+          editado_por_nome: string | null
           equipamento_id: string
           fila_posicao: number | null
           fim_em: string | null
@@ -1800,6 +1844,9 @@ export type Database = {
           concentracao_media?: number | null
           created_at?: string
           duracao_estimada_min?: number | null
+          editado_em?: string | null
+          editado_por?: string | null
+          editado_por_nome?: string | null
           equipamento_id: string
           fila_posicao?: number | null
           fim_em?: string | null
@@ -1826,6 +1873,9 @@ export type Database = {
           concentracao_media?: number | null
           created_at?: string
           duracao_estimada_min?: number | null
+          editado_em?: string | null
+          editado_por?: string | null
+          editado_por_nome?: string | null
           equipamento_id?: string
           fila_posicao?: number | null
           fim_em?: string | null

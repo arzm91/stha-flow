@@ -10,7 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Eye, FileText, Plus } from "lucide-react";
+import { ArrowLeft, Eye, FileText, Pencil, Plus } from "lucide-react";
+import { EditarOrdemDialog } from "@/components/producao/EditarOrdemDialog";
 import { toast } from "sonner";
 import { RegistrarProducaoManualDialog } from "@/components/producao/RegistrarProducaoManualDialog";
 
@@ -23,6 +24,7 @@ type Row = {
   id: string; numero: string; equipamento_id: string; produto_id: string;
   qtd_produzida: number | null; inicio_em: string | null; fim_em: string | null;
   indice_conversao: number | null; concentracao_media: number | null; responsavel_fechamento: string | null;
+  editado_em: string | null; editado_por_nome: string | null;
   produto: { nome: string; codigo: string; concentracao: number | null } | null;
   equipamento: { nome: string; codigo: string } | null;
   materiais: Array<{ quantidade_consumida: number | null }> | null;
@@ -40,6 +42,7 @@ function PcpPage() {
   const [equip, setEquip] = useState("");
   const [prod, setProd] = useState("");
   const [busca, setBusca] = useState("");
+  const [editando, setEditando] = useState<Row | null>(null);
 
   const equipamentos = useQuery({
     queryKey: ["pcp-equipamentos"],
@@ -54,7 +57,7 @@ function PcpPage() {
     queryKey: ["pcp-finalizadas", de, ate, equip, prod],
     queryFn: async () => {
       let q = supabase.from("ordens_producao")
-        .select("id,numero,equipamento_id,produto_id,qtd_produzida,inicio_em,fim_em,indice_conversao,concentracao_media,responsavel_fechamento,produto:produto_id(nome,codigo,concentracao),equipamento:equipamento_id(nome,codigo),materiais:ordem_materiais(quantidade_consumida)")
+        .select("id,numero,equipamento_id,produto_id,qtd_produzida,inicio_em,fim_em,indice_conversao,concentracao_media,responsavel_fechamento,editado_em,editado_por_nome,produto:produto_id(nome,codigo,concentracao),equipamento:equipamento_id(nome,codigo),materiais:ordem_materiais(quantidade_consumida)")
         .eq("status", "finalizada")
         .gte("fim_em", new Date(de).toISOString())
         .lte("fim_em", new Date(ate).toISOString())
@@ -144,9 +147,10 @@ function PcpPage() {
                   <TableCell className="text-right font-mono">{num(o.qtd_produzida)}</TableCell>
                   <TableCell className="text-right font-mono">{num(consumo(o))}</TableCell>
                   <TableCell className="text-right font-mono">{num(indice(o), 3)}</TableCell>
-                  <TableCell>{o.responsavel_fechamento ?? "—"}</TableCell>
+                  <TableCell>{o.responsavel_fechamento ?? "—"}{o.editado_em && <div className="text-xs text-muted-foreground">Editado {dt(o.editado_em)} por {o.editado_por_nome ?? "—"}</div>}</TableCell>
                   <TableCell className="whitespace-nowrap text-right">
                     <Button asChild size="icon" variant="ghost" title="Ver detalhes"><Link to="/producao/finalizada/$id" params={{ id: o.id }}><Eye className="h-4 w-4" /></Link></Button>
+                    <Button size="icon" variant="ghost" title="Editar" onClick={() => setEditando(o)}><Pencil className="h-4 w-4" /></Button>
                     <Button size="icon" variant="ghost" title="Relatório PDF" onClick={() => pdf(o.id)}><FileText className="h-4 w-4" /></Button>
                   </TableCell>
                 </TableRow>
@@ -156,6 +160,7 @@ function PcpPage() {
         </CardContent>
       </Card>
 
+      <EditarOrdemDialog ordem={editando} onClose={() => setEditando(null)} onDone={() => qc.invalidateQueries({ queryKey: ["pcp-finalizadas"] })} />
       <RegistrarProducaoManualDialog
         open={manualOpen}
         onOpenChange={setManualOpen}
