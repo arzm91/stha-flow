@@ -1,3 +1,5 @@
+import { VIRT_OP_ID, filtroOrdem } from "@/lib/producao/virtual";
+import { somaIncrementos } from "@/lib/producao/producao-24h";
 import { indiceCorrigido } from "@/lib/reports-v2/producao-periodo";
 import { pageHead } from "@/lib/seo";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
@@ -35,12 +37,37 @@ export const Route = createFileRoute("/_authenticated/producao/$id")({
 
 function OPPage() {
   const { id } = Route.useParams() as { id: string };
+  return <AcompanhamentoView id={id} />;
+}
+
+export function AcompanhamentoView({ id: idProp, equipId }: { id?: string; equipId?: string }) {
+  const virtual = !!equipId;
+  const id = idProp ?? VIRT_OP_ID;
+  const [desde] = useState(() => new Date(Date.now() - 24 * 3600_000).toISOString());
+  const [pdfOpen, setPdfOpen] = useState(false);
   const qc = useQueryClient();
   const navigate = useNavigate();
 
   const op = useQuery({
-    queryKey: ["op", id],
+    queryKey: ["op", id, equipId],
     queryFn: async () => {
+      if (virtual) {
+        const { data: eq, error: e1 } = await supabase.from("equipamentos").select("id,codigo,nome,tag_nomes,tag_velocidade_producao,tag_velocidade_consumo,indices_config,tag_producao_total,tag_indices,capacidade_hora,capacidade_dia,capacidade_mes,capacidade_unidade").eq("id", equipId!).maybeSingle();
+        if (e1) throw e1;
+        if (!eq) return null;
+        let qtd: number | null = null;
+        if (eq.tag_producao_total) {
+          const { data: h } = await supabase.from("producao_tag_historico").select("valor_num")
+            .eq("equipamento_id", equipId!).eq("tag_nome", eq.tag_producao_total).gte("registrado_em", desde)
+            .order("registrado_em").limit(10000);
+          qtd = somaIncrementos((h ?? []).map((r) => Number(r.valor_num ?? 0)));
+        }
+        return {
+          id: VIRT_OP_ID, numero: eq.codigo, status: "em_andamento", equipamento_id: eq.id, equipamento: eq,
+          produto: null, produto_id: null, inicio_em: desde, fim_em: null, qtd_produzida: qtd, qtd_planejada: 0,
+          obs_iniciais: null, obs_finais: null,
+        } as any;
+      }
       const { data, error } = await supabase
         .from("ordens_producao")
         .select("*, produto:produto_id(id,nome,codigo,unidade,concentracao), equipamento:equipamento_id(id,codigo,nome,tag_nomes,tag_velocidade_producao,tag_velocidade_consumo,indices_config,tag_producao_total,tag_indices,capacidade_hora,capacidade_dia,capacidade_mes,capacidade_unidade), tanque:tanque_destino_id(nome,codigo)")
@@ -56,7 +83,7 @@ function OPPage() {
     queryFn: async () => {
       const { data } = await supabase.from("parametros_registrados")
         .select("*, parametro:parametro_id(nome,unidade,valor_min,valor_max)")
-        .eq("ordem_id", id).order("registrado_em", { ascending: false });
+        .or(filtroOrdem(id, desde)).order("registrado_em", { ascending: false });
       return data ?? [];
     },
   });
@@ -65,7 +92,7 @@ function OPPage() {
     queryFn: async () => {
       const { data } = await supabase.from("analises_registradas")
         .select("*, analise:analise_id(nome,unidade,valor_min,valor_max)")
-        .eq("ordem_id", id).order("registrado_em", { ascending: false });
+        .or(filtroOrdem(id, desde)).order("registrado_em", { ascending: false });
       return data ?? [];
     },
   });
@@ -73,7 +100,7 @@ function OPPage() {
     queryKey: ["obs", id],
     queryFn: async () => {
       const { data } = await supabase.from("observacoes_producao")
-        .select("*").eq("ordem_id", id).order("registrado_em", { ascending: false });
+        .select("*").or(filtroOrdem(id, desde)).order("registrado_em", { ascending: false });
       return data ?? [];
     },
   });
@@ -96,7 +123,7 @@ function OPPage() {
   // Sincroniza o produto da OP em andamento com o produto indicado pela tag do CLP.
   const syncingRef = useRef(false);
   useEffect(() => {
-    if (!op.data || op.data.status !== "em_andamento" || !prodAtivo) return;
+    if (virtual || !op.data || op.data.status !== "em_andamento" || !prodAtivo) return;
     if (op.data.produto_id === prodAtivo.id || syncingRef.current) return;
     syncingRef.current = true;
     supabase.from("ordens_producao").update({ produto_id: prodAtivo.id }).eq("id", op.data.id)
@@ -170,7 +197,7 @@ function OPPage() {
   };
 
   if (op.isLoading) return <div className="text-sm text-muted-foreground">Carregando...</div>;
-  if (!op.data) return <div className="text-sm text-muted-foreground">Ordem não encontrada.</div>;
+  if (!op.data) return <div className="text-sm text-muted-foreground">{virtual ? "Equipamento não encontrado." : "Ordem não encontrada."}</div>;
 
   const isFinal = op.data.status === "finalizada";
   const equip = op.data.equipamento as { tag_nomes?: string[]; tag_velocidade_producao?: string | null; tag_producao_total?: string | null; tag_indices?: string[] | null; codigo?: string | null; nome?: string; capacidade_hora?: number | null; capacidade_dia?: number | null; capacidade_mes?: number | null; capacidade_unidade?: string | null } | null;
@@ -182,7 +209,7 @@ function OPPage() {
   const concProdRaw = !isFinal && prodAtivo ? prodAtivo.concentracao : (op.data.produto as { concentracao?: number | null } | null)?.concentracao ?? null;
   const concProd = concProdRaw != null ? Number(concProdRaw) : null;
   const qtdPlanejada = Number(op.data.qtd_planejada ?? 0);
-  const produtoNome = (op.data.produto as { nome?: string } | null)?.nome ?? null;
+  const produtoNome = (virtual ? prodAtivo?.nome : (op.data.produto as { nome?: string } | null)?.nome) ?? null;
   const produtoUnidade = (op.data.produto as { unidade?: string | null } | null)?.unidade ?? null;
   const unidadeProduzido = equip?.capacidade_unidade ?? produtoUnidade ?? "";
   const produtoInfo = produtoNome
@@ -201,12 +228,12 @@ function OPPage() {
         <Link to="/producao"><ArrowLeft className="mr-1 h-4 w-4" /> Voltar</Link>
       </Button>
       <PageHeader
-        title={`OP ${op.data.numero}`}
-        description={`${produtoNome ?? "Sem produto"} · ${equip?.nome ?? ""}`}
+        title={virtual ? (equip?.nome ?? "Equipamento") : `OP ${op.data.numero}`}
+        description={virtual ? `${produtoNome ?? "Sem produto ativo"} · monitoramento contínuo das últimas 24 horas` : `${produtoNome ?? "Sem produto"} · ${equip?.nome ?? ""}`}
         actions={
           <div className="flex flex-wrap items-center justify-end gap-2">
             <Badge variant="outline" className={isFinal ? "bg-success/20 text-success border-success/30" : "bg-primary/20 text-primary border-primary/30"}>
-              {isFinal ? "Finalizada" : "Em andamento"}
+              {virtual ? "Últimas 24h" : isFinal ? "Finalizada" : "Em andamento"}
             </Badge>
             <Button variant="outline" size="sm" onClick={toggleFs} title={isFs ? "Sair da tela cheia" : "Tela cheia"}>
               {isFs ? <Minimize2 className="mr-1 h-4 w-4" /> : <Maximize2 className="mr-1 h-4 w-4" />}
@@ -216,6 +243,7 @@ function OPPage() {
               variant="outline"
               size="sm"
               onClick={async () => {
+                if (virtual) { setPdfOpen(true); return; }
                 try { await gerarRelatorioProducaoPdf(id); toast.success("Relatório PDF gerado"); }
                 catch (e) { toast.error("Falha ao gerar PDF: " + (e as Error).message); }
               }}
@@ -223,7 +251,8 @@ function OPPage() {
             >
               <FileText className="mr-1 h-4 w-4" /> Relatório PDF
             </Button>
-            <Button
+            {virtual ? <RelatorioPeriodoDialog open={pdfOpen} onOpenChange={setPdfOpen} equipamentoId={equipId!} /> : null}
+            {!virtual && <Button
               variant="outline"
               size="sm"
               onClick={async () => {
@@ -233,8 +262,8 @@ function OPPage() {
               title="Exportar timeline e histórico para Excel"
             >
               <FileSpreadsheet className="mr-1 h-4 w-4" /> Exportar Excel
-            </Button>
-            {!isFinal && <FinalizarDialog op={op.data} tanques={tanquesProd.data ?? []} onDone={() => { qc.invalidateQueries(); navigate({ to: "/producao" }); }} />}
+            </Button>}
+            {!isFinal && !virtual && <FinalizarDialog op={op.data} tanques={tanquesProd.data ?? []} onDone={() => { qc.invalidateQueries(); navigate({ to: "/producao" }); }} />}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" title="Personalizar seções visíveis">
@@ -270,7 +299,7 @@ function OPPage() {
         }
       />
 
-      {!produtoNome && !isFinal ? (
+      {!produtoNome && !isFinal && !virtual ? (
         <VincularProdutoBanner ordemId={id} onDone={() => qc.invalidateQueries({ queryKey: ["op", id] })} />
       ) : null}
 
@@ -359,7 +388,7 @@ function OPPage() {
           fimEm={(op.data as any).fim_em ?? null}
         />
       ) : null}
-      {vis.tagsEquipamento ? <TagsDoEquipamento tagNomes={tagNomes} ordemId={id} disabled={isFinal} /> : null}
+      {vis.tagsEquipamento ? <TagsDoEquipamento tagNomes={tagNomes} ordemId={id} disabled={isFinal || virtual} /> : null}
         </TabsContent>
 
         <TabsContent value="sinotico" className="space-y-3 [&>*]:mb-0">
@@ -374,7 +403,7 @@ function OPPage() {
 
         <TabsContent value="parametros">
           <RegistroSection
-            disabled={isFinal}
+            disabled={isFinal || virtual}
             label="parâmetro"
             options={paramCat.data ?? []}
             valueLabel="Valor"
@@ -396,7 +425,7 @@ function OPPage() {
         <TabsContent value="analises">
           <AnalisesTab ordemId={id} equipamentoId={(op.data as any).equipamento_id ?? null} inicioEm={(op.data as any).inicio_em ?? null} fimEm={(op.data as any).fim_em ?? null}>
           <RegistroSection
-            disabled={isFinal}
+            disabled={isFinal || virtual}
             label="análise"
             options={anlCat.data ?? []}
             valueLabel="Resultado"
@@ -427,7 +456,7 @@ function OPPage() {
         <TabsContent value="paradas">
           <ParadasSection
             equipamentoId={(op.data as any).equipamento_id ?? null}
-            ordemId={id}
+            ordemId={virtual ? null : id}
             inicioEm={(op.data as any).inicio_em ?? null}
             fimEm={(op.data as any).fim_em ?? null}
           />
@@ -436,7 +465,7 @@ function OPPage() {
 
 
         <TabsContent value="historico">
-          <TimelineUnificada ordemId={id} />
+          <TimelineUnificada ordemId={id} virtual={virtual ? { equipId: equipId!, desde } : undefined} />
         </TabsContent>
       </Tabs>
       ) : null}
@@ -444,10 +473,12 @@ function OPPage() {
   );
 }
 
-function TimelineUnificada({ ordemId }: { ordemId: string }) {
+function TimelineUnificada({ ordemId, virtual }: { ordemId: string; virtual?: { equipId: string; desde: string } }) {
+  const vDesde = virtual?.desde ?? null;
   const opQ = useQuery({
-    queryKey: ["op-times-equip", ordemId],
+    queryKey: ["op-times-equip", ordemId, virtual?.equipId],
     queryFn: async () => {
+      if (virtual) return { equipamento_id: virtual.equipId, inicio_em: virtual.desde, fim_em: null as string | null };
       const { data } = await supabase.from("ordens_producao")
         .select("equipamento_id,inicio_em,fim_em").eq("id", ordemId).maybeSingle();
       return data;
@@ -458,7 +489,7 @@ function TimelineUnificada({ ordemId }: { ordemId: string }) {
     queryFn: async () => {
       const { data } = await supabase.from("parametros_registrados")
         .select("*, parametro:parametro_id(nome,unidade)")
-        .eq("ordem_id", ordemId).order("registrado_em", { ascending: false });
+        .or(filtroOrdem(ordemId, vDesde)).order("registrado_em", { ascending: false });
       return data ?? [];
     },
   });
@@ -467,7 +498,7 @@ function TimelineUnificada({ ordemId }: { ordemId: string }) {
     queryFn: async () => {
       const { data } = await supabase.from("analises_registradas")
         .select("*, analise:analise_id(nome,unidade)")
-        .eq("ordem_id", ordemId).order("registrado_em", { ascending: false });
+        .or(filtroOrdem(ordemId, vDesde)).order("registrado_em", { ascending: false });
       return data ?? [];
     },
   });
@@ -475,7 +506,7 @@ function TimelineUnificada({ ordemId }: { ordemId: string }) {
     queryKey: ["obs", ordemId],
     queryFn: async () => {
       const { data } = await supabase.from("observacoes_producao")
-        .select("*").eq("ordem_id", ordemId).order("registrado_em", { ascending: false });
+        .select("*").or(filtroOrdem(ordemId, vDesde)).order("registrado_em", { ascending: false });
       return data ?? [];
     },
   });
@@ -483,7 +514,7 @@ function TimelineUnificada({ ordemId }: { ordemId: string }) {
     queryKey: ["ordem-etapas", ordemId],
     queryFn: async () => {
       const { data } = await supabase.from("ordem_etapas")
-        .select("*").eq("ordem_id", ordemId).order("iniciado_em", { ascending: false });
+        .select("*").or(filtroOrdem(ordemId, vDesde, "iniciado_em")).order("iniciado_em", { ascending: false });
       return data ?? [];
     },
   });
@@ -2080,5 +2111,41 @@ function TurnosSection({ inicioEm, fimEm }: { inicioEm: string | null; fimEm: st
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function RelatorioPeriodoDialog({ open, onOpenChange, equipamentoId }: { open: boolean; onOpenChange: (v: boolean) => void; equipamentoId: string }) {
+  const toLocal = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  const [ini, setIni] = useState(() => toLocal(new Date(Date.now() - 24 * 3600_000)));
+  const [fim, setFim] = useState(() => toLocal(new Date()));
+  const [busy, setBusy] = useState(false);
+  const atalho = (h: number) => { setIni(toLocal(new Date(Date.now() - h * 3600_000))); setFim(toLocal(new Date())); };
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Relatório PDF do equipamento</DialogTitle></DialogHeader>
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={() => atalho(12)}>Últimas 12h</Button>
+          <Button variant="outline" size="sm" onClick={() => atalho(24)}>Últimas 24h</Button>
+          <Button variant="outline" size="sm" onClick={() => atalho(24 * 7)}>Últimos 7 dias</Button>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div><Label>Início</Label><Input type="datetime-local" value={ini} onChange={(e) => setIni(e.target.value)} /></div>
+          <div><Label>Fim</Label><Input type="datetime-local" value={fim} onChange={(e) => setFim(e.target.value)} /></div>
+        </div>
+        <DialogFooter>
+          <Button disabled={busy || !ini || !fim} onClick={async () => {
+            const a = new Date(ini), b = new Date(fim);
+            if (!(a < b)) { toast.error("O início deve ser antes do fim"); return; }
+            setBusy(true);
+            try {
+              await gerarRelatorioProducaoPdf({ equipamentoId, inicio: a.toISOString(), fim: b.toISOString() });
+              toast.success("Relatório PDF gerado"); onOpenChange(false);
+            } catch (e) { toast.error("Falha ao gerar PDF: " + (e as Error).message); }
+            finally { setBusy(false); }
+          }}><FileText className="mr-1 h-4 w-4" />Gerar PDF</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -28,12 +28,48 @@ const setY = (doc: jsPDF, y: number) => { (doc as any).lastAutoTable = { finalY:
 const avg = (a: number[]) => (a.length ? a.reduce((x, y) => x + y, 0) / a.length : null);
 
 /** Relatório de fechamento da produção. Todos os dados são filtrados entre o início e o fim da OP. */
-export async function gerarRelatorioProducaoPdf(ordemId: string) {
-  const { data: op } = await supabase.from("ordens_producao")
-    .select("*, produto:produto_id(nome,codigo,unidade,concentracao), equipamento:equipamento_id(id,nome,codigo,tag_velocidade_producao,tag_velocidade_consumo,indices_config,capacidade_hora,capacidade_unidade), tanque:tanque_destino_id(nome,codigo)")
-    .eq("id", ordemId).maybeSingle() as { data: any };
-  if (!op) throw new Error("Ordem não encontrada");
+export type PeriodoEquip = { equipamentoId: string; inicio: string; fim: string };
+
+/** Relatório de fechamento da produção (por OP) ou do equipamento num período livre (sem OP). */
+export async function gerarRelatorioProducaoPdf(alvo: string | PeriodoEquip) {
+  const porPeriodo = typeof alvo !== "string";
+  let ordemId = typeof alvo === "string" ? alvo : "";
+  let op: any;
+  let opIds: string[] = [];
+  if (!porPeriodo) {
+    const r = await supabase.from("ordens_producao")
+      .select("*, produto:produto_id(nome,codigo,unidade,concentracao), equipamento:equipamento_id(id,nome,codigo,tag_velocidade_producao,tag_velocidade_consumo,indices_config,capacidade_hora,capacidade_unidade), tanque:tanque_destino_id(nome,codigo)")
+      .eq("id", ordemId).maybeSingle() as { data: any };
+    op = r.data;
+    if (!op) throw new Error("Ordem não encontrada");
+    opIds = [ordemId];
+  } else {
+    const { data: eq } = await supabase.from("equipamentos")
+      .select("id,nome,codigo,tag_producao_total,tag_velocidade_producao,tag_velocidade_consumo,indices_config,capacidade_hora,capacidade_unidade")
+      .eq("id", alvo.equipamentoId).maybeSingle() as { data: any };
+    if (!eq) throw new Error("Equipamento não encontrado");
+    const { data: ops } = await supabase.from("ordens_producao").select("id")
+      .eq("equipamento_id", eq.id).lte("inicio_em", alvo.fim).or(`fim_em.is.null,fim_em.gte.${alvo.inicio}`);
+    opIds = (ops ?? []).map((o) => o.id);
+    const { data: prods } = await supabase.from("produtos").select("nome,codigo,unidade,concentracao").eq("equipamento_id", eq.id).limit(1);
+    let qtd = 0;
+    if (eq.tag_producao_total) {
+      const { data: h } = await supabase.from("producao_tag_historico").select("valor_num")
+        .eq("equipamento_id", eq.id).eq("tag_nome", eq.tag_producao_total)
+        .gte("registrado_em", alvo.inicio).lte("registrado_em", alvo.fim).order("registrado_em").limit(10000);
+      const vals = (h ?? []).map((r) => Number(r.valor_num ?? 0));
+      for (let i = 1; i < vals.length; i++) { const d = vals[i]! - vals[i - 1]!; qtd += d >= 0 ? d : vals[i]!; }
+    }
+    op = {
+      numero: `${eq.codigo ?? eq.nome} (período)`, equipamento: eq, produto: prods?.[0] ?? null,
+      inicio_em: alvo.inicio, fim_em: alvo.fim, qtd_produzida: qtd, finalizado_por: null, responsavel_fechamento: null,
+      tanque: null, obs_iniciais: null, obs_finais: null, concentracao_media: null, indice_conversao: null,
+    };
+    ordemId = "";
+  }
   if (!op.inicio_em) throw new Error("Produção sem data de início");
+  const fOrd = porPeriodo ? "id.not.is.null" : `ordem_id.eq.${ordemId}`;
+  const fOps = opIds.length ? `ordem_id.in.(${opIds.join(",")})` : "id.is.null";
   const ini = op.inicio_em as string;
   const fim = (op.fim_em as string | null) ?? new Date().toISOString();
   const equip = op.equipamento ?? {};
@@ -41,20 +77,20 @@ export async function gerarRelatorioProducaoPdf(ordemId: string) {
 
   const [paramsRes, anlRes, obsRes, etapasRes, matsRes, tagHistRes, paradasRes, trocasRes, sheetsRes] = await Promise.all([
     supabase.from("parametros_registrados").select("*, parametro:parametro_id(nome,unidade,valor_min,valor_max)")
-      .eq("ordem_id", ordemId).gte("registrado_em", ini).lte("registrado_em", fim).order("registrado_em"),
+      .or(fOrd).gte("registrado_em", ini).lte("registrado_em", fim).order("registrado_em"),
     supabase.from("analises_registradas").select("*, analise:analise_id(nome,unidade,valor_min,valor_max)")
-      .eq("ordem_id", ordemId).gte("registrado_em", ini).lte("registrado_em", fim).order("registrado_em"),
-    supabase.from("observacoes_producao").select("*").eq("ordem_id", ordemId).gte("registrado_em", ini).lte("registrado_em", fim).order("registrado_em"),
-    supabase.from("ordem_etapas").select("*").eq("ordem_id", ordemId).gte("iniciado_em", ini).lte("iniciado_em", fim).order("iniciado_em"),
-    supabase.from("ordem_materiais").select("quantidade_prevista,quantidade_consumida,percentual,mp:materia_prima_id(nome,unidade)").eq("ordem_id", ordemId),
+      .or(fOrd).gte("registrado_em", ini).lte("registrado_em", fim).order("registrado_em"),
+    supabase.from("observacoes_producao").select("*").or(fOrd).gte("registrado_em", ini).lte("registrado_em", fim).order("registrado_em"),
+    supabase.from("ordem_etapas").select("*").or(fOrd).gte("iniciado_em", ini).lte("iniciado_em", fim).order("iniciado_em"),
+    supabase.from("ordem_materiais").select("quantidade_prevista,quantidade_consumida,percentual,mp:materia_prima_id(nome,unidade)").or(fOps),
     supabase.from("producao_tag_historico").select("tag_nome,valor_num,unidade,registrado_em")
-      .eq("ordem_id", ordemId).gte("registrado_em", ini).lte("registrado_em", fim).order("registrado_em").limit(10000),
+      .or(porPeriodo ? `equipamento_id.eq.${equip.id}` : fOrd).gte("registrado_em", ini).lte("registrado_em", fim).order("registrado_em").limit(10000),
     equip.id
       ? supabase.from("paradas_equipamento").select("inicio_em,fim_em,duracao_seg,motivo,categoria,observacao")
           .eq("equipamento_id", equip.id).lte("inicio_em", fim).or(`fim_em.is.null,fim_em.gte.${ini}`).order("inicio_em")
       : Promise.resolve({ data: [] as any[] }),
     supabase.from("ordem_trocas_produto").select("ocorrido_em,qtd_produto_anterior,observacao,anterior:produto_anterior_id(nome),novo:produto_novo_id(nome)")
-      .eq("ordem_id", ordemId).order("ocorrido_em"),
+      .or(fOps).order("ocorrido_em"),
     equip.id
       ? supabase.from("custom_sheets").select("id,nome,columns,tabela_analise").contains("equipamento_ids", [equip.id] as never).order("nome")
       : Promise.resolve({ data: [] as any[] }),

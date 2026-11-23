@@ -1,3 +1,4 @@
+import { filtroOrdem, isVirtualOp } from "@/lib/producao/virtual";
 import { useMemo, useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -100,7 +101,7 @@ export function TagsMonitoramento({
         const { data, error } = await supabase
           .from("producao_tag_historico")
           .select("id,tag_nome,valor_num,unidade,registrado_em")
-          .eq("ordem_id", ordemId)
+          .or(isVirtualOp(ordemId) ? `equipamento_id.eq.${equipamentoId}` : `ordem_id.eq.${ordemId}`)
           .gte("registrado_em", desde)
           .order("registrado_em", { ascending: false })
           .range(from, from + CHUNK - 1);
@@ -120,14 +121,14 @@ export function TagsMonitoramento({
     queryFn: async () => {
       const [params, anls, obs, etps] = await Promise.all([
         supabase.from("parametros_registrados")
-          .select("id,valor,registrado_em,parametro:parametro_id(nome,unidade)").eq("ordem_id", ordemId),
+          .select("id,valor,registrado_em,parametro:parametro_id(nome,unidade)").or(filtroOrdem(ordemId, inicioEm)),
         supabase.from("analises_registradas")
-          .select("id,resultado,registrado_em,analise:analise_id(nome,unidade)").eq("ordem_id", ordemId),
+          .select("id,resultado,registrado_em,analise:analise_id(nome,unidade)").or(filtroOrdem(ordemId, inicioEm)),
         supabase.from("observacoes_producao")
-          .select("id,texto,registrado_em").eq("ordem_id", ordemId),
+          .select("id,texto,registrado_em").or(filtroOrdem(ordemId, inicioEm)),
         supabase.from("ordem_etapas")
           .select("id,tipo,processo_nome,atividade_descricao,iniciado_em,finalizado_em,observacao,motivo_atraso,equipamento_atividade_id,processo_id,estab_fase,valor_capturado,valor_fim,valor_inicio,unidade,equipamento_atividade:equipamento_atividade_id(cor,quantidade,unidade)")
-          .eq("ordem_id", ordemId),
+          .or(filtroOrdem(ordemId, inicioEm, "iniciado_em")),
       ]);
       return {
         parametros: params.data ?? [],
