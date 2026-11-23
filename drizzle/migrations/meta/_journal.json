@@ -64,6 +64,13 @@
       "when": 1795448675710,
       "tag": "0008_tags_producao_consumo_produtos",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1795451543002,
+      "tag": "0009_tag_totalizador_vazao",
+      "breakpoints": true
     }
   ]
 }

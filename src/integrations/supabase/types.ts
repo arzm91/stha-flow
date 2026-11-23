@@ -3006,12 +3006,15 @@ export type Database = {
           snapshot_janela_dias: number | null
           snapshot_tag_nome: string | null
           tipo: string
+          totalizador_ultimo_em: string | null
           ultimo_valor_calc: number | null
           ultimo_valor_calc_em: string | null
           unidade: string | null
           updated_at: string
           valor_max: number | null
           valor_min: number | null
+          vazao_base: string | null
+          vazao_fator: number | null
         }
         Insert: {
           acumulador_intervalo_horas?: number | null
@@ -3034,12 +3037,15 @@ export type Database = {
           snapshot_janela_dias?: number | null
           snapshot_tag_nome?: string | null
           tipo?: string
+          totalizador_ultimo_em?: string | null
           ultimo_valor_calc?: number | null
           ultimo_valor_calc_em?: string | null
           unidade?: string | null
           updated_at?: string
           valor_max?: number | null
           valor_min?: number | null
+          vazao_base?: string | null
+          vazao_fator?: number | null
         }
         Update: {
           acumulador_intervalo_horas?: number | null
@@ -3062,12 +3068,15 @@ export type Database = {
           snapshot_janela_dias?: number | null
           snapshot_tag_nome?: string | null
           tipo?: string
+          totalizador_ultimo_em?: string | null
           ultimo_valor_calc?: number | null
           ultimo_valor_calc_em?: string | null
           unidade?: string | null
           updated_at?: string
           valor_max?: number | null
           valor_min?: number | null
+          vazao_base?: string | null
+          vazao_fator?: number | null
         }
         Relationships: []
       }

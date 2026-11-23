@@ -46,7 +46,7 @@ export function CalculatedTagsSync() {
         const upserts = calc
           .map((t) => {
             let valor: number | null = null;
-            if (t.tipo === "delta_janela" || t.tipo === "acumulador_janela") {
+            if (t.tipo === "delta_janela" || t.tipo === "acumulador_janela" || t.tipo === "totalizador_vazao") {
               valor = t.ultimo_valor_calc != null ? Number(t.ultimo_valor_calc) : null;
             } else {
               const r = results.get(t.nome);

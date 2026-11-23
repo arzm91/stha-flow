@@ -28,7 +28,7 @@ export function CalcTagDialog({
   const qc = useQueryClient();
   const [nome, setNome] = useState("");
   const [nomeAmigavel, setNomeAmigavel] = useState("");
-  const [tipo, setTipo] = useState<"formula" | "delta_janela" | "acumulador_janela">("formula");
+  const [tipo, setTipo] = useState<"formula" | "delta_janela" | "acumulador_janela" | "totalizador_vazao">("formula");
   const [formula, setFormula] = useState("");
   const [unidade, setUnidade] = useState("");
   const [grupo, setGrupo] = useState("Calculadas");
@@ -45,6 +45,10 @@ export function CalcTagDialog({
   const [acumResetTipo, setAcumResetTipo] = useState<"diario" | "horas">("diario");
   const [acumResetHora, setAcumResetHora] = useState("00:00");
   const [acumIntervaloHoras, setAcumIntervaloHoras] = useState("1");
+  // Config para tipo "totalizador_vazao"
+  const [vazaoBase, setVazaoBase] = useState<"h" | "min" | "s">("h");
+  const [vazaoFator, setVazaoFator] = useState("1");
+  const [manterTotal, setManterTotal] = useState(true);
   const formulaRef = useRef<HTMLTextAreaElement>(null);
 
   // Lista de tags disponíveis para compor a fórmula (endpoint + outras calculadas)
@@ -103,11 +107,16 @@ export function CalcTagDialog({
         acumulador_reset_tipo?: string | null;
         acumulador_reset_hora?: string | null;
         acumulador_intervalo_horas?: number | null;
+        vazao_base?: string | null;
+        vazao_fator?: number | null;
       }) | null;
       setNome(editing?.nome ?? "");
       setNomeAmigavel(editing?.nome_amigavel ?? "");
       const t = editingAny?.tipo;
-      setTipo(t === "delta_janela" ? "delta_janela" : t === "acumulador_janela" ? "acumulador_janela" : "formula");
+      setTipo(t === "delta_janela" ? "delta_janela" : t === "acumulador_janela" ? "acumulador_janela" : t === "totalizador_vazao" ? "totalizador_vazao" : "formula");
+      setVazaoBase(editingAny?.vazao_base === "min" ? "min" : editingAny?.vazao_base === "s" ? "s" : "h");
+      setVazaoFator(String(editingAny?.vazao_fator ?? 1));
+      setManterTotal(true);
       setFormula(editing?.formula ?? "");
       setUnidade(editing?.unidade ?? "");
       setGrupo(editing?.grupo ?? "Calculadas");
@@ -138,6 +147,13 @@ export function CalcTagDialog({
         erro: cur == null
           ? "Aguardando primeira captura no horário configurado"
           : "Delta será calculado após duas capturas no horário",
+      };
+    }
+    if (tipo === "totalizador_vazao") {
+      const cur = liveValues.get(acumTag);
+      return {
+        valor: null as number | null,
+        erro: cur == null ? "Aguardando leitura da vazão" : `Vazão atual ${formatNumber(cur, 2)} — total atualizado a cada minuto`,
       };
     }
     if (tipo === "acumulador_janela") {
@@ -178,6 +194,10 @@ export function CalcTagDialog({
         if (!/^\d{1,2}:\d{2}$/.test(snapshotHora)) throw new Error("Horário inválido (use HH:MM)");
         const jan = Number(snapshotJanelaDias);
         if (!Number.isFinite(jan) || jan < 1 || jan > 366) throw new Error("Janela deve estar entre 1 e 366 dias");
+      } else if (tipo === "totalizador_vazao") {
+        if (!acumTag.trim()) throw new Error("Escolha a tag de vazão");
+        const f = Number(vazaoFator);
+        if (!Number.isFinite(f) || f <= 0) throw new Error("Fator deve ser maior que zero");
       } else if (tipo === "acumulador_janela") {
         if (!acumTag.trim()) throw new Error("Escolha a tag de origem");
         if (acumResetTipo === "diario") {
@@ -214,7 +234,9 @@ export function CalcTagDialog({
         snapshot_tag_nome: tipo === "delta_janela" ? snapshotTag.trim() : null,
         snapshot_hora: tipo === "delta_janela" ? snapshotHora : null,
         snapshot_janela_dias: tipo === "delta_janela" ? Number(snapshotJanelaDias) : null,
-        acumulador_tag_nome: tipo === "acumulador_janela" ? acumTag.trim() : null,
+        acumulador_tag_nome: tipo === "acumulador_janela" || tipo === "totalizador_vazao" ? acumTag.trim() : null,
+        vazao_base: tipo === "totalizador_vazao" ? vazaoBase : null,
+        vazao_fator: tipo === "totalizador_vazao" ? Number(vazaoFator) : 1,
         acumulador_reset_tipo: tipo === "acumulador_janela" ? acumResetTipo : null,
         acumulador_reset_hora: tipo === "acumulador_janela" && acumResetTipo === "diario" ? acumResetHora : null,
         acumulador_intervalo_horas: tipo === "acumulador_janela" && acumResetTipo === "horas" ? Number(acumIntervaloHoras) : null,
@@ -222,7 +244,15 @@ export function CalcTagDialog({
         acumulador_valor: tipo === "acumulador_janela" ? 0 : null,
         acumulador_ultimo_valor_fonte: null,
         acumulador_janela_inicio: null,
+        totalizador_ultimo_em: null,
       };
+      if (tipo === "totalizador_vazao") {
+        // Odômetro nunca zera: ao editar, mantém o total já acumulado (a menos que o usuário peça para zerar).
+        const prevTotal = (editing as any)?.tipo === "totalizador_vazao" && manterTotal
+          ? Number((editing as any)?.acumulador_valor ?? 0) : 0;
+        payload.acumulador_valor = prevTotal;
+        payload.ultimo_valor_calc = prevTotal;
+      }
 
       if (editing) {
         if (editing.nome !== n) {
@@ -253,7 +283,7 @@ export function CalcTagDialog({
             valor_num_bruto: null,
             unidade: unidade.trim() || null,
             grupo: grupo.trim() || "Calculadas",
-            qualidade: tipo === "delta_janela" || tipo === "acumulador_janela" ? "aguardando" : "good",
+            qualidade: tipo === "delta_janela" || tipo === "acumulador_janela" || tipo === "totalizador_vazao" ? "aguardando" : "good",
             valor_min: vMin.trim() === "" ? null : Number(vMin),
             valor_max: vMax.trim() === "" ? null : Number(vMax),
             origem: "calculada",
@@ -303,17 +333,20 @@ export function CalcTagDialog({
 
           <div>
             <Label>Tipo *</Label>
-            <Select value={tipo} onValueChange={(v) => setTipo(v as "formula" | "delta_janela" | "acumulador_janela")}>
+            <Select value={tipo} onValueChange={(v) => setTipo(v as "formula" | "delta_janela" | "acumulador_janela" | "totalizador_vazao")}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="formula">Fórmula matemática</SelectItem>
                 <SelectItem value="delta_janela">Delta em janela (ex: hoje 08:00 − ontem 08:00)</SelectItem>
                 <SelectItem value="acumulador_janela">Acumulador em janela (soma incrementos até zerar)</SelectItem>
+                <SelectItem value="totalizador_vazao">Totalizador de vazão (contínuo, nunca zera)</SelectItem>
               </SelectContent>
             </Select>
             <p className="mt-1 text-[11px] text-muted-foreground">
               {tipo === "formula"
                 ? "Combine outras tags com uma expressão matemática."
+                : tipo === "totalizador_vazao"
+                ? "Transforma uma vazão instantânea (ex.: kg/h) em total acumulado (kg), somando vazão × tempo a cada minuto. Funciona como um hidrômetro: nunca zera. O consumo de qualquer período é a diferença entre o total no fim e no início."
                 : tipo === "delta_janela"
                 ? "Captura o valor de uma tag num horário fixo do dia e calcula a diferença em relação ao valor capturado N dias atrás no mesmo horário."
                 : "Soma os incrementos positivos de uma tag ao longo de uma janela de tempo e zera automaticamente no fim do período. A primeira leitura de cada janela vira baseline (contagem inicia em 0), então o valor bruto da fonte pode ser qualquer número."}
@@ -379,6 +412,55 @@ export function CalcTagDialog({
                 <div className="sm:col-span-3 rounded-md bg-muted/40 p-2 text-[11px] text-muted-foreground">
                   A tag <b>acumula apenas incrementos positivos</b>. Se a fonte cair (rollover do totalizador), o baseline
                   é atualizado sem subtrair. A atualização é feita pelo agendador (a cada minuto).
+                </div>
+              </div>
+            </div>
+          )}
+
+          {tipo === "totalizador_vazao" && (
+            <div className="space-y-3 rounded-md border p-3">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                <div className="sm:col-span-3">
+                  <Label>Tag de vazão *</Label>
+                  <Select value={acumTag} onValueChange={setAcumTag}>
+                    <SelectTrigger><SelectValue placeholder="Escolha a tag de vazão…" /></SelectTrigger>
+                    <SelectContent className="max-h-72">
+                      {(tagsDisponiveis.data ?? [])
+                        .filter((t) => !editing || t.nome !== editing.nome)
+                        .map((t) => (
+                          <SelectItem key={t.nome} value={t.nome}>
+                            {(t.nome_amigavel?.trim() || t.nome)} <span className="ml-1 text-[10px] text-muted-foreground">({t.nome}{t.unidade ? ` · ${t.unidade}` : ""})</span>
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>A vazão é por *</Label>
+                  <Select value={vazaoBase} onValueChange={(v) => setVazaoBase(v as "h" | "min" | "s")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="h">Hora (ex.: kg/h)</SelectItem>
+                      <SelectItem value="min">Minuto (ex.: kg/min)</SelectItem>
+                      <SelectItem value="s">Segundo (ex.: kg/s)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Fator multiplicador</Label>
+                  <Input type="number" step="any" min="0" value={vazaoFator} onChange={(e) => setVazaoFator(e.target.value)} />
+                  <p className="mt-1 text-[10px] text-muted-foreground">1 = mesma unidade. Ex.: m³→kg use a densidade.</p>
+                </div>
+                {(editing as any)?.tipo === "totalizador_vazao" && (
+                  <div className="flex items-end gap-2 pb-2 text-xs">
+                    <input id="manter-total" type="checkbox" checked={manterTotal} onChange={(e) => setManterTotal(e.target.checked)} />
+                    <label htmlFor="manter-total">Manter total acumulado ({formatNumber(Number((editing as any)?.acumulador_valor ?? 0), 2)})</label>
+                  </div>
+                )}
+                <div className="sm:col-span-3 rounded-md bg-muted/40 p-2 text-[11px] text-muted-foreground">
+                  Ex.: 500 kg/h estável → +8,33 kg por minuto → 12.000 kg em 24h. O total <b>nunca zera</b>; use a unidade
+                  <b> kg</b> abaixo. Para consumo de MP ou produto, vincule esta tag no cadastro — o sistema calcula a diferença do período.
+                  Se a leitura ficar mais de 15 min sem atualizar, esse intervalo não é somado.
                 </div>
               </div>
             </div>
@@ -604,7 +686,7 @@ export function CalcTagDialog({
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>Cancelar</Button>
-          <Button onClick={() => save.mutate()} disabled={save.isPending || !nome.trim() || (tipo === "formula" ? (!validation.ok || !formula.trim()) : tipo === "delta_janela" ? (!snapshotTag.trim() || !snapshotHora) : (!acumTag.trim() || (acumResetTipo === "diario" ? !acumResetHora : !acumIntervaloHoras)))}>
+          <Button onClick={() => save.mutate()} disabled={save.isPending || !nome.trim() || (tipo === "formula" ? (!validation.ok || !formula.trim()) : tipo === "delta_janela" ? (!snapshotTag.trim() || !snapshotHora) : tipo === "totalizador_vazao" ? !acumTag.trim() : (!acumTag.trim() || (acumResetTipo === "diario" ? !acumResetHora : !acumIntervaloHoras)))}>
             {save.isPending ? "Salvando…" : "Salvar"}
           </Button>
         </DialogFooter>

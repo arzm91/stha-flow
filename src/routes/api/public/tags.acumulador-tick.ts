@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { createClient } from "@supabase/supabase-js";
+import { incrementoVazao, type VazaoBase } from "@/lib/tags/totalizador-vazao";
 
 /**
  * Processa tags calculadas do tipo "acumulador_janela".
@@ -219,6 +220,45 @@ export const Route = createFileRoute("/api/public/tags/acumulador-tick")({
             baseline,
             janela_inicio: winStart.toISOString(),
           });
+        }
+
+        // Totalizador de vazão: odômetro contínuo (nunca zera), integra vazão × tempo.
+        const { data: vrows } = await admin
+          .from("tags_calculadas")
+          .select("id,nome,nome_amigavel,unidade,grupo,valor_min,valor_max,owner_id,acumulador_tag_nome,acumulador_valor,acumulador_ultimo_valor_fonte,totalizador_ultimo_em,vazao_base,vazao_fator")
+          .eq("ativo", true)
+          .eq("tipo", "totalizador_vazao");
+        for (const t of (vrows ?? []) as any[]) {
+          const src = (t.acumulador_tag_nome ?? "").trim();
+          if (!src) continue;
+          const { data: live } = await admin
+            .from("tags_live").select("valor_num")
+            .eq("owner_id", t.owner_id).eq("nome", src).maybeSingle();
+          const atual = live?.valor_num != null ? Number(live.valor_num) : null;
+          const agora = new Date();
+          let total = Number(t.acumulador_valor ?? 0);
+          if (atual != null && Number.isFinite(atual) && t.totalizador_ultimo_em) {
+            const dt = agora.getTime() - new Date(t.totalizador_ultimo_em).getTime();
+            const prev = t.acumulador_ultimo_valor_fonte != null ? Number(t.acumulador_ultimo_valor_fonte) : null;
+            total += incrementoVazao(prev, atual, dt, (t.vazao_base ?? "h") as VazaoBase, Number(t.vazao_fator ?? 1));
+          }
+          const nowIso = agora.toISOString();
+          await admin.from("tags_calculadas").update({
+            acumulador_valor: total,
+            acumulador_ultimo_valor_fonte: atual,
+            totalizador_ultimo_em: atual != null ? nowIso : null,
+            ultimo_valor_calc: total,
+            ultimo_valor_calc_em: nowIso,
+          }).eq("id", t.id);
+          await admin.from("tags_live").upsert({
+            nome: t.nome, nome_amigavel: t.nome_amigavel,
+            valor: String(total), valor_num: total, valor_num_bruto: total,
+            unidade: t.unidade, grupo: t.grupo ?? "Calculadas",
+            qualidade: atual != null ? "good" : "aguardando",
+            valor_min: t.valor_min, valor_max: t.valor_max,
+            origem: "calculada", owner_id: t.owner_id, atualizado_em: nowIso,
+          }, { onConflict: "owner_id,nome" });
+          results.push({ tag: t.nome, status: "totalizador", total, vazao: atual });
         }
 
         return Response.json({ ok: true, processed: tags.length, results });
