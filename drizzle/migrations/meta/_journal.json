@@ -50,6 +50,13 @@
       "when": 1795435666906,
       "tag": "0006_historico_tags_continuo",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795442623809,
+      "tag": "0007_migration",
+      "breakpoints": true
     }
   ]
 }

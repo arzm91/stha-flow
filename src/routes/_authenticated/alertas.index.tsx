@@ -23,6 +23,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Bell, Plus, Trash2, Check, Eye, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { RotinasSemanais } from "@/components/alertas/RotinasSemanais";
+import { AlarmesClpPanel, ImportarAlarmesClpDialog } from "@/components/alertas/AlarmesClp";
 
 export const Route = createFileRoute("/_authenticated/alertas/")({
   head: pageHead({ title: "Alertas — STHApc", description: "Acesse e gerencie Alertas no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/alertas" }),
@@ -92,6 +93,7 @@ function AlertasPage() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [equipamentos, setEquipamentos] = useState<Equipamento[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("todos");
+  const [importOpen, setImportOpen] = useState(false);
 
   // form state
   const [editing, setEditing] = useState<Alerta | null>(null);
@@ -196,6 +198,10 @@ function AlertasPage() {
       form.max_val == null
     ) {
       toast.error("Informe ao menos um limite (mínimo ou máximo)");
+      return;
+    }
+    if (form.tipo === "tag_digital" && !form.tag_nome) {
+      toast.error("Selecione a tag do alarme");
       return;
     }
     if (form.tipo === "tag_stale" && !form.stale_minutes) {
@@ -310,9 +316,12 @@ function AlertasPage() {
         title="Alertas"
         description="Configure regras para monitorar tags e eventos, e acompanhe os alertas disparados em tempo real."
         actions={
-          <Button onClick={openNew}>
-            <Plus className="mr-2 size-4" /> Nova regra
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button variant="outline" onClick={() => setImportOpen(true)}>Importar alarmes CLP</Button>
+            <Button onClick={openNew}>
+              <Plus className="mr-2 size-4" /> Nova regra
+            </Button>
+          </div>
         }
       />
 
@@ -327,8 +336,13 @@ function AlertasPage() {
               <Badge variant="destructive" className="ml-2">{novos} novos</Badge>
             )}
           </TabsTrigger>
+          <TabsTrigger value="clp">Alarmes ao vivo (CLP)</TabsTrigger>
           <TabsTrigger value="rotinas">Rotinas semanais</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="clp" className="mt-4">
+          <AlarmesClpPanel />
+        </TabsContent>
 
         <TabsContent value="rotinas" className="mt-4">
           <RotinasSemanais />
@@ -478,6 +492,7 @@ function AlertasPage() {
           )}
         </TabsContent>
       </Tabs>
+      <ImportarAlarmesClpDialog open={importOpen} onOpenChange={setImportOpen} onDone={() => { loadAlertas(); setTab("clp"); }} />
 
       {/* Form dialog */}
       <Dialog open={open} onOpenChange={setOpen}>
@@ -516,6 +531,7 @@ function AlertasPage() {
                   <SelectContent>
                     <SelectItem value="tag_min_max">Tag fora dos limites</SelectItem>
                     <SelectItem value="tag_stale">Tag sem atualização</SelectItem>
+                    <SelectItem value="tag_digital">Alarme digital CLP (0/1)</SelectItem>
                     <SelectItem value="parametro_min_max">Parâmetro fora dos limites</SelectItem>
                     <SelectItem value="analise_min_max">Análise fora dos limites</SelectItem>
                     <SelectItem value="processo_evento">Evento de processo</SelectItem>
@@ -539,7 +555,7 @@ function AlertasPage() {
               </div>
             </div>
 
-            {(form.tipo === "tag_min_max" || form.tipo === "tag_stale") && (
+            {(form.tipo === "tag_min_max" || form.tipo === "tag_stale" || form.tipo === "tag_digital") && (
               <div className="grid gap-2">
                 <Label>Tag</Label>
                 <Select
@@ -845,6 +861,7 @@ function StatusBadge({ status }: { status: Disparo["status"] }) {
 function labelTipo(t: string) {
   if (t === "tag_min_max") return "Tag (limites)";
   if (t === "tag_stale") return "Tag (sem atualização)";
+  if (t === "tag_digital") return "Alarme CLP (0/1)";
   if (t === "parametro_min_max") return "Parâmetro";
   if (t === "analise_min_max") return "Análise";
   if (t === "processo_evento") return "Atividade";

@@ -24,6 +24,7 @@ export type Database = {
           email_recipients: string[]
           email_template_key: string
           evento_processo: string | null
+          grupo_tag: string | null
           id: string
           last_fired_at: string | null
           max_val: number | null
@@ -37,10 +38,13 @@ export type Database = {
           push_recipients: string[]
           severidade: string
           stale_minutes: number | null
+          tag_nivel_primario: string | null
+          tag_nivel_secundario: string | null
           tag_nome: string | null
           tempo_limite_minutos: number | null
           tipo: string
           updated_at: string
+          valor_ativacao: number
         }
         Insert: {
           analise_id?: string | null
@@ -51,6 +55,7 @@ export type Database = {
           email_recipients?: string[]
           email_template_key?: string
           evento_processo?: string | null
+          grupo_tag?: string | null
           id?: string
           last_fired_at?: string | null
           max_val?: number | null
@@ -64,10 +69,13 @@ export type Database = {
           push_recipients?: string[]
           severidade?: string
           stale_minutes?: number | null
+          tag_nivel_primario?: string | null
+          tag_nivel_secundario?: string | null
           tag_nome?: string | null
           tempo_limite_minutos?: number | null
           tipo?: string
           updated_at?: string
+          valor_ativacao?: number
         }
         Update: {
           analise_id?: string | null
@@ -78,6 +86,7 @@ export type Database = {
           email_recipients?: string[]
           email_template_key?: string
           evento_processo?: string | null
+          grupo_tag?: string | null
           id?: string
           last_fired_at?: string | null
           max_val?: number | null
@@ -91,10 +100,13 @@ export type Database = {
           push_recipients?: string[]
           severidade?: string
           stale_minutes?: number | null
+          tag_nivel_primario?: string | null
+          tag_nivel_secundario?: string | null
           tag_nome?: string | null
           tempo_limite_minutos?: number | null
           tipo?: string
           updated_at?: string
+          valor_ativacao?: number
         }
         Relationships: [
           {
@@ -3415,6 +3427,15 @@ export type Database = {
           p_tag_nome: string
           p_unidade: string
           p_valor: string
+          p_valor_num: number
+        }
+        Returns: number
+      }
+      evaluate_tag_digital: {
+        Args: {
+          p_owner_id: string
+          p_prev: number
+          p_tag_nome: string
           p_valor_num: number
         }
         Returns: number
