@@ -463,6 +463,7 @@ export function NodeConfigPanel({
                   <SelectItem value="enviar_alerta">⚠ Disparar alerta</SelectItem>
                   
                   <SelectItem value="enviar_email">✉ Enviar e-mail</SelectItem>
+                  <SelectItem value="enviar_relatorio">📊 Enviar relatório por e-mail</SelectItem>
                   <SelectItem value="movimentacao_estoque">📦 Movimentação de estoque</SelectItem>
                   <SelectItem value="webhook_http">🌐 Chamar webhook HTTP</SelectItem>
                   <SelectItem value="aguardar">⏱ Aguardar (segundos)</SelectItem>
@@ -593,6 +594,29 @@ export function NodeConfigPanel({
               </>
             )}
 
+
+            {cfg.type === "enviar_relatorio" && (
+              <>
+                <div className="space-y-1">
+                  <Label>Relatório</Label>
+                  <Select value={String(cfg.relatorio ?? "alertas")} onValueChange={(v) => set({ relatorio: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="alertas">Alertas do período</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label>Período (últimas horas)</Label>
+                  <Input type="number" min={1} value={String(cfg.horas ?? 24)} onChange={(e) => set({ horas: Number(e.target.value) || 24 })} />
+                </div>
+                <div className="space-y-1">
+                  <Label>Destinatários</Label>
+                  <Input placeholder="a@empresa.com, b@empresa.com" value={String(cfg.recipients ?? "")} onChange={(e) => set({ recipients: e.target.value })} />
+                  <p className="text-[11px] text-muted-foreground">Separe vários e-mails por vírgula. Use com o gatilho "Agendamento" para enviar todo dia no horário escolhido.</p>
+                </div>
+              </>
+            )}
 
             {cfg.type === "enviar_email" && (
               <>

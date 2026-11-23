@@ -11,6 +11,7 @@ export type ActionType =
   | "enviar_alerta"
   | "gerar_relatorio"
   | "enviar_email"
+  | "enviar_relatorio"
   | "webhook_http"
   | "aguardar";
 

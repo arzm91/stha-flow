@@ -21,7 +21,7 @@ import { COMPARADORES, PRODUCTION_EVENTS } from "@/lib/automation/types";
 type Props = { open: boolean; onOpenChange: (o: boolean) => void };
 
 type TriggerKind = "tag_value" | "production_event" | "schedule";
-type ActionKind = "criar_ordem" | "iniciar_op" | "finalizar_op" | "criar_aviso" | "enviar_email";
+type ActionKind = "criar_ordem" | "iniciar_op" | "finalizar_op" | "criar_aviso" | "enviar_email" | "enviar_relatorio";
 
 const TRIGGER_OPTIONS: Array<{ value: TriggerKind; label: string; hint: string }> = [
   { value: "tag_value", label: "Uma tag atingir um valor", hint: "Ex.: temperatura maior que 80" },
@@ -35,6 +35,7 @@ const ACTION_OPTIONS: Array<{ value: ActionKind; label: string }> = [
   { value: "finalizar_op", label: "Finalizar a ordem em andamento de um equipamento" },
   { value: "criar_aviso", label: "Criar um aviso no sistema" },
   { value: "enviar_email", label: "Enviar um e-mail" },
+  { value: "enviar_relatorio", label: "Enviar relatório de alertas por e-mail" },
 ];
 
 export function AssistenteFluxo({ open, onOpenChange }: Props) {
@@ -60,6 +61,7 @@ export function AssistenteFluxo({ open, onOpenChange }: Props) {
   const [mensagem, setMensagem] = useState("");
   const [email, setEmail] = useState("");
   const [assunto, setAssunto] = useState("");
+  const [horas, setHoras] = useState("24");
   const [requiresApproval, setRequiresApproval] = useState(true);
 
   const [tags, setTags] = useState<Array<{ nome: string; nome_amigavel: string | null }>>([]);
@@ -99,6 +101,8 @@ export function AssistenteFluxo({ open, onOpenChange }: Props) {
         return { type: "iniciar_op", equipamento_id: equipamentoId };
       case "finalizar_op":
         return { type: "finalizar_op", equipamento_id: equipamentoId };
+      case "enviar_relatorio":
+        return { type: "enviar_relatorio", relatorio: "alertas", horas: Number(horas) || 24, recipients: email.trim() };
       case "enviar_email":
         return { type: "enviar_email", template: "message", recipient: email.trim(), subject: assunto.trim(), body: mensagem.trim() };
       default:
@@ -128,6 +132,7 @@ export function AssistenteFluxo({ open, onOpenChange }: Props) {
       case "iniciar_op": return `Iniciar produção em ${eqNome}`;
       case "finalizar_op": return `Finalizar produção em ${eqNome}`;
       case "enviar_email": return `Enviar e-mail para ${email}`;
+      case "enviar_relatorio": return `Enviar relatório de alertas (${horas}h) para ${email}`;
       default: return `Criar aviso: ${titulo || "aviso"}`;
     }
   }
@@ -139,7 +144,7 @@ export function AssistenteFluxo({ open, onOpenChange }: Props) {
     if ((actionKind === "iniciar_op" || actionKind === "finalizar_op" || actionKind === "criar_ordem") && !equipamentoId)
       return "Selecione o equipamento da ação";
     if (actionKind === "criar_ordem" && !produtoId) return "Selecione o produto da ordem";
-    if (actionKind === "enviar_email" && !email.trim()) return "Informe o destinatário do e-mail";
+    if ((actionKind === "enviar_email" || actionKind === "enviar_relatorio") && !email.trim()) return "Informe o destinatário do e-mail";
     return null;
   }
 
@@ -346,6 +351,19 @@ export function AssistenteFluxo({ open, onOpenChange }: Props) {
                 <div className="space-y-1">
                   <Label className="text-xs">Mensagem (opcional)</Label>
                   <Input value={mensagem} onChange={(e) => setMensagem(e.target.value)} />
+                </div>
+              </>
+            )}
+
+            {actionKind === "enviar_relatorio" && (
+              <>
+                <div className="space-y-1">
+                  <Label className="text-xs">Enviar para (e-mails separados por vírgula)</Label>
+                  <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="a@empresa.com, b@empresa.com" />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Período do relatório (últimas horas)</Label>
+                  <Input type="number" min={1} value={horas} onChange={(e) => setHoras(e.target.value)} />
                 </div>
               </>
             )}
