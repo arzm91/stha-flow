@@ -604,22 +604,10 @@ export function NodeConfigPanel({
                     <SelectContent>
                       <SelectItem value="producao">Produção do período (PDF)</SelectItem>
                       <SelectItem value="manutencao">Manutenção do período (PDF)</SelectItem>
-                      <SelectItem value="alertas">Alertas do período</SelectItem>
+                      <SelectItem value="alertas">Alertas do período (PDF)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                {String(cfg.relatorio ?? "alertas") === "alertas" && (
-                  <div className="space-y-1">
-                    <Label>Formato</Label>
-                    <Select value={String(cfg.formato ?? "pdf")} onValueChange={(v) => set({ formato: v })}>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pdf">PDF para baixar</SelectItem>
-                        <SelectItem value="email">Resumo no corpo do e-mail</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                )}
                 <div className="space-y-1">
                   <Label>Período (últimas horas)</Label>
                   <Input type="number" min={1} value={String(cfg.horas ?? 24)} onChange={(e) => set({ horas: Number(e.target.value) || 24 })} />
