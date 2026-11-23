@@ -2116,7 +2116,7 @@ export type Database = {
           created_at: string
           equipamento_id: string | null
           id: string
-          ordem_id: string
+          ordem_id: string | null
           owner_id: string
           registrado_em: string
           tag_nome: string
@@ -2128,7 +2128,7 @@ export type Database = {
           created_at?: string
           equipamento_id?: string | null
           id?: string
-          ordem_id: string
+          ordem_id?: string | null
           owner_id: string
           registrado_em?: string
           tag_nome: string
@@ -2140,7 +2140,7 @@ export type Database = {
           created_at?: string
           equipamento_id?: string | null
           id?: string
-          ordem_id?: string
+          ordem_id?: string | null
           owner_id?: string
           registrado_em?: string
           tag_nome?: string

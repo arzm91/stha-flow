@@ -43,6 +43,13 @@
       "when": 1794923780309,
       "tag": "0005_ordens_concentracao_indice",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795435666906,
+      "tag": "0006_historico_tags_continuo",
+      "breakpoints": true
     }
   ]
 }

@@ -21,20 +21,22 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/EmptyState";
-import { Factory, Play, Eye, LayoutGrid, FileText } from "lucide-react";
+import { Factory, Play, Eye, LayoutGrid, FileText, Plus } from "lucide-react";
+import { RegistrarProducaoManualDialog } from "@/components/producao/RegistrarProducaoManualDialog";
+import { useHistoricoEquip, useParadasAbertas, somaIncrementos } from "@/lib/producao/producao-24h";
 import { toast } from "sonner";
 import { durationFromNow } from "@/lib/format";
 
 export const Route = createFileRoute("/_authenticated/producao/")({
-  head: pageHead({ title: "Produção — STHApc", description: "Acesse e gerencie Produção no STHApc. Sistema de gestão industrial para produção, estoque, qualidade e manutenção.", path: "/producao" }),
+  head: pageHead({ title: "Produção — STHApc", description: "Monitoramento contínuo dos equipamentos de produção nas últimas 24 horas.", path: "/producao" }),
   component: ProducaoPage,
 });
 
 type Equip = { id: string; codigo: string; nome: string; status: string; localizacao: string | null; tipo: string | null; ativo: boolean; tag_producao_total: string | null; tag_velocidade_producao: string | null; tag_indices: string[] | null; indices_config?: unknown };
 
 function ProducaoPage() {
-  const [novaOpen, setNovaOpen] = useState(false);
-  const [equipPreset, setEquipPreset] = useState<string | undefined>();
+  const qc = useQueryClient();
+  const [manualOpen, setManualOpen] = useState(false);
 
   const equipamentos = useQuery({
     queryKey: ["equipamentos"],
@@ -45,69 +47,43 @@ function ProducaoPage() {
     },
     refetchInterval: 15_000,
   });
+  const paradas = useParadasAbertas();
+  const ativosQ = useProdutosAtivos((equipamentos.data ?? []).map((e) => e.id));
 
-  const opsAtivas = useQuery({
-    queryKey: ["ops-ativas"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("ordens_producao")
-        .select("id,numero,equipamento_id,inicio_em,qtd_planejada,produto:produto_id(nome,codigo)")
-        .eq("status", "em_andamento");
-      return data ?? [];
-    },
-    refetchInterval: 15_000,
-  });
-
-  const opByEquip = new Map((opsAtivas.data ?? []).map((o) => [o.equipamento_id, o]));
-  const ativosQ = useProdutosAtivos((opsAtivas.data ?? []).map((o) => o.equipamento_id as string).filter(Boolean));
   const cfgOf = (e: Equip) => parseIndices(e.indices_config).filter((c) => c.tag || c.formula);
-
-  // Tags de produção total ativas + tags de índice/rendimento
-  const tagsAvanco = Array.from(new Set(
-    (equipamentos.data ?? [])
-      .filter((e) => opByEquip.has(e.id))
-      .flatMap((e) => [
-        e.tag_producao_total,
-        ...(cfgOf(e).length > 0 ? [] : ((e.tag_indices ?? []) as string[])),
-        ...cfgOf(e).flatMap((c) => [c.tag, ...((c.formula || "").match(/[A-Za-z_][A-Za-z0-9_.]*/g) ?? [])]).filter((v) => v !== "VALOR" && v !== "CONC_PROD"),
-      ].filter(Boolean) as string[])
+  const tagsCards = Array.from(new Set(
+    (equipamentos.data ?? []).flatMap((e) => [
+      e.tag_producao_total, e.tag_velocidade_producao,
+      ...(cfgOf(e).length > 0 ? [] : ((e.tag_indices ?? []) as string[])),
+      ...cfgOf(e).flatMap((c) => [c.tag, ...((c.formula || "").match(/[A-Za-z_][A-Za-z0-9_.]*/g) ?? [])]).filter((v) => v !== "VALOR" && v !== "CONC_PROD"),
+    ].filter(Boolean) as string[])
   ));
   const tagsQuery = useQuery({
-    queryKey: ["equip-cards-tags", tagsAvanco.join(",")],
-    enabled: tagsAvanco.length > 0,
+    queryKey: ["equip-cards-tags", tagsCards.join(",")],
+    enabled: tagsCards.length > 0,
     queryFn: async () => {
-      const { data } = await supabase.from("tags_live")
-        .select("nome,nome_amigavel,valor_num,unidade").in("nome", tagsAvanco);
+      const { data } = await supabase.from("tags_live").select("nome,nome_amigavel,valor_num,unidade").in("nome", tagsCards);
       return (data ?? []) as Array<{ nome: string; nome_amigavel: string | null; valor_num: number | null; unidade: string | null }>;
     },
     refetchInterval: 5000,
   });
   const tagMap = new Map((tagsQuery.data ?? []).map((t) => [t.nome, t]));
 
-
-  const openNova = (equipId?: string) => {
-    setEquipPreset(equipId);
-    setNovaOpen(true);
-  };
-
   return (
     <div>
       <PageHeader
         title="Produção"
-        description="Equipamentos disponíveis e produções em andamento."
+        description="Equipamentos em monitoramento contínuo — últimas 24 horas."
         actions={
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline">
-              <Link to="/relatorios/$slug" params={{ slug: "produtividade-total" }}><FileText className="mr-2 h-4 w-4" />Relatório</Link>
+              <Link to="/relatorios/$slug" params={{ slug: "producao-periodo" }}><FileText className="mr-2 h-4 w-4" />Relatório</Link>
             </Button>
             <Button asChild variant="outline">
-              <Link to="/producao/dashboard"><LayoutGrid className="mr-2 h-4 w-4" />Dashboard</Link>
+              <Link to="/producao/pcp"><LayoutGrid className="mr-2 h-4 w-4" />Ordens finalizadas</Link>
             </Button>
-            <Button asChild variant="outline">
-              <Link to="/producao/pcp"><LayoutGrid className="mr-2 h-4 w-4" />PCP / Ordens</Link>
-            </Button>
-            <Button onClick={() => openNova(undefined)}>
-              <Play className="mr-2 h-4 w-4" />Nova ordem
+            <Button onClick={() => setManualOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />Registrar produção
             </Button>
           </div>
         }
@@ -117,125 +93,106 @@ function ProducaoPage() {
         <EmptyState
           icon={<Factory className="h-6 w-6" />}
           title="Nenhum equipamento ativo"
-          description="Cadastre equipamentos para começar a registrar produções."
+          description="Cadastre equipamentos para começar a monitorar a produção."
           action={<Button asChild><Link to="/cadastros/equipamentos">Cadastrar equipamento</Link></Button>}
         />
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {equipamentos.data?.map((e) => {
-            const op = opByEquip.get(e.id);
-            return (
-              <Card key={e.id} className="flex flex-col">
-                <CardContent className="flex flex-1 flex-col p-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="font-mono text-xs text-muted-foreground">{e.codigo}</div>
-                      <div className="text-base font-semibold">{e.nome}</div>
-                      <div className="text-xs text-muted-foreground">{e.localizacao ?? e.tipo ?? "—"}</div>
-                    </div>
-                    <StatusBadge status={e.status} />
-                  </div>
-                  {op ? (
-                    <div className="mt-3 rounded-md border border-primary/30 bg-primary/5 p-2 text-sm">
-                      <div className="font-medium">OP {op.numero}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {ativosQ.data?.[e.id]?.nome ?? (op.produto as { nome: string } | null)?.nome ?? ""}{op.inicio_em ? ` · há ${durationFromNow(op.inicio_em)}` : ""}
-                      </div>
-                      {(() => {
-                        if (!e.tag_producao_total) return null;
-                        const tag = tagMap.get(e.tag_producao_total);
-                        const plan = Number(op.qtd_planejada ?? 0);
-                        const val = tag?.valor_num ?? null;
-                        const pct = val != null && plan > 0 ? Math.max(0, Math.min(100, (val / plan) * 100)) : null;
-                        return (
-                          <div className="mt-2">
-                            <div className="flex items-baseline justify-between text-xs">
-                              <span className="text-muted-foreground">Avanço</span>
-                              <span className="font-mono font-semibold text-primary">
-                                {val != null ? val.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) : "—"}
-                                {tag?.unidade ? ` ${tag.unidade}` : ""} / {plan.toLocaleString("pt-BR")}
-                                {pct != null ? ` · ${pct.toFixed(0)}%` : ""}
-                              </span>
-                            </div>
-                            <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                              <div className="h-full rounded-full bg-primary transition-all" style={{ width: `${pct ?? 0}%` }} />
-                            </div>
-                          </div>
-                        );
-                      })()}
-                      {cfgOf(e).length > 0 ? (
-                        <div className="mt-2 border-t border-primary/20 pt-2">
-                          <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Rendimento / índice</div>
-                          <div className="grid grid-cols-2 gap-1 text-[11px]">
-                            {cfgOf(e).map((c, i) => {
-                              const conc = ativosQ.data?.[e.id]?.concentracao ?? null;
-                              const v = calcularIndice(c, (n) => tagMap.get(n)?.valor_num ?? null, conc);
-                              return (
-                                <div key={i} className="flex items-baseline justify-between gap-1 rounded bg-background/70 px-1.5 py-0.5">
-                                  <span className="truncate text-muted-foreground" title={c.formula || c.tag}>{c.nome || c.tag}</span>
-                                  <span className="font-mono font-semibold">
-                                    {v != null ? v.toLocaleString("pt-BR", { minimumFractionDigits: c.decimais, maximumFractionDigits: c.decimais }) : "—"}
-                                    {c.unidade ? ` ${c.unidade}` : ""}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ) : ((e.tag_indices ?? []) as string[]).length > 0 ? (
-                        <div className="mt-2 border-t border-primary/20 pt-2">
-                          <div className="mb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Rendimento / índice</div>
-                          <div className="grid grid-cols-2 gap-1 text-[11px]">
-                            {((e.tag_indices ?? []) as string[]).map((n) => {
-                              const t = tagMap.get(n);
-                              const label = t?.nome_amigavel?.trim() || n;
-                              return (
-                                <div key={n} className="flex items-baseline justify-between gap-1 rounded bg-background/70 px-1.5 py-0.5">
-                                  <span className="truncate text-muted-foreground" title={n}>{label}</span>
-                                  <span className="font-mono font-semibold">
-                                    {t?.valor_num != null ? t.valor_num.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) : "—"}
-                                    {t?.unidade ? ` ${t.unidade}` : ""}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <div className="mt-3 text-sm text-muted-foreground">
-                      {e.status === "manutencao" ? "Em manutenção (indisponível)." : "Disponível para nova OP."}
-                    </div>
-                  )}
-                  <div className="mt-4 flex justify-end gap-2">
-                    {op ? (
-                      <Button asChild size="sm">
-                        <Link to="/producao/$id" params={{ id: op.id }}><Eye className="mr-1 h-4 w-4" />Acompanhar</Link>
-                      </Button>
-                    ) : (
-                      <Button size="sm" variant="secondary" onClick={() => openNova(e.id)} disabled={e.status === "manutencao"}>
-                        <Play className="mr-1 h-4 w-4" />Iniciar produção
-                      </Button>
-                    )}
-                    <Button asChild size="sm" variant="ghost">
-                      <Link to="/producao/historico/$equipId" params={{ equipId: e.id }}>Histórico</Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {equipamentos.data?.map((e) => (
+            <EquipCard
+              key={e.id}
+              e={e}
+              paradaDesde={paradas.data?.get(e.id) ?? null}
+              produto={ativosQ.data?.[e.id] ?? null}
+              tagMap={tagMap}
+              cfg={cfgOf(e)}
+            />
+          ))}
         </div>
       )}
 
-      <NovaOPDialog
-        open={novaOpen}
-        onOpenChange={setNovaOpen}
-        equipPreset={equipPreset}
-        equipamentos={equipamentos.data ?? []}
+      <RegistrarProducaoManualDialog
+        open={manualOpen}
+        onOpenChange={setManualOpen}
+        equipamentos={(equipamentos.data ?? []) as never}
+        onDone={() => qc.invalidateQueries({ queryKey: ["equipamentos"] })}
       />
     </div>
+  );
+}
+
+type TagInfo = { nome: string; nome_amigavel: string | null; valor_num: number | null; unidade: string | null };
+
+function EquipCard({ e, paradaDesde, produto, tagMap, cfg }: {
+  e: Equip; paradaDesde: string | null;
+  produto: { nome: string; concentracao: number | null } | null;
+  tagMap: Map<string, TagInfo>; cfg: ReturnType<typeof parseIndices>;
+}) {
+  const hist = useHistoricoEquip(e.id, e.tag_producao_total);
+  const prod24 = somaIncrementos((hist.data ?? []).map((p) => p.v));
+  const unid = e.tag_producao_total ? tagMap.get(e.tag_producao_total)?.unidade ?? "" : "";
+  const vel = e.tag_velocidade_producao ? tagMap.get(e.tag_velocidade_producao) : undefined;
+  const manut = e.status === "manutencao";
+  const parado = !!paradaDesde;
+  const fmt = (v: number | null | undefined, d = 2) => (v == null ? "—" : v.toLocaleString("pt-BR", { maximumFractionDigits: d }));
+  return (
+    <Card className="flex flex-col">
+      <CardContent className="flex flex-1 flex-col p-4">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <div className="font-mono text-xs text-muted-foreground">{e.codigo}</div>
+            <div className="text-base font-semibold">{e.nome}</div>
+            <div className="text-xs text-muted-foreground">{produto?.nome ?? "Produto não identificado"}{produto?.concentracao != null ? ` · ${produto.concentracao}%` : ""}</div>
+          </div>
+          {manut ? <Badge variant="outline">Manutenção</Badge>
+            : parado ? <Badge variant="destructive">Parado · {durationFromNow(paradaDesde!)}</Badge>
+            : <Badge className="bg-primary/15 text-primary hover:bg-primary/15">Em operação</Badge>}
+        </div>
+        <div className="mt-3 grid grid-cols-2 gap-2 rounded-md border border-primary/30 bg-primary/5 p-2">
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Produzido 24h</div>
+            <div className="font-mono text-lg font-semibold text-primary">{e.tag_producao_total ? fmt(prod24) : "—"} <span className="text-xs">{unid}</span></div>
+          </div>
+          <div>
+            <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Velocidade</div>
+            <div className="font-mono text-lg font-semibold">{fmt(vel?.valor_num)} <span className="text-xs">{vel?.unidade ?? ""}</span></div>
+          </div>
+        </div>
+        {cfg.length > 0 ? (
+          <div className="mt-2 grid grid-cols-2 gap-1 text-[11px]">
+            {cfg.map((c, i) => {
+              const v = calcularIndice(c, (n) => tagMap.get(n)?.valor_num ?? null, produto?.concentracao ?? null);
+              return (
+                <div key={i} className="flex items-baseline justify-between gap-1 rounded bg-muted/60 px-1.5 py-0.5">
+                  <span className="truncate text-muted-foreground" title={c.formula || c.tag}>{c.nome || c.tag}</span>
+                  <span className="font-mono font-semibold">{v != null ? v.toLocaleString("pt-BR", { minimumFractionDigits: c.decimais, maximumFractionDigits: c.decimais }) : "—"}{c.unidade ? ` ${c.unidade}` : ""}</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : ((e.tag_indices ?? []) as string[]).length > 0 ? (
+          <div className="mt-2 grid grid-cols-2 gap-1 text-[11px]">
+            {((e.tag_indices ?? []) as string[]).map((n) => {
+              const t = tagMap.get(n);
+              return (
+                <div key={n} className="flex items-baseline justify-between gap-1 rounded bg-muted/60 px-1.5 py-0.5">
+                  <span className="truncate text-muted-foreground">{t?.nome_amigavel?.trim() || n}</span>
+                  <span className="font-mono font-semibold">{fmt(t?.valor_num)}{t?.unidade ? ` ${t.unidade}` : ""}</span>
+                </div>
+              );
+            })}
+          </div>
+        ) : null}
+        <div className="mt-auto flex justify-end gap-2 pt-4">
+          <Button asChild size="sm">
+            <Link to="/producao/equipamento/$equipId" params={{ equipId: e.id }}><Eye className="mr-1 h-4 w-4" />Acompanhar</Link>
+          </Button>
+          <Button asChild size="sm" variant="ghost">
+            <Link to="/producao/historico/$equipId" params={{ equipId: e.id }}>Histórico</Link>
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
