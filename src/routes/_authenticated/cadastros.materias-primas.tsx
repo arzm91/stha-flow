@@ -33,9 +33,12 @@ type MP = {
   categoria: string | null;
   ativo: boolean;
   disponivel_como_materia_prima?: boolean;
+  tag_consumo?: string | null;
+  consumo_modo?: string;
+  consumo_fator?: number;
 };
 
-const empty = { codigo: "", nome: "", descricao: "", unidade: "kg", ativo: true };
+const empty = { codigo: "", nome: "", descricao: "", unidade: "kg", ativo: true, tag_consumo: "", consumo_modo: "totalizador", consumo_fator: "1" };
 
 function MateriasPrimasPage() {
   const qc = useQueryClient();
@@ -72,6 +75,16 @@ function MateriasPrimasPage() {
     enabled: promoteOpen,
   });
 
+  const tags = useQuery({
+    queryKey: ["tags-live-mp"],
+    queryFn: async () => {
+      const { data } = await supabase.from("tags_live").select("nome,nome_amigavel,valor_num,unidade").order("nome");
+      return (data ?? []) as Array<{ nome: string; nome_amigavel: string | null; valor_num: number | null; unidade: string | null }>;
+    },
+    refetchInterval: 15_000,
+  });
+  const tagMap = new Map((tags.data ?? []).map((t) => [t.nome, t]));
+
   const usage = useQuery({
     queryKey: ["materias-primas-usage"],
     queryFn: async () => {
@@ -96,6 +109,8 @@ function MateriasPrimasPage() {
     setForm({
       codigo: r.codigo, nome: r.nome, descricao: r.descricao ?? "",
       unidade: r.unidade, ativo: r.ativo,
+      tag_consumo: r.tag_consumo ?? "", consumo_modo: r.consumo_modo ?? "totalizador",
+      consumo_fator: String(r.consumo_fator ?? 1),
     });
     setOpen(true);
   };
@@ -111,11 +126,15 @@ function MateriasPrimasPage() {
         unidade: form.unidade || "kg",
         categoria: "materia_prima",
         ativo: form.ativo,
+        tag_consumo: form.tag_consumo || null,
+        consumo_modo: form.consumo_modo,
+        consumo_fator: Number(form.consumo_fator) > 0 ? Number(form.consumo_fator) : 1,
         owner_id: u.user.id,
       };
       if (!payload.codigo || !payload.nome) throw new Error("Código e nome são obrigatórios");
       if (editing) {
-        const { error } = await supabase.from("produtos").update(payload).eq("id", editing.id);
+        const { owner_id: _o, ...upd } = payload;
+        const { error } = await supabase.from("produtos").update(upd).eq("id", editing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("produtos").insert(payload);
@@ -232,6 +251,34 @@ function MateriasPrimasPage() {
                     <Label>Descrição</Label>
                     <Textarea value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} rows={2} />
                   </div>
+                  <div className="sm:col-span-2 rounded-md border border-border p-3 space-y-3">
+                    <div>
+                      <div className="text-sm font-medium">Tag de consumo do CLP (opcional)</div>
+                      <p className="text-[11px] text-muted-foreground">Usada para calcular o consumo automaticamente no registro de produção.</p>
+                    </div>
+                    <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="space-y-1.5 sm:col-span-3">
+                        <Label>Tag</Label>
+                        <select value={form.tag_consumo} onChange={(e) => setForm({ ...form, tag_consumo: e.target.value })}
+                          className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+                          <option value="">— sem tag —</option>
+                          {(tags.data ?? []).map((t) => <option key={t.nome} value={t.nome}>{t.nome_amigavel || t.nome}</option>)}
+                        </select>
+                      </div>
+                      <div className="space-y-1.5 sm:col-span-2">
+                        <Label>Tipo de medição</Label>
+                        <select value={form.consumo_modo} onChange={(e) => setForm({ ...form, consumo_modo: e.target.value })}
+                          className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+                          <option value="totalizador">Totalizador acumulado (fim − início)</option>
+                          <option value="direto">Vazão por hora (integrada no tempo)</option>
+                        </select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Fator</Label>
+                        <Input type="number" step="any" value={form.consumo_fator} onChange={(e) => setForm({ ...form, consumo_fator: e.target.value })} />
+                      </div>
+                    </div>
+                  </div>
                   <label className="sm:col-span-2 flex items-center gap-2 text-sm">
                     <input type="checkbox" checked={form.ativo} onChange={(e) => setForm({ ...form, ativo: e.target.checked })} />
                     Ativa
@@ -267,6 +314,7 @@ function MateriasPrimasPage() {
                 <TableHead>Nome</TableHead>
                 <TableHead>Origem</TableHead>
                 <TableHead>Unidade</TableHead>
+                <TableHead>Tag de consumo</TableHead>
                 <TableHead>Usada em</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead></TableHead>
@@ -291,6 +339,10 @@ function MateriasPrimasPage() {
                       )}
                     </TableCell>
                     <TableCell>{r.unidade}</TableCell>
+                    <TableCell className="text-xs">
+                      {r.tag_consumo ? (<><div className="font-mono">{r.tag_consumo}</div>
+                        <div className="text-muted-foreground">{tagMap.get(r.tag_consumo)?.valor_num != null ? Number(tagMap.get(r.tag_consumo)!.valor_num).toLocaleString("pt-BR") : "sem leitura"}</div></>) : <span className="text-muted-foreground">—</span>}
+                    </TableCell>
                     <TableCell>{(usage.data ?? {})[r.id] ?? 0} receita(s)</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={r.ativo ? "bg-success/20 text-success border-success/30" : "bg-muted"}>

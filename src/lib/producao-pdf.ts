@@ -135,7 +135,7 @@ export async function gerarRelatorioProducaoPdf(alvo: string | PeriodoEquip) {
   const consumoTotal = mats.reduce((s, m) => s + Number(m.quantidade_consumida ?? 0), 0);
   const concMedia = op.concentracao_media != null ? Number(op.concentracao_media) : null;
   const concCad = op.produto?.concentracao != null ? Number(op.produto.concentracao) : null;
-  const conversao = op.indice_conversao != null ? Number(op.indice_conversao) : indiceCorrigido(consumoTotal, produzida, concCad, concMedia);
+  const conversao = op.indice_conversao != null ? Number(op.indice_conversao) : indiceCorrigido(Number(mats[0]?.quantidade_consumida ?? 0), produzida, concCad, concMedia);
 
   // Tags no período
   const byTag = new Map<string, { unidade: string | null; values: number[] }>();

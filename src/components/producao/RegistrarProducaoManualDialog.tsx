@@ -1,4 +1,5 @@
 import { indiceCorrigido } from "@/lib/reports-v2/producao-periodo";
+import { acumuladoTotalizador, consumoMp, consumoBaseIndice, type Pt } from "@/lib/producao/auto-preenchimento";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -77,7 +78,20 @@ type Ordem = {
 };
 
 type Equip = { id: string; codigo: string; nome: string; status: string };
-type Prod = { id: string; codigo: string; nome: string; concentracao?: number | null };
+type Prod = { id: string; codigo: string; nome: string; concentracao?: number | null; equipamento_id?: string | null; tag_clp?: string | null; tag_valor_ativacao?: number | null; tag_total_producao?: string | null };
+
+async function historicoTag(equipId: string, tag: string, ini: string, fim: string): Promise<Pt[]> {
+  const out: Pt[] = [];
+  for (let from = 0; from < 50_000; from += 1000) {
+    const { data, error } = await supabase.from("producao_tag_historico").select("valor_num,registrado_em")
+      .eq("equipamento_id", equipId).eq("tag_nome", tag).gte("registrado_em", ini).lte("registrado_em", fim)
+      .order("registrado_em", { ascending: true }).range(from, from + 999);
+    if (error) throw error;
+    for (const r of data ?? []) if (r.valor_num != null) out.push({ t: new Date(r.registrado_em).getTime(), v: Number(r.valor_num) });
+    if ((data ?? []).length < 1000) break;
+  }
+  return out;
+}
 
 const PRIO_LABEL: Record<Prioridade, string> = { alta: "Alta", media: "Média", baixa: "Baixa" };
 const PRIO_CLS: Record<Prioridade, string> = {
@@ -138,7 +152,9 @@ export function RegistrarProducaoManualDialog({
   const [lancarEstoque, setLancarEstoque] = useState(true);
   const [responsavel, setResponsavel] = useState("");
   const [concMedia, setConcMedia] = useState<string>("");
-  const [mats, setMats] = useState<Array<{ mp_id: string; nome: string; unidade: string; percentual: number | null; tag: string | null; qtd: string; tanque_id: string }>>([]);
+  const [mats, setMats] = useState<Array<{ mp_id: string; nome: string; unidade: string; percentual: number | null; tag: string | null; modo: string; fator: number; qtd: string; tanque_id: string }>>([]);
+  const [autoMsg, setAutoMsg] = useState<string>("");
+  const [autoLoading, setAutoLoading] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -149,14 +165,14 @@ export function RegistrarProducaoManualDialog({
     setInicio(toLocalDateTimeInput(oneHourAgo.toISOString()));
     setFim(toLocalDateTimeInput(now.toISOString()));
     setTanqueId(""); setObsIniciais(""); setObsFinais(""); setLancarEstoque(true);
-    setResponsavel(""); setMats([]);
+    setResponsavel(""); setMats([]); setAutoMsg("");
     fetchNextOpNumero().then((n) => setNumero((cur) => cur || n)).catch(() => {});
   }, [open]);
 
   const produtos = useQuery({
     queryKey: ["pcp-produtos"],
     queryFn: async () => {
-      const { data } = await supabase.from("produtos").select("id,codigo,nome").eq("ativo", true).order("nome");
+      const { data } = await supabase.from("produtos").select("id,codigo,nome,concentracao,equipamento_id,tag_clp,tag_valor_ativacao,tag_total_producao").eq("ativo", true).neq("categoria", "materia_prima").order("nome");
       return (data ?? []) as Prod[];
     },
   });
@@ -173,7 +189,7 @@ export function RegistrarProducaoManualDialog({
   const concCad = (produtos.data ?? []).find((p) => p.id === produtoId)?.concentracao ?? null;
   useEffect(() => { setConcMedia(concCad != null ? String(concCad) : ""); }, [produtoId, concCad]);
   const indicePrev = qtdProduzida === "" ? null : indiceCorrigido(
-    mats.reduce((s, m) => s + (Number(m.qtd) || 0), 0), Number(qtdProduzida),
+    consumoBaseIndice(mats), Number(qtdProduzida),
     concCad, concMedia === "" ? null : Number(concMedia));
 
   // Receita do produto -> matérias-primas
@@ -181,14 +197,80 @@ export function RegistrarProducaoManualDialog({
     if (!produtoId) { setMats([]); return; }
     (async () => {
       const { data: rec } = await supabase.from("produto_receita")
-        .select("materia_prima_id, percentual, tag_consumo_nome, mp:materia_prima_id(nome,unidade)")
+        .select("materia_prima_id, percentual, tag_consumo_nome, mp:materia_prima_id(nome,unidade,tag_consumo,consumo_modo,consumo_fator)")
         .eq("produto_id", produtoId).order("ordem");
       setMats(((rec ?? []) as any[]).map((r) => ({
         mp_id: r.materia_prima_id, nome: r.mp?.nome ?? "—", unidade: r.mp?.unidade ?? "",
-        percentual: r.percentual, tag: r.tag_consumo_nome, qtd: "", tanque_id: "",
+        percentual: r.percentual, tag: r.mp?.tag_consumo || r.tag_consumo_nome || null,
+        modo: r.mp?.consumo_modo ?? "totalizador", fator: Number(r.mp?.consumo_fator ?? 1), qtd: "", tanque_id: "",
       })));
     })();
   }, [produtoId]);
+
+  // Equipamento automático quando só há um
+  useEffect(() => {
+    if (open && !equipamentoId && equipamentos.length === 1) setEquipamentoId(equipamentos[0]!.id);
+  }, [open, equipamentos, equipamentoId]);
+
+  // Início = fim da última produção registrada no equipamento
+  useEffect(() => {
+    if (!open || !equipamentoId) return;
+    (async () => {
+      const { data } = await supabase.from("ordens_producao").select("fim_em").eq("equipamento_id", equipamentoId)
+        .eq("status", "finalizada").not("fim_em", "is", null).order("fim_em", { ascending: false }).limit(1).maybeSingle();
+      if (data?.fim_em && new Date(data.fim_em).getTime() < Date.now()) setInicio(toLocalDateTimeInput(data.fim_em));
+    })();
+  }, [open, equipamentoId]);
+
+  // Produto automático pela tag de identificação do CLP
+  useEffect(() => {
+    if (!open || !equipamentoId || produtoId) return;
+    const cands = (produtos.data ?? []).filter((p) => p.equipamento_id === equipamentoId && p.tag_clp && p.tag_valor_ativacao != null);
+    if (!cands.length) return;
+    (async () => {
+      const nomes = Array.from(new Set(cands.map((c) => c.tag_clp!)));
+      const { data } = await supabase.from("tags_live").select("nome,valor_num").in("nome", nomes);
+      const m = new Map((data ?? []).map((t: any) => [t.nome, Number(t.valor_num)]));
+      const ativo = cands.find((c) => m.get(c.tag_clp!) === Number(c.tag_valor_ativacao));
+      if (ativo) setProdutoId(ativo.id);
+    })();
+  }, [open, equipamentoId, produtoId, produtos.data]);
+
+  const buscarDoClp = async () => {
+    const prod = (produtos.data ?? []).find((p) => p.id === produtoId);
+    if (!equipamentoId || !prod || !inicio || !fim) return;
+    setAutoLoading(true);
+    try {
+      const ini = new Date(inicio).toISOString(), fi = new Date(fim).toISOString();
+      const { data: eq } = await supabase.from("equipamentos").select("tag_producao_total").eq("id", equipamentoId).maybeSingle();
+      const tagTot = prod.tag_total_producao || eq?.tag_producao_total || null;
+      const idPts = prod.tag_clp && prod.tag_valor_ativacao != null ? await historicoTag(equipamentoId, prod.tag_clp, ini, fi) : null;
+      const ativ = prod.tag_valor_ativacao != null ? Number(prod.tag_valor_ativacao) : null;
+      const partes: string[] = [];
+      if (tagTot) {
+        const pts = await historicoTag(equipamentoId, tagTot, ini, fi);
+        if (pts.length > 1) { setQtdProduzida(+acumuladoTotalizador(pts, idPts, ativ).toFixed(3)); partes.push(`produção pela tag ${tagTot}`); }
+      }
+      const novos = await Promise.all(mats.map(async (m) => {
+        if (!m.tag) return m;
+        const pts = await historicoTag(equipamentoId, m.tag, ini, fi);
+        if (pts.length < 2) return m;
+        return { ...m, qtd: String(+consumoMp(pts, m.modo, m.fator, idPts, ativ).toFixed(3)) };
+      }));
+      const nTags = novos.filter((m, i) => m.qtd !== mats[i]!.qtd).length;
+      if (nTags) partes.push(`${nTags} matéria(s)-prima(s) pelas tags de consumo`);
+      setMats(novos);
+      setAutoMsg(partes.length ? `Preenchido automaticamente: ${partes.join(" e ")}. Confira antes de salvar.` : "Sem leituras de tags no período — preencha manualmente.");
+    } catch (e) {
+      setAutoMsg("Falha ao buscar dados do CLP: " + (e as Error).message);
+    } finally { setAutoLoading(false); }
+  };
+
+  const matsKey = mats.map((m) => m.mp_id).join(",");
+  useEffect(() => {
+    if (open && equipamentoId && produtoId && inicio && fim) void buscarDoClp();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, equipamentoId, produtoId, inicio, fim, matsKey, produtos.data]);
 
   // Sugestão de consumo pelo percentual da receita
   useEffect(() => {
@@ -295,12 +377,16 @@ export function RegistrarProducaoManualDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] w-[calc(100vw-2rem)] max-w-2xl overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Registrar produção manual</DialogTitle>
+          <DialogTitle>Registrar produção</DialogTitle>
           <DialogDescription>
             Crie uma ordem já finalizada, para lançar produções realizadas fora do sistema (manutenção, indisponibilidade, etc.).
           </DialogDescription>
         </DialogHeader>
         <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); save.mutate(); }}>
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-primary/30 bg-primary/5 p-2 text-xs">
+            <span>{autoLoading ? "Buscando dados do CLP…" : autoMsg || "Os dados são preenchidos pelas tags do CLP ao escolher equipamento, produto e período."}</span>
+            <Button type="button" size="sm" variant="outline" disabled={autoLoading || !produtoId || !equipamentoId} onClick={() => void buscarDoClp()}>Recalcular pelo CLP</Button>
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Número da OP</Label>
@@ -367,7 +453,9 @@ export function RegistrarProducaoManualDialog({
                 : mats.length === 0 ? <div className="text-xs text-muted-foreground">Produto sem receita cadastrada.</div>
                 : mats.map((m, i) => (
                   <div key={m.mp_id} className="grid gap-2 sm:grid-cols-[1fr_120px_1fr] items-center">
-                    <div className="text-sm">{m.nome}{m.percentual != null ? <span className="text-xs text-muted-foreground"> · {m.percentual}%</span> : null}</div>
+                    <div className="text-sm">{m.nome}{m.percentual != null ? <span className="text-xs text-muted-foreground"> · {m.percentual}%</span> : null}
+                      {i === 0 ? <Badge variant="outline" className="ml-1 text-[10px]">Base do índice</Badge> : null}
+                      {m.tag ? <div className="text-[10px] text-muted-foreground font-mono">tag {m.tag}</div> : null}</div>
                     <Input type="number" step="any" value={m.qtd} placeholder={m.unidade || "qtd"}
                       onChange={(e) => setMats((prev) => prev.map((x, j) => j === i ? { ...x, qtd: e.target.value } : x))} />
                     <select value={m.tanque_id}
@@ -388,7 +476,7 @@ export function RegistrarProducaoManualDialog({
             <div className="rounded-md border border-border bg-muted/30 p-2">
               <div className="text-[11px] text-muted-foreground">Índice de conversão (prévia)</div>
               <div className="text-xl font-semibold tabular-nums">{indicePrev != null ? indicePrev.toLocaleString("pt-BR", { minimumFractionDigits: 3, maximumFractionDigits: 3 }) : "—"}</div>
-              <div className="text-[10px] text-muted-foreground">(consumido ÷ produzido) × conc. cad. ÷ conc. média</div>
+              <div className="text-[10px] text-muted-foreground">(1ª MP ÷ produzido) × conc. cad. ÷ conc. média</div>
             </div>
             <div className="space-y-1.5 sm:col-span-2">
               <Label>Responsável pelo fechamento</Label>

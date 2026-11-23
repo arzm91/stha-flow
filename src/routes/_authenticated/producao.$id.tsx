@@ -1347,7 +1347,7 @@ function FinalizarDialog({
     setMats((prev) => prev.map((m, idx) => (idx === i ? { ...m, ...patch } : m)));
 
   const consTotal = mats.reduce((s, m) => s + (Number(m.quantidade_consumida) || 0), 0);
-  const indicePrev = qtd === "" ? null : indiceCorrigido(consTotal, Number(qtd), concCad, concMedia === "" ? null : Number(concMedia));
+  const indicePrev = qtd === "" ? null : indiceCorrigido(Number(mats[0]?.quantidade_consumida) || 0, Number(qtd), concCad, concMedia === "" ? null : Number(concMedia));
   const handle = async () => {
     if (qtd === "" || Number(qtd) <= 0) return toast.error("Informe quantidade produzida");
     if (!responsavel.trim()) return toast.error("Informe o responsável pelo fechamento");

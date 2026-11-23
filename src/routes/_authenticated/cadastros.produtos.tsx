@@ -35,9 +35,10 @@ type Produto = {
   equipamento_id: string | null;
   tag_clp: string | null;
   tag_valor_ativacao: number | null;
+  tag_total_producao: string | null;
 };
 
-const emptyProduto = { codigo: "", nome: "", descricao: "", unidade: "", categoria: "", ativo: true, concentracao: "", equipamento_id: "", tag_clp: "", tag_valor_ativacao: "" };
+const emptyProduto = { codigo: "", nome: "", descricao: "", unidade: "", categoria: "", ativo: true, concentracao: "", equipamento_id: "", tag_clp: "", tag_valor_ativacao: "", tag_total_producao: "" };
 
 function ProdutosPage() {
   const qc = useQueryClient();
@@ -93,11 +94,11 @@ function ProdutosPage() {
     queryKey: ["materias-primas-list"],
     queryFn: async () => {
       const { data, error } = await supabase.from("produtos")
-        .select("id, codigo, nome, unidade")
+        .select("id, codigo, nome, unidade, tag_consumo")
         .eq("categoria", "materia_prima").eq("ativo", true)
         .order("nome");
       if (error) throw error;
-      return (data ?? []) as { id: string; codigo: string; nome: string; unidade: string }[];
+      return (data ?? []) as { id: string; codigo: string; nome: string; unidade: string; tag_consumo: string | null }[];
     },
   });
 
@@ -122,6 +123,7 @@ function ProdutosPage() {
       equipamento_id: r.equipamento_id ?? "",
       tag_clp: r.tag_clp ?? "",
       tag_valor_ativacao: r.tag_valor_ativacao == null ? "" : String(r.tag_valor_ativacao),
+      tag_total_producao: r.tag_total_producao ?? "",
     });
 
     // Load recipe
@@ -151,6 +153,7 @@ function ProdutosPage() {
         equipamento_id: form.equipamento_id || null,
         tag_clp: form.tag_clp || null,
         tag_valor_ativacao: form.tag_valor_ativacao === "" ? null : Number(form.tag_valor_ativacao),
+        tag_total_producao: form.tag_total_producao || null,
         owner_id: ownerId,
       };
       if (payload.tag_clp && (payload.tag_valor_ativacao == null || !payload.equipamento_id)) {
@@ -304,6 +307,12 @@ function ProdutosPage() {
                           <option value="1">1</option>
                         </select>
                       </Field>
+                      <Field label="Tag de total de produção">
+                        <select value={form.tag_total_producao} onChange={(e) => setForm({ ...form, tag_total_producao: e.target.value })} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
+                          <option value="">— usa a do equipamento —</option>
+                          {(tagsList.data ?? []).map((t) => <option key={t.nome} value={t.nome}>{t.nome_amigavel || t.nome}</option>)}
+                        </select>
+                      </Field>
                     </div>
                   </div>
                   <div className="sm:col-span-2">
@@ -352,9 +361,10 @@ function ProdutosPage() {
                     <div className="space-y-2">
                       {receita.map((r, ri) => (
                         <div key={ri} className="grid grid-cols-12 gap-2 rounded-md border border-border bg-background p-2 items-center">
+                          {ri === 0 ? <div className="col-span-12 text-[10px] font-medium text-primary">Matéria-prima principal — base do índice de conversão</div> : null}
                           <select
                             value={r.materia_prima_id}
-                            onChange={(ev) => setReceita((prev) => prev.map((x, i) => i === ri ? { ...x, materia_prima_id: ev.target.value } : x))}
+                            onChange={(ev) => { const mp = (mpList.data ?? []).find((m) => m.id === ev.target.value); setReceita((prev) => prev.map((x, i) => i === ri ? { ...x, materia_prima_id: ev.target.value, tag_consumo_nome: mp?.tag_consumo || x.tag_consumo_nome } : x)); }}
                             className="col-span-5 h-9 rounded-md border border-input bg-background px-2 text-sm"
                           >
                             <option value="">— Selecione MP —</option>

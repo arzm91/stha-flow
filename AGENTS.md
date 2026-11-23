@@ -8,3 +8,4 @@
 > Commits you push to the connected branch sync back to Lovable and show up in
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
+- Production registration auto-fill rules (product totalizer filtered by CLP id tag, MP consumption, index from 1st recipe MP) live in src/lib/producao/auto-preenchimento.ts; keep UI calling these pure functions so tests cover them.

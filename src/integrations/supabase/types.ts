@@ -2357,6 +2357,8 @@ export type Database = {
           categoria: string | null
           codigo: string
           concentracao: number | null
+          consumo_fator: number
+          consumo_modo: string
           created_at: string
           descricao: string | null
           disponivel_como_materia_prima: boolean
@@ -2365,6 +2367,8 @@ export type Database = {
           nome: string
           owner_id: string
           tag_clp: string | null
+          tag_consumo: string | null
+          tag_total_producao: string | null
           tag_valor_ativacao: number | null
           unidade: string
           updated_at: string
@@ -2374,6 +2378,8 @@ export type Database = {
           categoria?: string | null
           codigo: string
           concentracao?: number | null
+          consumo_fator?: number
+          consumo_modo?: string
           created_at?: string
           descricao?: string | null
           disponivel_como_materia_prima?: boolean
@@ -2382,6 +2388,8 @@ export type Database = {
           nome: string
           owner_id: string
           tag_clp?: string | null
+          tag_consumo?: string | null
+          tag_total_producao?: string | null
           tag_valor_ativacao?: number | null
           unidade: string
           updated_at?: string
@@ -2391,6 +2399,8 @@ export type Database = {
           categoria?: string | null
           codigo?: string
           concentracao?: number | null
+          consumo_fator?: number
+          consumo_modo?: string
           created_at?: string
           descricao?: string | null
           disponivel_como_materia_prima?: boolean
@@ -2399,6 +2409,8 @@ export type Database = {
           nome?: string
           owner_id?: string
           tag_clp?: string | null
+          tag_consumo?: string | null
+          tag_total_producao?: string | null
           tag_valor_ativacao?: number | null
           unidade?: string
           updated_at?: string

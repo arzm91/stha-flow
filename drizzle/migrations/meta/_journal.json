@@ -57,6 +57,13 @@
       "when": 1795442623809,
       "tag": "0007_migration",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1795448675710,
+      "tag": "0008_tags_producao_consumo_produtos",
+      "breakpoints": true
     }
   ]
 }
