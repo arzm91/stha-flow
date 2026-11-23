@@ -5,6 +5,7 @@ import { template as alert } from './alert'
 import { template as message } from './message'
 import { template as rotinaEvento } from './rotina-evento'
 import { template as relatorioAlertas } from './relatorio-alertas'
+import { template as relatorioPdf } from './relatorio-pdf'
 
 export interface TemplateEntry {
   component: ComponentType<any>
@@ -22,4 +23,5 @@ export const TEMPLATES: Record<string, TemplateEntry> = {
   'message': message,
   'rotina-evento': rotinaEvento,
   'relatorio-alertas': relatorioAlertas,
+  'relatorio-pdf': relatorioPdf,
 }

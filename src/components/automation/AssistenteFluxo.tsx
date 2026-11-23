@@ -35,7 +35,7 @@ const ACTION_OPTIONS: Array<{ value: ActionKind; label: string }> = [
   { value: "finalizar_op", label: "Finalizar a ordem em andamento de um equipamento" },
   { value: "criar_aviso", label: "Criar um aviso no sistema" },
   { value: "enviar_email", label: "Enviar um e-mail" },
-  { value: "enviar_relatorio", label: "Enviar relatório de alertas por e-mail" },
+  { value: "enviar_relatorio", label: "Enviar relatório em PDF por e-mail" },
 ];
 
 export function AssistenteFluxo({ open, onOpenChange }: Props) {
@@ -62,6 +62,7 @@ export function AssistenteFluxo({ open, onOpenChange }: Props) {
   const [email, setEmail] = useState("");
   const [assunto, setAssunto] = useState("");
   const [horas, setHoras] = useState("24");
+  const [relTipo, setRelTipo] = useState("alertas");
   const [requiresApproval, setRequiresApproval] = useState(true);
 
   const [tags, setTags] = useState<Array<{ nome: string; nome_amigavel: string | null }>>([]);
@@ -102,7 +103,7 @@ export function AssistenteFluxo({ open, onOpenChange }: Props) {
       case "finalizar_op":
         return { type: "finalizar_op", equipamento_id: equipamentoId };
       case "enviar_relatorio":
-        return { type: "enviar_relatorio", relatorio: "alertas", horas: Number(horas) || 24, recipients: email.trim() };
+        return { type: "enviar_relatorio", relatorio: relTipo, formato: "pdf", horas: Number(horas) || 24, recipients: email.trim() };
       case "enviar_email":
         return { type: "enviar_email", template: "message", recipient: email.trim(), subject: assunto.trim(), body: mensagem.trim() };
       default:
@@ -132,7 +133,7 @@ export function AssistenteFluxo({ open, onOpenChange }: Props) {
       case "iniciar_op": return `Iniciar produção em ${eqNome}`;
       case "finalizar_op": return `Finalizar produção em ${eqNome}`;
       case "enviar_email": return `Enviar e-mail para ${email}`;
-      case "enviar_relatorio": return `Enviar relatório de alertas (${horas}h) para ${email}`;
+      case "enviar_relatorio": return `Enviar relatório de ${relTipo === "producao" ? "produção" : relTipo === "manutencao" ? "manutenção" : "alertas"} em PDF (${horas}h) para ${email}`;
       default: return `Criar aviso: ${titulo || "aviso"}`;
     }
   }
@@ -357,6 +358,14 @@ export function AssistenteFluxo({ open, onOpenChange }: Props) {
 
             {actionKind === "enviar_relatorio" && (
               <>
+                <div className="space-y-1">
+                  <Label className="text-xs">Tipo de relatório</Label>
+                  <select className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm" value={relTipo} onChange={(e) => setRelTipo(e.target.value)}>
+                    <option value="producao">Produção</option>
+                    <option value="manutencao">Manutenção</option>
+                    <option value="alertas">Alertas</option>
+                  </select>
+                </div>
                 <div className="space-y-1">
                   <Label className="text-xs">Enviar para (e-mails separados por vírgula)</Label>
                   <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="a@empresa.com, b@empresa.com" />

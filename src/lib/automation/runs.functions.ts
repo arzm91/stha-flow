@@ -346,6 +346,24 @@ async function runActionNode(
     return { info: "gerar_relatorio ignorado — use os relatórios pré-definidos em /relatorios" };
   }
 
+  if (actionType === "enviar_relatorio" && cfg.formato !== "email") {
+    const { gerarRelatorioPdf } = await import("@/lib/automation/relatorio-pdf.server");
+    const tipo = (["producao", "manutencao", "alertas"].includes(String(cfg.relatorio)) ? String(cfg.relatorio) : "alertas") as "producao" | "manutencao" | "alertas";
+    const recipients = String(cfg.recipients ?? cfg.recipient ?? "").split(/[,;\s]+/).map((x) => x.trim()).filter(Boolean);
+    if (!recipients.length) throw new Error("informe ao menos um destinatário");
+    const horas = Math.min(Math.max(Number(cfg.horas ?? 24) || 24, 1), 24 * 31);
+    const fim = new Date(String(ctx.__trigger_fired_at ?? new Date().toISOString()));
+    const inicio = new Date(fim.getTime() - horas * 3600_000);
+    const r = await gerarRelatorioPdf(supabase, ownerId, tipo, inicio, fim);
+    const { enqueueTransactionalEmail } = await import("@/lib/email/enqueue.server");
+    const key = fim.toISOString().slice(0, 16);
+    for (const to of recipients) {
+      const res = await enqueueTransactionalEmail({ templateName: "relatorio-pdf", recipientEmail: to, templateData: r, idempotencyKey: `rel-pdf-${tipo}-${ownerId}-${key}-${to}` });
+      if (!res.ok) throw new Error(`e-mail não enfileirado para ${to}: ${res.reason}`);
+    }
+    return { info: `${r.titulo} em PDF (${horas}h) → ${recipients.join(", ")}` };
+  }
+
   if (actionType === "enviar_relatorio") {
     const { montarRelatorioAlertas } = await import("@/lib/automation/relatorio-alertas");
     const recipients = String(cfg.recipients ?? cfg.recipient ?? "").split(/[,;\s]+/).map((x) => x.trim()).filter(Boolean);
