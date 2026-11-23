@@ -19,3 +19,10 @@ describe("auto-preenchimento", () => {
     expect(consumoBaseIndice([{ qtd: "630" }, { qtd: "200" }])).toBe(630);
   });
 });
+
+import { totalTagPura } from "./auto-preenchimento";
+describe("totalTagPura", () => {
+  it("usa a variação da tag já totalizada, tolerando zeragem", () => {
+    expect(totalTagPura([{ t: 1, v: 100 }, { t: 2, v: 150 }, { t: 3, v: 0 }, { t: 4, v: 20 }])).toBe(70);
+  });
+});

@@ -45,3 +45,11 @@ export function consumoMp(pts: Pt[], modo: string, fator: number, id?: Pt[] | nu
 export function consumoBaseIndice(mats: Array<{ qtd: string | number }>): number {
   return Number(mats[0]?.qtd) || 0;
 }
+
+/**
+ * Total de uma tag "pura" das Tags ao vivo, que já acumula sozinha (ex.: total do produto
+ * ou consumo da MP). Soma os incrementos do período, tolerando zeragens do CLP.
+ */
+export function totalTagPura(pts: Pt[]): number {
+  return acumuladoTotalizador(pts);
+}

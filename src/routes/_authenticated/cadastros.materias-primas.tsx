@@ -127,8 +127,8 @@ function MateriasPrimasPage() {
         categoria: "materia_prima",
         ativo: form.ativo,
         tag_consumo: form.tag_consumo || null,
-        consumo_modo: form.consumo_modo,
-        consumo_fator: Number(form.consumo_fator) > 0 ? Number(form.consumo_fator) : 1,
+        consumo_modo: "totalizador",
+        consumo_fator: 1,
         owner_id: u.user.id,
       };
       if (!payload.codigo || !payload.nome) throw new Error("Código e nome são obrigatórios");
@@ -254,7 +254,7 @@ function MateriasPrimasPage() {
                   <div className="sm:col-span-2 rounded-md border border-border p-3 space-y-3">
                     <div>
                       <div className="text-sm font-medium">Tag de consumo do CLP (opcional)</div>
-                      <p className="text-[11px] text-muted-foreground">Usada para calcular o consumo automaticamente no registro de produção.</p>
+                      <p className="text-[11px] text-muted-foreground">Escolha a tag das Tags ao vivo que já totaliza o consumo desta matéria-prima. O registro de produção usa a variação dela no período.</p>
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div className="space-y-1.5 sm:col-span-3">
@@ -264,18 +264,6 @@ function MateriasPrimasPage() {
                           <option value="">— sem tag —</option>
                           {(tags.data ?? []).map((t) => <option key={t.nome} value={t.nome}>{t.nome_amigavel || t.nome}</option>)}
                         </select>
-                      </div>
-                      <div className="space-y-1.5 sm:col-span-2">
-                        <Label>Tipo de medição</Label>
-                        <select value={form.consumo_modo} onChange={(e) => setForm({ ...form, consumo_modo: e.target.value })}
-                          className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
-                          <option value="totalizador">Totalizador acumulado (fim − início)</option>
-                          <option value="direto">Vazão por hora (integrada no tempo)</option>
-                        </select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label>Fator</Label>
-                        <Input type="number" step="any" value={form.consumo_fator} onChange={(e) => setForm({ ...form, consumo_fator: e.target.value })} />
                       </div>
                     </div>
                   </div>

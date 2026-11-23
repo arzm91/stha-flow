@@ -307,9 +307,9 @@ function ProdutosPage() {
                           <option value="1">1</option>
                         </select>
                       </Field>
-                      <Field label="Tag de total de produção">
+                      <Field label="Tag de total do produto (já totalizada)">
                         <select value={form.tag_total_producao} onChange={(e) => setForm({ ...form, tag_total_producao: e.target.value })} className="h-9 w-full rounded-md border border-input bg-background px-2 text-sm">
-                          <option value="">— usa a do equipamento —</option>
+                          <option value="">— sem tag —</option>
                           {(tagsList.data ?? []).map((t) => <option key={t.nome} value={t.nome}>{t.nome_amigavel || t.nome}</option>)}
                         </select>
                       </Field>

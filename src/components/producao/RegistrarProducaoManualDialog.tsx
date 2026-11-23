@@ -1,5 +1,5 @@
 import { indiceCorrigido } from "@/lib/reports-v2/producao-periodo";
-import { acumuladoTotalizador, consumoMp, consumoBaseIndice, type Pt } from "@/lib/producao/auto-preenchimento";
+import { totalTagPura, consumoBaseIndice, type Pt } from "@/lib/producao/auto-preenchimento";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -192,21 +192,6 @@ export function RegistrarProducaoManualDialog({
     consumoBaseIndice(mats), Number(qtdProduzida),
     concCad, concMedia === "" ? null : Number(concMedia));
 
-  // Receita do produto -> matérias-primas
-  useEffect(() => {
-    if (!produtoId) { setMats([]); return; }
-    (async () => {
-      const { data: rec } = await supabase.from("produto_receita")
-        .select("materia_prima_id, percentual, tag_consumo_nome, mp:materia_prima_id(nome,unidade,tag_consumo,consumo_modo,consumo_fator)")
-        .eq("produto_id", produtoId).order("ordem");
-      setMats(((rec ?? []) as any[]).map((r) => ({
-        mp_id: r.materia_prima_id, nome: r.mp?.nome ?? "—", unidade: r.mp?.unidade ?? "",
-        percentual: r.percentual, tag: r.mp?.tag_consumo || r.tag_consumo_nome || null,
-        modo: r.mp?.consumo_modo ?? "totalizador", fator: Number(r.mp?.consumo_fator ?? 1), qtd: "", tanque_id: "",
-      })));
-    })();
-  }, [produtoId]);
-
   // Equipamento automático quando só há um
   useEffect(() => {
     if (open && !equipamentoId && equipamentos.length === 1) setEquipamentoId(equipamentos[0]!.id);
@@ -236,49 +221,61 @@ export function RegistrarProducaoManualDialog({
     })();
   }, [open, equipamentoId, produtoId, produtos.data]);
 
-  const buscarDoClp = async () => {
-    const prod = (produtos.data ?? []).find((p) => p.id === produtoId);
-    if (!equipamentoId || !prod || !inicio || !fim) return;
-    setAutoLoading(true);
-    try {
-      const ini = new Date(inicio).toISOString(), fi = new Date(fim).toISOString();
-      const { data: eq } = await supabase.from("equipamentos").select("tag_producao_total").eq("id", equipamentoId).maybeSingle();
-      const tagTot = prod.tag_total_producao || eq?.tag_producao_total || null;
-      const idPts = prod.tag_clp && prod.tag_valor_ativacao != null ? await historicoTag(equipamentoId, prod.tag_clp, ini, fi) : null;
-      const ativ = prod.tag_valor_ativacao != null ? Number(prod.tag_valor_ativacao) : null;
-      const partes: string[] = [];
-      if (tagTot) {
-        const pts = await historicoTag(equipamentoId, tagTot, ini, fi);
-        if (pts.length > 1) { setQtdProduzida(+acumuladoTotalizador(pts, idPts, ativ).toFixed(3)); partes.push(`produção pela tag ${tagTot}`); }
-      }
-      const novos = await Promise.all(mats.map(async (m) => {
-        if (!m.tag) return m;
-        const pts = await historicoTag(equipamentoId, m.tag, ini, fi);
-        if (pts.length < 2) return m;
-        return { ...m, qtd: String(+consumoMp(pts, m.modo, m.fator, idPts, ativ).toFixed(3)) };
-      }));
-      const nTags = novos.filter((m, i) => m.qtd !== mats[i]!.qtd).length;
-      if (nTags) partes.push(`${nTags} matéria(s)-prima(s) pelas tags de consumo`);
-      setMats(novos);
-      setAutoMsg(partes.length ? `Preenchido automaticamente: ${partes.join(" e ")}. Confira antes de salvar.` : "Sem leituras de tags no período — preencha manualmente.");
-    } catch (e) {
-      setAutoMsg("Falha ao buscar dados do CLP: " + (e as Error).message);
-    } finally { setAutoLoading(false); }
-  };
-
-  const matsKey = mats.map((m) => m.mp_id).join(",");
+  // Fluxo único e sequencial: receita -> tags puras -> preenche tudo de uma vez.
+  // Respostas atrasadas são descartadas (cancelamento) e só roda quando a chave muda.
+  const [recalc, setRecalc] = useState(0);
+  const prodsOk = produtos.isSuccess;
   useEffect(() => {
-    if (open && equipamentoId && produtoId && inicio && fim) void buscarDoClp();
+    if (!open || !produtoId) { setMats([]); setAutoLoading(false); return; }
+    let cancel = false;
+    const timer = setTimeout(async () => {
+      const prod = (produtos.data ?? []).find((p) => p.id === produtoId);
+      setAutoLoading(true);
+      try {
+        const { data: rec } = await supabase.from("produto_receita")
+          .select("materia_prima_id, percentual, tag_consumo_nome, mp:materia_prima_id(nome,unidade,tag_consumo)")
+          .eq("produto_id", produtoId).order("ordem");
+        if (cancel) return;
+        let lista = ((rec ?? []) as any[]).map((r) => ({
+          mp_id: r.materia_prima_id, nome: r.mp?.nome ?? "—", unidade: r.mp?.unidade ?? "",
+          percentual: r.percentual, tag: r.mp?.tag_consumo || r.tag_consumo_nome || null,
+          modo: "totalizador", fator: 1, qtd: "", tanque_id: "",
+        }));
+        const iniOk = inicio && fim && !isNaN(new Date(inicio).getTime()) && !isNaN(new Date(fim).getTime());
+        if (!equipamentoId || !prod || !iniOk) { setMats(lista); setAutoMsg(""); return; }
+        const ini = new Date(inicio).toISOString(), fi = new Date(fim).toISOString();
+        const partes: string[] = [];
+        let qtd: number | null = null;
+        if (prod.tag_total_producao) {
+          const pts = await historicoTag(equipamentoId, prod.tag_total_producao, ini, fi);
+          if (cancel) return;
+          if (pts.length > 1) { qtd = +totalTagPura(pts).toFixed(3); partes.push(`produção pela tag ${prod.tag_total_producao}`); }
+        }
+        let nTags = 0;
+        lista = await Promise.all(lista.map(async (m) => {
+          if (!m.tag) return m;
+          const pts = await historicoTag(equipamentoId, m.tag, ini, fi);
+          if (pts.length < 2) return m;
+          nTags++;
+          return { ...m, qtd: String(+totalTagPura(pts).toFixed(3)) };
+        }));
+        if (cancel) return;
+        if (nTags) partes.push(`${nTags} matéria(s)-prima(s) pelas tags de consumo`);
+        if (qtd != null) {
+          lista = lista.map((m) => m.qtd === "" && m.percentual != null
+            ? { ...m, qtd: String(+(qtd! * m.percentual / 100).toFixed(3)) } : m);
+          setQtdProduzida(qtd);
+        }
+        setMats(lista);
+        setAutoMsg(partes.length ? `Preenchido automaticamente: ${partes.join(" e ")}. Confira antes de salvar.` : "Sem leituras de tags no período — preencha manualmente.");
+      } catch (e) {
+        if (!cancel) setAutoMsg("Falha ao buscar dados do CLP: " + (e as Error).message);
+      } finally { if (!cancel) setAutoLoading(false); }
+    }, 400);
+    return () => { cancel = true; clearTimeout(timer); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, equipamentoId, produtoId, inicio, fim, matsKey, produtos.data]);
-
-  // Sugestão de consumo pelo percentual da receita
-  useEffect(() => {
-    if (qtdProduzida === "") return;
-    setMats((prev) => prev.map((m) => m.qtd === ""
-      ? { ...m, qtd: m.percentual != null ? String(+(Number(qtdProduzida) * m.percentual / 100).toFixed(3)) : m.qtd }
-      : m));
-  }, [qtdProduzida]);
+  }, [open, equipamentoId, produtoId, inicio, fim, recalc, prodsOk]);
+  const buscarDoClp = () => setRecalc((n) => n + 1);
 
   const tanquesMp = useQuery({
     queryKey: ["pcp-tanques-mp"],
