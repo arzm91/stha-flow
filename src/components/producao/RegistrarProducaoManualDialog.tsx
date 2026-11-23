@@ -172,8 +172,8 @@ export function RegistrarProducaoManualDialog({
   const produtos = useQuery({
     queryKey: ["pcp-produtos"],
     queryFn: async () => {
-      const { data } = await supabase.from("produtos").select("id,codigo,nome,concentracao,equipamento_id,tag_clp,tag_valor_ativacao,tag_total_producao").eq("ativo", true).neq("categoria", "materia_prima").order("nome");
-      return (data ?? []) as Prod[];
+      const { data } = await supabase.from("produtos").select("id,codigo,nome,concentracao,equipamento_id,tag_clp,tag_valor_ativacao,tag_total_producao,categoria").eq("ativo", true).order("nome");
+      return ((data ?? []) as (Prod & { categoria: string | null })[]).filter((p) => p.categoria !== "materia_prima") as Prod[];
     },
   });
 
